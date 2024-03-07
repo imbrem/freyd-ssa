@@ -71,9 +71,13 @@ theorem Ctx.Wk.allEq {ν α} {Γ Δ : Ctx ν α} (D D': Γ.Wk Δ): D = D'
     | cons _ _ => exact (hxn.head rfl).elim
     | skip h I' => exact congrArg _ (I I')
 
-def Ctx.Wk.refl {ν α}: (Γ : Ctx ν α) → Γ.Wk Γ
+def Ctx.Wk.refl {ν α} : (Γ : Ctx ν α) → Γ.Wk Γ
   | [] => nil
   | x::Γ => cons x (refl Γ)
+
+def Ctx.Wk.drop {ν α} : (Γ : Ctx ν α) → Γ.Wk []
+  | [] => nil
+  | _::Γ => skip Fresh.nil (drop Γ)
 
 inductive Ctx.Wk.Iso : {Γ Δ : Ctx ν α} → {Γ' Δ' : Ctx ν' α'} → Ctx.Wk Γ Δ → Ctx.Wk Γ' Δ' → Prop
   | nil : Ctx.Wk.Iso nil nil
@@ -583,12 +587,13 @@ structure Label (ν : Type u) (α : Type v) extends Var ν α where
   live : Ctx ν α
 
 structure Label.Wk (ℓ ℓ' : Label ν α) where
-  name : ℓ.name = ℓ'.name
-  ty : ℓ.ty = ℓ'.ty
+  var : ℓ.toVar = ℓ'.toVar
   live : ℓ.live.Wk ℓ'.live
 
+def Label.Wk.refl (ℓ : Label ν α) : ℓ.Wk ℓ := ⟨rfl, Ctx.Wk.refl _⟩
+
 def Label.Wk.comp {ℓ ℓ' ℓ'' : Label ν α} (w : ℓ.Wk ℓ') (w' : ℓ'.Wk ℓ'') : ℓ.Wk ℓ''
-  := ⟨w.name.trans w'.name, w.ty.trans w'.ty, w.live.comp w'.live⟩
+  := ⟨w.var.trans w'.var, w.live.comp w'.live⟩
 
 abbrev Label.Wk.Iso {ℓ ℓ' ℓ'' ℓ''' : Label ν α} (w : ℓ.Wk ℓ') (w' : ℓ''.Wk ℓ''')
   := w.live.Iso w'.live
@@ -657,16 +662,61 @@ inductive InstSet.Terminator
   | br : Φ.Tm 1 Γ A → LCtx.Wk [⟨⟨n, A⟩, Γ⟩] L → Φ.Terminator Γ L
   | ite : Φ.Tm 1 Γ Ty.bool → Φ.Terminator Γ L → Φ.Terminator Γ L → Φ.Terminator Γ L
 
+def InstSet.Terminator.wk_entry {Φ : InstSet (Ty α)}
+  (w: Γ.Wk Δ): Φ.Terminator Δ L → Φ.Terminator Γ L
+  | br e h => br (e.wk w) --TODO: clean this up
+    (@LCtx.Wk.comp _ _ [⟨_, Γ⟩] [⟨_, Δ⟩] _
+      (LCtx.Wk.cons ⟨rfl, w⟩ LCtx.Wk.nil) h)
+  | ite e t f => ite (e.wk w) (t.wk_entry w) (f.wk_entry w)
+
+def InstSet.Terminator.wk_exit {Φ: InstSet (Ty α)}
+  : Φ.Terminator Γ L → L.Wk K → Φ.Terminator Γ K
+  | br e h, w => br e (h.comp w)
+  | ite e t f, w => ite e (t.wk_exit w) (f.wk_exit w)
+
 structure InstSet.BB (Φ : InstSet (Ty α)) (Γ : Ctx ν (Ty α)) (L : LCtx ν (Ty α)) where
   body: Φ.Body p Γ Δ
   -- Issue: underspecified: can change Δ, so must quotient somehow
   terminator: Φ.Terminator Δ L
 
-inductive InstSet.CFG
+def InstSet.BB.wk_entry {Φ : InstSet (Ty α)}
+  (w: Γ.Wk Δ) (β: Φ.BB Δ L): Φ.BB Γ L where
+  body := β.body.wk_entry w
+  terminator := β.terminator
+
+def InstSet.BB.wk_exit {Φ : InstSet (Ty α)}
+  (β: Φ.BB Γ L) (w: L.Wk K): Φ.BB Γ K where
+  body := β.body
+  terminator := β.terminator.wk_exit w
+
+inductive InstSet.ICFG
   (Φ : InstSet (Ty α))
   : (L K : LCtx ν (Ty α)) -> Type _
-  | nil : L.Wk K → InstSet.CFG Φ L K
-  | cons : InstSet.CFG Φ L (⟨x, Γ⟩::K) → Φ.BB (x::Γ) L → InstSet.CFG Φ L K
+  | nil : L.Wk K → InstSet.ICFG Φ L K
+  | cons : InstSet.ICFG Φ L (⟨x, Γ⟩::K) → Φ.BB (x::Γ) L → InstSet.ICFG Φ L K
+
+def InstSet.ICFG.wk_exit
+  {Φ : InstSet (Ty α)} {L K M : LCtx ν (Ty α)}
+  : (κ: Φ.ICFG L K) → K.Wk M → Φ.ICFG L M
+  | nil w, w' => nil (w.comp w')
+  | cons κ β, w' => cons (κ.wk_exit (w'.cons (Label.Wk.refl _))) β
+
+structure InstSet.CFG (Φ : InstSet (Ty α)) (L K : LCtx ν (Ty α))
+  where
+  looped : L.Wk W
+  inner : Φ.ICFG W K
+
+def InstSet.CFG.wk_exit
+  {Φ : InstSet (Ty α)} {L K M : LCtx ν (Ty α)}
+  (κ: Φ.CFG L K) (w: K.Wk M): Φ.CFG L M where
+  looped := κ.looped
+  inner := κ.inner.wk_exit w
+
+def InstSet.CFG.wk_entry
+  {Φ : InstSet (Ty α)} {L K M : LCtx ν (Ty α)}
+  (w: L.Wk K) (κ: Φ.CFG K M): Φ.CFG L M where
+  looped := w.comp κ.looped
+  inner := κ.inner
 
 structure InstSet.Region (Φ : InstSet (Ty α)) (Γ : Ctx ν (Ty α)) (L : LCtx ν (Ty α)) where
   entry : Φ.BB Γ K
