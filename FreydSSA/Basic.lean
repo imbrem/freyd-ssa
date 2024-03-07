@@ -10,10 +10,18 @@ structure Var (ν : Type u) (α : Type v) : Type (max u v) where
   name: ν
   ty: α
 
-def Ctx (ν: Type u) (α: Type v): Type (max u v) := List (Var ν α)
+def Ctx (ν : Type u) (α : Type v) : Type (max u v) := List (Var ν α)
+
+inductive Ctx.HasVar {ν α : Type u} (A : α) : ℕ -> Ctx ν α -> Prop
+  | head : Ctx.HasVar A 0 (⟨n, A⟩::Γ)
+  | tail : Ctx.HasVar A n Γ → Ctx.HasVar A (n+1) (x::Γ)
+
+structure Ctx.Ix {ν α} (Γ : Ctx ν α) (A : α) : Type where
+  val : ℕ
+  hasVar : Ctx.HasVar A val Γ
 
 @[simp]
-def Ctx.names {ν α} (Γ: Ctx ν α): List ν
+def Ctx.names {ν α} (Γ : Ctx ν α): List ν
   := Γ.map Var.name
 
 inductive Ctx.Fresh {ν α} (n : ν) : Ctx ν α → Prop
@@ -58,6 +66,34 @@ def Ctx.Wk.refl {ν α}: (Γ : Ctx ν α) → Γ.Wk Γ
   | [] => nil
   | x::Γ => cons x (refl Γ)
 
+inductive Ctx.Wk.Iso : {Γ Δ : Ctx ν α} → {Γ' Δ' : Ctx ν' α'} → Ctx.Wk Γ Δ → Ctx.Wk Γ' Δ' → Prop
+  | nil : Ctx.Wk.Iso nil nil
+  | cons : Ctx.Wk.Iso w w' -> Ctx.Wk.Iso (cons h w) (cons h' w')
+  | skip : Ctx.Wk.Iso w w' -> Ctx.Wk.Iso (skip h w) (skip h' w')
+
+theorem Ctx.Wk.iso_refl {Γ Δ : Ctx ν α} : (w: Γ.Wk Δ) -> w.Iso w
+  | Wk.nil => Iso.nil
+  | Wk.cons h w => Iso.cons w.iso_refl
+  | Wk.skip h w => Iso.skip w.iso_refl
+
+theorem Ctx.Wk.Iso.refl {Γ Δ : Ctx ν α} : (w: Γ.Wk Δ) -> w.Iso w
+  | Wk.nil => Iso.nil
+  | Wk.cons h w => Iso.cons w.iso_refl
+  | Wk.skip h w => Iso.skip w.iso_refl
+
+theorem Ctx.Wk.Iso.symm {Γ Δ : Ctx ν α} {Γ' Δ' : Ctx ν' α'} {w: Γ.Wk Δ} {w': Γ'.Wk Δ'}
+  : w.Iso w' -> w'.Iso w
+  | Iso.nil => Iso.nil
+  | Iso.cons I => Iso.cons (I.symm)
+  | Iso.skip I => Iso.skip (I.symm)
+
+theorem Ctx.Wk.Iso.trans {Γ Δ : Ctx ν α} {Γ' Δ' : Ctx ν' α'} {Γ'' Δ'' : Ctx ν'' α''}
+  {w: Γ.Wk Δ} {w': Γ'.Wk Δ'} {w'': Γ''.Wk Δ''}
+  : w.Iso w' -> w'.Iso w'' -> w.Iso w''
+  | Iso.nil, Iso.nil => Iso.nil
+  | Iso.cons I, Iso.cons I' => Iso.cons (I.trans I')
+  | Iso.skip I, Iso.skip I' => Iso.skip (I.trans I')
+
 --TODO: antisymm...
 
 inductive Ty (α: Type u): Type u where
@@ -88,12 +124,45 @@ def InstSet.to_impure {α : Type u} (Φ : InstSet α) {p} {A B : α} (f : Φ.Op 
 
 inductive InstSet.Tm {ν : Type u} {α : Type v} (Φ : InstSet (Ty α))
   : Purity → Ctx ν (Ty α) → Ty α → Type (max u v) where
-  | var {x} (p) : Γ.Wk [x] → Tm Φ p Γ x.ty
+  | var {n a} (p) : Γ.Wk [⟨n, a⟩] → Tm Φ p Γ a
   | op (f: Φ.Op p A B) : Tm Φ 1 Γ A → Tm Φ p Γ B
   | pair (p) : Tm Φ 1 Γ A → Tm Φ 1 Γ B → Tm Φ p Γ (Ty.pair A B)
   | unit (p) : Tm Φ p Γ Ty.unit
 
-def InstSet.Tm.to_impure (Φ : InstSet (Ty α)) {A : Ty α} : Φ.Tm p Γ A → Φ.Tm 0 Γ A
+inductive InstSet.Tm.IsoSh {Φ : InstSet (Ty α)}: Φ.Tm p Γ A -> Φ.Tm p' Γ' A' -> Prop
+  | var (p p') : w.Iso w' -> IsoSh (Tm.var p w) (Tm.var p' w')
+  | op (f) : Tm.IsoSh e e' -> IsoSh (Tm.op f e) (Tm.op f e')
+  | pair (p p') : Tm.IsoSh l l' -> Tm.IsoSh r r' -> IsoSh (Tm.pair p l r) (Tm.pair p' l' r')
+  | unit (p p') : IsoSh (Tm.unit p) (Tm.unit p')
+
+inductive InstSet.Tm.Iso {Φ : InstSet (Ty α)}: Φ.Tm p Γ A -> Φ.Tm p Γ' A -> Prop
+  | var {Γ: Ctx ν (Ty α)} {Γ': Ctx ν' (Ty α)} (p)
+    {w: Γ.Wk [⟨n, a⟩]} {w': Γ'.Wk [⟨n', a⟩]}: w.Iso w' -> Iso (Tm.var p w) (Tm.var p w')
+  | op (f) : Tm.Iso e e' -> Iso (Tm.op f e) (Tm.op f e')
+  | pair (p) : Tm.Iso l l' -> Tm.Iso r r' -> Iso (Tm.pair p l r) (Tm.pair p l' r')
+  | unit (p) : Iso (Tm.unit p) (Tm.unit p)
+
+theorem InstSet.Tm.Iso.refl {Φ : InstSet (Ty α)} {Γ : Ctx ν (Ty α)} {A : Ty α} {e : Φ.Tm p Γ A}
+  : e.Iso e
+  := by induction e with
+  | var => constructor; apply Ctx.Wk.Iso.refl
+  | _ => constructor <;> apply_assumption
+
+theorem InstSet.Tm.Iso.symm {Φ : InstSet (Ty α)}
+  {e : Φ.Tm p Γ A} {e' : Φ.Tm p Γ' A}
+  (h : e.Iso e') : e'.Iso e
+  := by induction h with
+  | var _ I => constructor; exact I.symm
+  | _ => constructor <;> apply_assumption
+
+theorem InstSet.Tm.Iso.trans {Φ : InstSet (Ty α)}
+  {e : Φ.Tm p Γ A} {e' : Φ.Tm p Γ' A} {e'' : Φ.Tm p Γ'' A}
+  (h : e.Iso e') (h' : e'.Iso e'') : e.Iso e''
+  := by induction h with
+  | var _ I => cases h'; constructor; apply I.trans; assumption
+  | _ => cases h'; constructor <;> apply_assumption <;> assumption
+
+def InstSet.Tm.to_impure {Φ : InstSet (Ty α)} {A : Ty α} : Φ.Tm p Γ A → Φ.Tm 0 Γ A
   | var p h => var 0 h
   | op f e => op (Φ.to_impure f) e
   | pair p x y => pair 0 x y
@@ -112,6 +181,42 @@ inductive InstSet.Body {ν : Type u} {α : Type v} (Φ : InstSet (Ty α))
   | let2 : Φ.Tm p Γ (Ty.pair A B)
     → Body Φ p (⟨x, A⟩::⟨y, B⟩::Γ) Δ
     → Body Φ p Γ Δ
+
+inductive InstSet.Body.Iso {Φ : InstSet (Ty α)}: Φ.Body p Γ Δ -> Φ.Body p Γ' Δ' -> Prop
+  | nil (p) : w.Iso w' -> Iso (Body.nil p w) (Body.nil p w')
+  | let1 : Tm.Iso e e' -> Body.Iso b b' -> Iso (Body.let1 e b) (Body.let1 e' b')
+  | let2 : Tm.Iso e e' -> Body.Iso b b' -> Iso (Body.let2 e b) (Body.let2 e' b')
+
+theorem InstSet.Body.Iso.refl {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)} {p}
+  (e : Φ.Body p Γ Δ)
+  : e.Iso e
+  := by induction e with
+  | nil _ I => constructor; exact I.iso_refl
+  | _ =>
+    constructor
+    . apply Tm.Iso.refl
+    . apply_assumption
+
+theorem InstSet.Body.Iso.symm {Φ : InstSet (Ty α)}
+  {e : Φ.Body p Γ Δ} {e' : Φ.Body p Γ' Δ'}
+  (h : e.Iso e') : e'.Iso e
+  := by induction h with
+  | nil _ I => constructor; exact I.symm
+  | _ =>
+    constructor
+    . apply Tm.Iso.symm; assumption
+    . apply_assumption
+
+theorem InstSet.Body.Iso.trans {Φ : InstSet (Ty α)}
+  {e : Φ.Body p Γ Δ} {e' : Φ.Body p Γ' Δ'} {e'' : Φ.Body p Γ'' Δ''}
+  (h : e.Iso e') (h' : e'.Iso e'') : e.Iso e''
+  := by induction h generalizing Γ'' Δ'' with
+  | nil _ I => cases h'; constructor; apply I.trans; assumption
+  | _ =>
+    cases h'
+    constructor
+    . apply Tm.Iso.trans <;> assumption
+    . apply_assumption; assumption
 
 def InstSet.Body.to_impure {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)}
   : Φ.Body p Γ Δ → Φ.Body 0 Γ Δ
@@ -202,12 +307,24 @@ def Ctx.Wk.rename {ν α} {ρ : ν → ν'} {Γ Δ : Ctx ν α} (hΓ : Γ.InjOn 
     (hxn.rename (hΓ.wk (skip hxn h)) (hΓ.wk (cons _ h)).head_ne)
     (rename hΓ.tail h)
 
+def Ctx.Wk.rename_iso {Γ Δ : Ctx ν α} {ρ: ν -> ν'} (hΓ : Γ.InjOn ρ) (w: Γ.Wk Δ)
+  : w.Iso (w.rename hΓ) := match Γ, Δ, w with
+  | [], [], nil => Iso.nil
+  | _::_, _::_, cons _ w => Iso.cons (w.rename_iso hΓ.tail)
+  | _::_, _, skip _ w => Iso.skip (w.rename_iso hΓ.tail)
+
 def InstSet.Tm.rename {Φ : InstSet (Ty α)} {Γ : Ctx ν (Ty α)} {a : Ty α}
   {ρ : ν → ν'} (hρ : Γ.InjOn ρ) : Φ.Tm p Γ a → Φ.Tm p (Γ.rename ρ) a
-  | var p h' => @var _ _ _ _ ⟨ρ _, _⟩ p (h'.rename hρ)
+  | var p h' => @var _ _ _ _ (ρ _) _ p (h'.rename hρ)
   | op f e => op f (e.rename hρ)
   | pair p l r => pair p (l.rename hρ) (r.rename hρ)
   | unit p => unit p
+
+theorem InstSet.Tm.rename_iso {Φ : InstSet (Ty α)} {Γ : Ctx ν (Ty α)} {a : Ty α}
+  {ρ : ν → ν'} (hρ : Γ.InjOn ρ) (e: Φ.Tm p Γ a) : e.Iso (e.rename hρ)
+  := by induction e with
+  | @var Γ n a p w => simp only [rename]; constructor; exact w.rename_iso hρ
+  | _ => simp only [rename]; constructor <;> apply_assumption
 
 inductive InstSet.Body.InjOn {Φ : InstSet (Ty α)} (ρ : ν → ν')
   : {Γ Δ: Ctx ν (Ty α)} → Φ.Body p Γ Δ → Prop
@@ -234,6 +351,24 @@ def InstSet.Body.rename {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)}
   | nil _ h, hρ => nil _ (h.rename (by cases hρ; assumption))
   | let1 e b, hρ => let1 (e.rename hρ.entry) (b.rename (by cases hρ; assumption))
   | let2 e b, hρ => let2 (e.rename hρ.entry) (b.rename (by cases hρ; assumption))
+
+theorem InstSet.Body.rename_iso {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)}
+  {ρ : ν → ν'} {b : Φ.Body p Γ Δ} (hb: b.InjOn ρ): b.Iso (b.rename hb)
+  := by induction b with
+  | nil _ h =>
+    simp only [rename]
+    constructor
+    exact h.rename_iso (hb.entry)
+  | let1 e b I =>
+    simp only [rename]
+    constructor
+    exact e.rename_iso (hb.entry)
+    apply I
+  | let2 e b I =>
+    simp only [rename]
+    constructor
+    exact e.rename_iso (hb.entry)
+    apply I
 
 def Ctx.EqOn (ρ₁ ρ₂ : ν → ν') (Γ : Ctx ν α): Prop
   := Set.EqOn ρ₁ ρ₂ { x : ν | x ∈ Γ.names }
@@ -347,13 +482,10 @@ inductive InstSet.Body.SSA {Φ: InstSet (Ty α)}
   | let2 {b: Φ.Body p (⟨x, A⟩::⟨y, B⟩::Γ) Δ}:
     b.NotDef x → b.NotDef y → (e: Φ.Tm p Γ (Ty.pair A B)) → b.SSA → (b.let2 e).SSA
 
--- theorem InstSet.Body.SSA.rename {Φ: InstSet (Ty α)} {Γ Δ: Ctx ν (Ty α)}
---   {ρ: ν → ν'} {b: Φ.Body p Γ Δ}
---   : b.SSA → (hρ : b.InjOn ρ) -> (b.rename hρ).SSA
---   | nil h, hρ => by simp only [Body.rename]; exact SSA.nil (h.rename hρ.entry) --TODO: defeq?
---   | let1 hx e b, hρ => by
---     simp only [Body.rename]
---     exact SSA.let1 sorry (e.rename hρ.entry) (b.rename (by cases hρ; assumption))
---   | let2 hx hy e b, hρ => by
---     simp only [Body.rename]
---     exact SSA.let2 sorry sorry (e.rename hρ.entry) (b.rename (by cases hρ; assumption))
+def InstSet.Body.αSSA {Φ: InstSet (Ty α)} (b: Φ.Body p Γ Δ): Prop
+  := ∃b': Φ.Body p Γ Δ, b'.SSA ∧ b.Iso b'
+
+-- TODO: every body, w/ de-Bruijn indices, can be placed into SSA...
+
+-- TODO: in particular, if ν is infinite (or actually, just > |b| + |Γ|), then every body from Γ to
+--Δ is in αSSA
