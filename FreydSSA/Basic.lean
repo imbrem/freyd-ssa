@@ -721,7 +721,7 @@ def InstSet.CFG.wk_entry
 structure InstSet.Region (Φ : InstSet (Ty α)) (Γ : Ctx ν (Ty α)) (L : LCtx ν (Ty α)) where
   entry : Φ.BB Γ K
   -- Issue: underspecified: can change K, so must quotient somehow
-  cfg : InstSet.CFG Φ K L
+  cfg : Φ.ICFG K L
 
 inductive GCtx (ν : Type u) (α : Type v) where
   | ctx : Ctx ν α → GCtx ν α
