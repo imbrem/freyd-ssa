@@ -12,16 +12,16 @@ structure Var (ν : Type u) (α : Type v) : Type (max u v) where
 
 def Ctx (ν : Type u) (α : Type v) : Type (max u v) := List (Var ν α)
 
-inductive Ctx.Iso : Ctx ν α -> Ctx ν' α -> Prop
+inductive Ctx.Iso : Ctx ν α → Ctx ν' α → Prop
   | nil : Ctx.Iso [] []
-  | cons : Ctx.Iso Γ Δ -> Ctx.Iso (⟨n, a⟩::Γ) (⟨n', a⟩::Δ)
+  | cons : Ctx.Iso Γ Δ → Ctx.Iso (⟨n, a⟩::Γ) (⟨n', a⟩::Δ)
 
 theorem Ctx.Iso.cons'
-  : {x : Var ν α} -> {x' : Var ν' α} -> (hx: x.ty = x'.ty) -> (h: Ctx.Iso Γ Δ)
-    -> Ctx.Iso (x::Γ) (x'::Δ)
+  : {x : Var ν α} → {x' : Var ν' α} → (hx: x.ty = x'.ty) → (h: Ctx.Iso Γ Δ)
+    → Ctx.Iso (x::Γ) (x'::Δ)
   | ⟨_, _⟩, ⟨_, _⟩, rfl, h => Ctx.Iso.cons h
 
-inductive Ctx.HasVar {ν α : Type u} (A : α) : ℕ -> Ctx ν α -> Prop
+inductive Ctx.HasVar {ν α : Type u} (A : α) : ℕ → Ctx ν α → Prop
   | head : Ctx.HasVar A 0 (⟨n, A⟩::Γ)
   | tail : Ctx.HasVar A n Γ → Ctx.HasVar A (n+1) (x::Γ)
 
@@ -77,28 +77,28 @@ def Ctx.Wk.refl {ν α}: (Γ : Ctx ν α) → Γ.Wk Γ
 
 inductive Ctx.Wk.Iso : {Γ Δ : Ctx ν α} → {Γ' Δ' : Ctx ν' α'} → Ctx.Wk Γ Δ → Ctx.Wk Γ' Δ' → Prop
   | nil : Ctx.Wk.Iso nil nil
-  | cons : Ctx.Wk.Iso w w' -> Ctx.Wk.Iso (cons h w) (cons h' w')
-  | skip : Ctx.Wk.Iso w w' -> Ctx.Wk.Iso (skip h w) (skip h' w')
+  | cons : Ctx.Wk.Iso w w' → Ctx.Wk.Iso (cons h w) (cons h' w')
+  | skip : Ctx.Wk.Iso w w' → Ctx.Wk.Iso (skip h w) (skip h' w')
 
-theorem Ctx.Wk.iso_refl {Γ Δ : Ctx ν α} : (w: Γ.Wk Δ) -> w.Iso w
+theorem Ctx.Wk.iso_refl {Γ Δ : Ctx ν α} : (w: Γ.Wk Δ) → w.Iso w
   | Wk.nil => Iso.nil
   | Wk.cons h w => Iso.cons w.iso_refl
   | Wk.skip h w => Iso.skip w.iso_refl
 
-theorem Ctx.Wk.Iso.refl {Γ Δ : Ctx ν α} : (w: Γ.Wk Δ) -> w.Iso w
+theorem Ctx.Wk.Iso.refl {Γ Δ : Ctx ν α} : (w: Γ.Wk Δ) → w.Iso w
   | Wk.nil => Iso.nil
   | Wk.cons h w => Iso.cons w.iso_refl
   | Wk.skip h w => Iso.skip w.iso_refl
 
 theorem Ctx.Wk.Iso.symm {Γ Δ : Ctx ν α} {Γ' Δ' : Ctx ν' α'} {w: Γ.Wk Δ} {w': Γ'.Wk Δ'}
-  : w.Iso w' -> w'.Iso w
+  : w.Iso w' → w'.Iso w
   | Iso.nil => Iso.nil
   | Iso.cons I => Iso.cons (I.symm)
   | Iso.skip I => Iso.skip (I.symm)
 
 theorem Ctx.Wk.Iso.trans {Γ Δ : Ctx ν α} {Γ' Δ' : Ctx ν' α'} {Γ'' Δ'' : Ctx ν'' α''}
   {w: Γ.Wk Δ} {w': Γ'.Wk Δ'} {w'': Γ''.Wk Δ''}
-  : w.Iso w' -> w'.Iso w'' -> w.Iso w''
+  : w.Iso w' → w'.Iso w'' → w.Iso w''
   | Iso.nil, Iso.nil => Iso.nil
   | Iso.cons I, Iso.cons I' => Iso.cons (I.trans I')
   | Iso.skip I, Iso.skip I' => Iso.skip (I.trans I')
@@ -117,6 +117,7 @@ inductive Ty (α: Type u): Type u where
   | base (a : α)
   | pair (a b : Ty α)
   | unit
+  | bool
 
 inductive Purity
   | pure
@@ -145,19 +146,22 @@ inductive InstSet.Tm {ν : Type u} {α : Type v} (Φ : InstSet (Ty α))
   | op (f: Φ.Op p A B) : Tm Φ 1 Γ A → Tm Φ p Γ B
   | pair (p) : Tm Φ 1 Γ A → Tm Φ 1 Γ B → Tm Φ p Γ (Ty.pair A B)
   | unit (p) : Tm Φ p Γ Ty.unit
+  | bool (p) (b: Bool) : Tm Φ p Γ Ty.bool
 
-inductive InstSet.Tm.IsoSh {Φ : InstSet (Ty α)}: Φ.Tm p Γ A -> Φ.Tm p' Γ' A' -> Prop
-  | var (p p') : w.Iso w' -> IsoSh (Tm.var p w) (Tm.var p' w')
-  | op (f) : Tm.IsoSh e e' -> IsoSh (Tm.op f e) (Tm.op f e')
-  | pair (p p') : Tm.IsoSh l l' -> Tm.IsoSh r r' -> IsoSh (Tm.pair p l r) (Tm.pair p' l' r')
+inductive InstSet.Tm.IsoSh {Φ : InstSet (Ty α)}: Φ.Tm p Γ A → Φ.Tm p' Γ' A' → Prop
+  | var (p p') : w.Iso w' → IsoSh (Tm.var p w) (Tm.var p' w')
+  | op (f) : Tm.IsoSh e e' → IsoSh (Tm.op f e) (Tm.op f e')
+  | pair (p p') : Tm.IsoSh l l' → Tm.IsoSh r r' → IsoSh (Tm.pair p l r) (Tm.pair p' l' r')
   | unit (p p') : IsoSh (Tm.unit p) (Tm.unit p')
+  | bool (p p') : IsoSh (Tm.bool p b) (Tm.bool p' b)
 
-inductive InstSet.Tm.Iso {Φ : InstSet (Ty α)}: Φ.Tm p Γ A -> Φ.Tm p Γ' A -> Prop
+inductive InstSet.Tm.Iso {Φ : InstSet (Ty α)}: Φ.Tm p Γ A → Φ.Tm p Γ' A → Prop
   | var {Γ: Ctx ν (Ty α)} {Γ': Ctx ν' (Ty α)} (p)
-    {w: Γ.Wk [⟨n, a⟩]} {w': Γ'.Wk [⟨n', a⟩]}: w.Iso w' -> Iso (Tm.var p w) (Tm.var p w')
-  | op (f) : Tm.Iso e e' -> Iso (Tm.op f e) (Tm.op f e')
-  | pair (p) : Tm.Iso l l' -> Tm.Iso r r' -> Iso (Tm.pair p l r) (Tm.pair p l' r')
+    {w: Γ.Wk [⟨n, a⟩]} {w': Γ'.Wk [⟨n', a⟩]}: w.Iso w' → Iso (Tm.var p w) (Tm.var p w')
+  | op (f) : Tm.Iso e e' → Iso (Tm.op f e) (Tm.op f e')
+  | pair (p) : Tm.Iso l l' → Tm.Iso r r' → Iso (Tm.pair p l r) (Tm.pair p l' r')
   | unit (p) : Iso (Tm.unit p) (Tm.unit p)
+  | bool (p) : Iso (Tm.bool p b) (Tm.bool p b)
 
 theorem InstSet.Tm.Iso.refl {Φ : InstSet (Ty α)} {Γ : Ctx ν (Ty α)} {A : Ty α} {e : Φ.Tm p Γ A}
   : e.Iso e
@@ -184,12 +188,14 @@ def InstSet.Tm.to_impure {Φ : InstSet (Ty α)} {A : Ty α} : Φ.Tm p Γ A → �
   | op f e => op (Φ.to_impure f) e
   | pair p x y => pair 0 x y
   | unit p => unit 0
+  | bool p b => bool 0 b
 
 def InstSet.Tm.wk {Φ : InstSet (Ty α)} {A : Ty α} : Γ.Wk Δ → Φ.Tm p Δ A → Φ.Tm p Γ A
   | h, var p h' => var p (h.comp h')
   | h, op f e => op f (wk h e)
   | h, pair p x y => pair p (wk h x) (wk h y)
   | h, unit p => unit p
+  | h, bool p b => bool p b
 
 theorem InstSet.Tm.Iso.wk {Φ : InstSet (Ty α)}
   {Γ Δ : Ctx ν (Ty α)} {Γ' Δ' : Ctx ν' (Ty α)}
@@ -208,10 +214,10 @@ inductive InstSet.Body {ν : Type u} {α : Type v} (Φ : InstSet (Ty α))
     → Body Φ p (⟨x, A⟩::⟨y, B⟩::Γ) Δ
     → Body Φ p Γ Δ
 
-inductive InstSet.Body.Iso {Φ : InstSet (Ty α)}: Φ.Body p Γ Δ -> Φ.Body p Γ' Δ' -> Prop
-  | nil (p) : w.Iso w' -> Iso (Body.nil p w) (Body.nil p w')
-  | let1 : Tm.Iso e e' -> Body.Iso b b' -> Iso (Body.let1 e b) (Body.let1 e' b')
-  | let2 : Tm.Iso e e' -> Body.Iso b b' -> Iso (Body.let2 e b) (Body.let2 e' b')
+inductive InstSet.Body.Iso {Φ : InstSet (Ty α)}: Φ.Body p Γ Δ → Φ.Body p Γ' Δ' → Prop
+  | nil (p) : w.Iso w' → Iso (Body.nil p w) (Body.nil p w')
+  | let1 : Tm.Iso e e' → Body.Iso b b' → Iso (Body.let1 e b) (Body.let1 e' b')
+  | let2 : Tm.Iso e e' → Body.Iso b b' → Iso (Body.let2 e b) (Body.let2 e' b')
 
 theorem InstSet.Body.Iso.refl {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)} {p}
   (e : Φ.Body p Γ Δ)
@@ -374,7 +380,7 @@ def Ctx.Wk.rename {ν α} {ρ : ν → ν'} {Γ Δ : Ctx ν α} (hΓ : Γ.InjOn 
     (hxn.rename (hΓ.wk (skip hxn h)) (hΓ.wk (cons _ h)).head_ne)
     (rename hΓ.tail h)
 
-def Ctx.Wk.rename_iso {Γ Δ : Ctx ν α} {ρ: ν -> ν'} (hΓ : Γ.InjOn ρ) (w: Γ.Wk Δ)
+def Ctx.Wk.rename_iso {Γ Δ : Ctx ν α} {ρ: ν → ν'} (hΓ : Γ.InjOn ρ) (w: Γ.Wk Δ)
   : w.Iso (w.rename hΓ) := match Γ, Δ, w with
   | [], [], nil => Iso.nil
   | _::_, _::_, cons _ w => Iso.cons (w.rename_iso hΓ.tail)
@@ -386,6 +392,7 @@ def InstSet.Tm.rename {Φ : InstSet (Ty α)} {Γ : Ctx ν (Ty α)} {a : Ty α}
   | op f e => op f (e.rename hρ)
   | pair p l r => pair p (l.rename hρ) (r.rename hρ)
   | unit p => unit p
+  | bool p b => bool p b
 
 theorem InstSet.Tm.rename_iso {Φ : InstSet (Ty α)} {Γ : Ctx ν (Ty α)} {a : Ty α}
   {ρ : ν → ν'} (hρ : Γ.InjOn ρ) (e: Φ.Tm p Γ a) : e.Iso (e.rename hρ)
@@ -514,7 +521,7 @@ theorem InstSet.Body.NotDef.not_mem_defs {Φ: InstSet (Ty α)} {b: Φ.Body p Γ 
     exact ⟨hx.symm, hy.symm, b.not_mem_defs⟩
 
 theorem InstSet.Body.NotDef.of_not_mem_defs {Φ: InstSet (Ty α)} {b: Φ.Body p Γ Δ}
-  : n ∉ b.defs -> b.NotDef n
+  : n ∉ b.defs → b.NotDef n
   := by induction b with
   | nil => exact λ_ => NotDef.nil _
   | let1 _ _ I =>
@@ -550,9 +557,174 @@ inductive InstSet.Body.SSA {Φ: InstSet (Ty α)}
     b.NotDef x → b.NotDef y → (e: Φ.Tm p Γ (Ty.pair A B)) → b.SSA → (b.let2 e).SSA
 
 def InstSet.Body.αSSA {Φ: InstSet (Ty α)} (b: Φ.Body p Γ Δ): Prop
-  := ∃b': Φ.Body p Γ Δ, b'.SSA ∧ b.Iso b'
+  := ∃b' : Φ.Body p Γ Δ, b'.SSA ∧ b.Iso b'
+
+structure InstSet.Body.Renaming {Φ: InstSet (Ty α)}
+  {Γ Δ : Ctx ν (Ty α)} (b: Φ.Body p Γ Δ) (Γ' Δ': Ctx ν' (Ty α))
+  where
+  val : Φ.Body p Γ' Δ'
+  isIso : b.Iso val
+
+structure InstSet.Body.SSAForm {Φ: InstSet (Ty α)}
+  {Γ Δ : Ctx ν (Ty α)} (b: Φ.Body p Γ Δ) (Γ' Δ': Ctx ν' (Ty α))
+  extends Renaming b Γ' Δ' where
+  isSSA : val.SSA
+
+structure InstSet.SSABody {Φ: InstSet (Ty α)} (p: Purity) (Γ Δ: Ctx ν (Ty α)) where
+  val : Φ.Body p Γ Δ
+  isSSA : val.SSA
 
 -- TODO: every body, w/ de-Bruijn indices, can be placed into SSA...
 
 -- TODO: in particular, if ν is infinite (or actually, just > |b| + |Γ|), then every body from Γ to
 --Δ is in αSSA
+
+structure Label (ν : Type u) (α : Type v) extends Var ν α where
+  live : Ctx ν α
+
+structure Label.Wk (ℓ ℓ' : Label ν α) where
+  name : ℓ.name = ℓ'.name
+  ty : ℓ.ty = ℓ'.ty
+  live : ℓ.live.Wk ℓ'.live
+
+def Label.Wk.comp {ℓ ℓ' ℓ'' : Label ν α} (w : ℓ.Wk ℓ') (w' : ℓ'.Wk ℓ'') : ℓ.Wk ℓ''
+  := ⟨w.name.trans w'.name, w.ty.trans w'.ty, w.live.comp w'.live⟩
+
+abbrev Label.Wk.Iso {ℓ ℓ' ℓ'' ℓ''' : Label ν α} (w : ℓ.Wk ℓ') (w' : ℓ''.Wk ℓ''')
+  := w.live.Iso w'.live
+
+structure Label.Fresh (ℓ : Label ν α) (n : ν): Prop where
+  name : ℓ.name ≠ n
+  live : ℓ.live.Fresh n
+
+def LCtx (ν: Type u) (α: Type v) := List (Label ν α)
+
+inductive LCtx.Fresh {ν α} (n : ν) : LCtx ν α → Prop
+  | nil : LCtx.Fresh n []
+  | cons : ℓ.Fresh n → Fresh n L → Fresh n (ℓ::L)
+
+theorem LCtx.Fresh.head {ν α} {n} {ℓ : Label ν α} {L : LCtx ν α}
+  : LCtx.Fresh n (ℓ::L) → ℓ.Fresh n
+  | cons hxn _ => hxn
+
+theorem LCtx.Fresh.tail {ν α} {n} {ℓ : Label ν α} {L : LCtx ν α}
+  : LCtx.Fresh n (ℓ::L) → L.Fresh n
+  | cons _ h => h
+
+inductive LCtx.Wk {ν : Type u} {α : Type v} : LCtx ν α → LCtx ν α → Type (max u v)
+  | nil : Wk [] []
+  | cons {ℓ ℓ' : Label ν α} : ℓ.Wk ℓ' → Wk L K → Wk (ℓ::L) (ℓ'::K)
+  | skip (ℓ : Label ν α) : Wk L K → Wk L (ℓ::K) --TODO: freshness?
+
+def LCtx.Wk.comp {L K M : LCtx ν α} : L.Wk K → K.Wk M → L.Wk M
+  | Wk.nil, w => w
+  | Wk.cons h w, Wk.cons h' w' => Wk.cons (h.comp h') (w.comp w')
+  | Wk.skip _ w, Wk.cons h w' => Wk.skip _ (w.comp w')
+  | w, Wk.skip ℓ w' => Wk.skip _ (w.comp w')
+
+inductive LCtx.Wk.Iso : {L K : LCtx ν α} → {L' K' : LCtx ν' α'} → Wk L K → Wk L' K' → Prop
+  | nil : Iso nil nil
+  | cons : h.Iso h' → Iso w w' → Iso (cons h w) (cons h' w')
+  | skip (ℓ ℓ') : Iso w w' → Iso (skip ℓ w) (skip ℓ' w')
+
+theorem LCtx.Wk.Iso.refl {L K : LCtx ν α} : (w: L.Wk K) → w.Iso w
+  | Wk.nil => nil
+  | Wk.cons h w => cons h.live.iso_refl (refl w)
+  | Wk.skip _ w => skip _ _ (refl w)
+
+theorem LCtx.Wk.Iso.symm {L K : LCtx ν α} {L' K' : LCtx ν' α'}
+  {w: L.Wk K} {w': L'.Wk K'} : (h: w.Iso w') → w'.Iso w
+  | nil => nil
+  | cons h w => cons h.symm w.symm
+  | skip _ _ w => skip _ _ w.symm
+
+theorem LCtx.Wk.Iso.trans {L K : LCtx ν α} {L' K' : LCtx ν' α'} {L'' K'' : LCtx ν'' α''}
+  {w: L.Wk K} {w': L'.Wk K'} {w'': L''.Wk K''} : (h: w.Iso w') → (h': w'.Iso w'') → w.Iso w''
+  | nil, nil => nil
+  | cons h w, cons h' w' => cons (h.trans h') (w.trans w')
+  | skip _ _ w, skip _ _ w' => skip _ _ (w.trans w')
+
+theorem LCtx.Wk.Iso.comp {L K M : LCtx ν α} {L' K' M' : LCtx ν' α'}
+  {l: L.Wk K} {r: K.Wk M} {l': L'.Wk K'} {r': K'.Wk M'}
+  (hl: l.Iso l') (hr: r.Iso r'): (l.comp r).Iso (l'.comp r') := by
+  induction hr generalizing L
+  <;> cases hl
+  <;> repeat first | apply Ctx.Wk.Iso.comp | apply_assumption | constructor
+
+inductive InstSet.Terminator
+  (Φ : InstSet (Ty α)) (Γ : Ctx ν (Ty α)) (L : LCtx ν (Ty α))
+  : Type _
+  | br : Φ.Tm 1 Γ A → LCtx.Wk [⟨⟨n, A⟩, Γ⟩] L → Φ.Terminator Γ L
+  | ite : Φ.Tm 1 Γ Ty.bool → Φ.Terminator Γ L → Φ.Terminator Γ L → Φ.Terminator Γ L
+
+structure InstSet.BB (Φ : InstSet (Ty α)) (Γ : Ctx ν (Ty α)) (L : LCtx ν (Ty α)) where
+  body: Φ.Body p Γ Δ
+  -- Issue: underspecified: can change Δ, so must quotient somehow
+  terminator: Φ.Terminator Δ L
+
+inductive InstSet.CFG
+  (Φ : InstSet (Ty α))
+  : (L K : LCtx ν (Ty α)) -> Type _
+  | nil : L.Wk K → InstSet.CFG Φ L K
+  | cons : InstSet.CFG Φ L (⟨x, Γ⟩::K) → Φ.BB (x::Γ) L → InstSet.CFG Φ L K
+
+structure InstSet.Region (Φ : InstSet (Ty α)) (Γ : Ctx ν (Ty α)) (L : LCtx ν (Ty α)) where
+  entry : Φ.BB Γ K
+  -- Issue: underspecified: can change K, so must quotient somehow
+  cfg : InstSet.CFG Φ K L
+
+inductive GCtx (ν : Type u) (α : Type v) where
+  | ctx : Ctx ν α → GCtx ν α
+  | lctx : LCtx ν α → GCtx ν α
+
+inductive InstSet.GRegion (Φ : InstSet (Ty α)) : GCtx ν (Ty α) → LCtx ν (Ty α) → Type _
+  | br : Φ.Tm 1 Γ A → LCtx.Wk [⟨⟨n, A⟩, Γ⟩] L → Φ.GRegion (GCtx.ctx Γ) L
+  | ite : Φ.Tm 1 Γ Ty.bool
+    → Φ.GRegion (GCtx.ctx Γ) L
+    → Φ.GRegion (GCtx.ctx Γ) L
+    → Φ.GRegion (GCtx.ctx Γ) L
+  | dom : Φ.GRegion (GCtx.ctx Γ) K → Φ.GRegion (GCtx.lctx L) K → Φ.GRegion (GCtx.ctx Γ) L
+  | nil : L.Wk K → Φ.GRegion (GCtx.lctx L) K
+  | cons : Φ.GRegion (GCtx.lctx L) (⟨x, Γ⟩::K) → Φ.BB (x::Γ) L → Φ.GRegion (GCtx.lctx L) K
+
+inductive InstSet.UTm {α : Type v} (Φ : InstSet (Ty α)) (ν : Type u)
+  : Type (max u v) where
+  | var : ν → Φ.UTm ν
+  | op : Φ.Op p A B → Φ.UTm ν
+  | pair : Φ.UTm ν → Φ.UTm ν → Φ.UTm ν
+  | unit : Φ.UTm ν
+  | bool : Bool → Φ.UTm ν
+
+inductive InstSet.UBody {α : Type v} (Φ : InstSet (Ty α)) (ν : Type u)
+  : Type (max u v) where
+  | nil : Φ.UBody ν
+  | let1 : Φ.UTm ν → Φ.UBody ν → Φ.UBody ν
+  | let2 : Φ.UTm ν → Φ.UBody ν → Φ.UBody ν
+
+inductive InstSet.UTerminator {α : Type v} (Φ : InstSet (Ty α)) (ν : Type u)
+  : Type (max u v) where
+  | br : Φ.UTm ν → List ν → Φ.UTerminator ν
+  | ite : Φ.UTm ν → Φ.UTerminator ν → Φ.UTerminator ν → Φ.UTerminator ν
+
+structure InstSet.UBB {α : Type v} (Φ : InstSet (Ty α)) (ν : Type u)
+  : Type (max u v) where
+  body : Φ.UBody ν
+  terminator : Φ.UTerminator ν
+
+inductive InstSet.UCFG {α : Type v} (Φ : InstSet (Ty α)) (ν : Type u)
+  : Type (max u v) where
+  | nil : Φ.UCFG ν
+  | cons : Φ.UCFG ν → Φ.UBB ν → Φ.UCFG ν
+
+structure InstSet.URegion {α : Type v} (Φ : InstSet (Ty α)) (ν : Type u)
+  : Type (max u v) where
+  entry : Φ.UBB ν
+  cfg : Φ.UCFG ν
+
+inductive InstSet.UGRegion {α : Type v} (Φ : InstSet (Ty α)) (ν : Type u)
+  : Type (max u v) where
+  | br : Φ.UTm ν → List ν → Φ.UGRegion ν
+  | ite : Φ.UTm ν → Φ.UGRegion ν → Φ.UGRegion ν → Φ.UGRegion ν
+  | dom : Φ.UGRegion ν → Φ.UGRegion ν → Φ.UGRegion ν
+  | nil : List ν → Φ.UGRegion ν
+  | cons : Φ.UGRegion ν → Φ.UBB ν → Φ.UGRegion ν
