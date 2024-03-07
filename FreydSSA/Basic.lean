@@ -12,6 +12,15 @@ structure Var (ν : Type u) (α : Type v) : Type (max u v) where
 
 def Ctx (ν : Type u) (α : Type v) : Type (max u v) := List (Var ν α)
 
+inductive Ctx.Iso : Ctx ν α -> Ctx ν' α -> Prop
+  | nil : Ctx.Iso [] []
+  | cons : Ctx.Iso Γ Δ -> Ctx.Iso (⟨n, a⟩::Γ) (⟨n', a⟩::Δ)
+
+theorem Ctx.Iso.cons'
+  : {x : Var ν α} -> {x' : Var ν' α} -> (hx: x.ty = x'.ty) -> (h: Ctx.Iso Γ Δ)
+    -> Ctx.Iso (x::Γ) (x'::Δ)
+  | ⟨_, _⟩, ⟨_, _⟩, rfl, h => Ctx.Iso.cons h
+
 inductive Ctx.HasVar {ν α : Type u} (A : α) : ℕ -> Ctx ν α -> Prop
   | head : Ctx.HasVar A 0 (⟨n, A⟩::Γ)
   | tail : Ctx.HasVar A n Γ → Ctx.HasVar A (n+1) (x::Γ)
@@ -94,6 +103,14 @@ theorem Ctx.Wk.Iso.trans {Γ Δ : Ctx ν α} {Γ' Δ' : Ctx ν' α'} {Γ'' Δ'' 
   | Iso.cons I, Iso.cons I' => Iso.cons (I.trans I')
   | Iso.skip I, Iso.skip I' => Iso.skip (I.trans I')
 
+theorem Ctx.Wk.Iso.comp {Γ Δ Ξ : Ctx ν α} {Γ' Δ' Ξ' : Ctx ν' α}
+  {l: Γ.Wk Δ} {r: Δ.Wk Ξ} {l': Γ'.Wk Δ'} {r': Δ'.Wk Ξ'}
+  : l.Iso l' → r.Iso r' → (l.comp r).Iso (l'.comp r')
+  | Iso.nil, hr => hr
+  | Iso.cons Il, Iso.cons Ir => Iso.cons (Il.comp Ir)
+  | Iso.cons Il, Iso.skip Ir => Iso.skip (Il.comp Ir)
+  | Iso.skip Il, hr => Iso.skip (Il.comp hr)
+
 --TODO: antisymm...
 
 inductive Ty (α: Type u): Type u where
@@ -174,6 +191,15 @@ def InstSet.Tm.wk {Φ : InstSet (Ty α)} {A : Ty α} : Γ.Wk Δ → Φ.Tm p Δ A
   | h, pair p x y => pair p (wk h x) (wk h y)
   | h, unit p => unit p
 
+theorem InstSet.Tm.Iso.wk {Φ : InstSet (Ty α)}
+  {Γ Δ : Ctx ν (Ty α)} {Γ' Δ' : Ctx ν' (Ty α)}
+  {w : Γ.Wk Δ} {w' : Γ'.Wk Δ'}
+  {e : Φ.Tm p Δ A} {e' : Φ.Tm p Δ' A}
+  (hw : w.Iso w') (he : e.Iso e') : (e.wk w).Iso (e'.wk w')
+  := by induction he with
+  | var => simp only [Tm.wk]; constructor; apply Ctx.Wk.Iso.comp <;> assumption
+  | _ => simp only [Tm.wk]; constructor <;> apply_assumption <;> assumption
+
 inductive InstSet.Body {ν : Type u} {α : Type v} (Φ : InstSet (Ty α))
   : Purity → Ctx ν (Ty α) → Ctx ν (Ty α) → Type (max u v) where
   | nil (p) : Γ.Wk Δ → Body Φ p Γ Δ
@@ -236,11 +262,52 @@ def InstSet.Body.wk_exit {Φ : InstSet (Ty α)} {Γ Δ Ξ : Ctx ν (Ty α)}
   | let1 e b, h' => let1 e (wk_exit b h')
   | let2 e b, h' => let2 e (wk_exit b h')
 
-def InstSet.Body.cat {Φ : InstSet (Ty α)} {Γ Δ Ξ : Ctx ν (Ty α)}
+def InstSet.Body.comp {Φ : InstSet (Ty α)} {Γ Δ Ξ : Ctx ν (Ty α)}
   : Φ.Body p Γ Δ → Φ.Body p Δ Ξ → Φ.Body p Γ Ξ
   | nil p h, b => wk_entry h b
-  | let1 e b, b' => let1 e (cat b b')
-  | let2 e b, b' => let2 e (cat b b')
+  | let1 e b, b' => let1 e (comp b b')
+  | let2 e b, b' => let2 e (comp b b')
+
+theorem InstSet.Body.Iso.wk_entry {Φ : InstSet (Ty α)}
+  {Γ Δ Ξ : Ctx ν (Ty α)} {Γ' Δ' Ξ' : Ctx ν' (Ty α)}
+  {w: Γ.Wk Δ} {w': Γ'.Wk Δ'} {b: Φ.Body p Δ Ξ} {b': Φ.Body p Δ' Ξ'}
+  (hw: w.Iso w') (hb: b.Iso b')
+  : (wk_entry w b).Iso (wk_entry w' b')
+  := by induction hb with
+  | nil => simp only [Body.wk_entry]; constructor; apply Ctx.Wk.Iso.comp <;> assumption
+  | _ =>
+    simp only [Body.wk_entry]
+    constructor
+    . apply Tm.Iso.wk <;> assumption
+    . apply_assumption
+      repeat constructor
+      assumption
+
+theorem InstSet.Body.Iso.wk_exit {Φ : InstSet (Ty α)}
+  {Γ Δ Ξ' : Ctx ν (Ty α)} {Γ' Δ' Ξ' : Ctx ν' (Ty α)}
+  {b: Φ.Body p Γ Δ} {b': Φ.Body p Γ' Δ'} {w: Δ.Wk Ξ} {w': Δ'.Wk Ξ'}
+  (hw: w.Iso w') (hb: b.Iso b')
+  : (wk_exit b w).Iso (wk_exit b' w')
+  := by induction hb with
+  | nil => simp only [Body.wk_exit]; constructor; apply Ctx.Wk.Iso.comp <;> assumption
+  | _ =>
+    simp only [Body.wk_exit]
+    constructor
+    . assumption
+    . apply_assumption <;> assumption
+
+theorem InstSet.Body.Iso.comp {Φ: InstSet (Ty α)}
+  {l: Φ.Body p Γ Δ} {l': Φ.Body p Γ' Δ'}
+  {r: Φ.Body p Δ Ξ} {r': Φ.Body p Δ' Ξ'}
+  (hl: l.Iso l') (hr: r.Iso r')
+  : (l.comp r).Iso (l'.comp r')
+  := by induction hl with
+  | nil _ hw => simp only [Body.comp]; exact wk_entry hw hr
+  | _ =>
+    simp only [Body.comp]
+    constructor
+    . assumption
+    . apply_assumption; assumption
 
 def Ctx.Wk.names {ν α} {Γ Δ : Ctx ν α} : Γ.Wk Δ → Δ.names.Sublist Γ.names
   | Wk.nil => List.Sublist.slnil
