@@ -107,6 +107,58 @@ theorem Ctx.Wk.Iso.comp {Γ Δ Ξ : Ctx ν α} {Γ' Δ' Ξ' : Ctx ν' α}
   | Iso.cons Il, Iso.skip Ir => Iso.skip (Il.comp Ir)
   | Iso.skip Il, hr => Iso.skip (Il.comp hr)
 
+def Ctx.Wk.names {ν α} {Γ Δ : Ctx ν α} : Γ.Wk Δ → Δ.names.Sublist Γ.names
+  | Wk.nil => List.Sublist.slnil
+  | Wk.cons _ h => h.names.cons₂ _
+  | Wk.skip _ h => h.names.cons _
+
+def Ctx.InjOn (ρ : ν → ν') (Γ : Ctx ν α) : Prop
+  := Set.InjOn ρ { x : ν | x ∈ Γ.names }
+
+theorem Ctx.injOn_empty (ρ : ν → ν') : Ctx.InjOn ρ (@List.nil (Var ν α))
+  := λ _ hx => nomatch hx
+
+theorem Ctx.InjOn.tail {ρ: ν → ν'} {v} {Γ : Ctx ν α} (h: Ctx.InjOn ρ (v::Γ))
+  : Ctx.InjOn ρ Γ
+  := λ _ hx _ hy hxy => h (hx.tail _) (hy.tail _) hxy
+
+theorem Ctx.InjOn.head {ρ: ν → ν'} {v} {Γ : Ctx ν α} (h: Ctx.InjOn ρ (v::Γ))
+  : ∀x ∈ Γ.names, ρ x = ρ v.name → x = v.name
+  := λ _ hx hx' => h (hx.tail _) (by simp) hx'
+
+theorem Ctx.InjOn.head_ne {ρ : ν → ν'} {v} {Γ : Ctx ν α} (h : Ctx.InjOn ρ (v::Γ))
+  : ∀x ∈ Γ.names, x ≠ v.name → ρ x ≠ ρ v.name
+  := λ _ hx hx' => h.ne (hx.tail _) (by simp) hx'
+
+theorem Ctx.InjOn.cons {ρ : ν → ν'} {v : Var ν α} {Γ : Ctx ν α}
+  (hv : ∀x ∈ Γ.names, ρ x = ρ v.name → x = v.name) (h : Ctx.InjOn ρ Γ)
+  : Ctx.InjOn ρ (v::Γ)
+  | _, List.Mem.head _, _, List.Mem.head _, _ => rfl
+  | _, List.Mem.head _, _, List.Mem.tail _ ha, hav => (hv _ ha hav.symm).symm
+  | _, List.Mem.tail _ ha, _, List.Mem.head _, hav => hv _ ha hav
+  | _, List.Mem.tail _ hx, _, List.Mem.tail _ hy, hxy => h hx hy hxy
+
+theorem Ctx.InjOn.cons_ne {ρ : ν → ν'} {v : Var ν α} {Γ : Ctx ν α}
+  (hv : ∀x ∈ Γ.names, x ≠ v.name → ρ x ≠ ρ v.name) (h : Ctx.InjOn ρ Γ)
+  : Ctx.InjOn ρ (v::Γ)
+  := h.cons (λ_ hx hxv => Classical.by_contradiction (λh => hv _ hx h hxv))
+
+theorem Ctx.InjOn.wk {ρ : ν → ν'} {Γ : Ctx ν α} (hΓ : Γ.InjOn ρ) : Γ.Wk Δ → Δ.InjOn ρ
+  | Wk.nil => Ctx.injOn_empty _
+  | Wk.cons x h => (hΓ.tail.wk h).cons (λ_ hx hxv => hΓ.head _ (h.names.subset hx) hxv)
+  | Wk.skip _ h => hΓ.tail.wk h
+
+def Ctx.EqOn (ρ₁ ρ₂ : ν → ν') (Γ : Ctx ν α): Prop
+  := Set.EqOn ρ₁ ρ₂ { x : ν | x ∈ Γ.names }
+
+theorem Ctx.EqOn.head {ρ₁ ρ₂ : ν → ν'} {v} {Γ : Ctx ν α} (h : Ctx.EqOn ρ₁ ρ₂ (v::Γ))
+  : ρ₁ v.name = ρ₂ v.name
+  := h (by simp)
+
+theorem Ctx.EqOn.tail {ρ₁ ρ₂ : ν → ν'} {v} {Γ : Ctx ν α} (h : Ctx.EqOn ρ₁ ρ₂ (v::Γ))
+  : Ctx.EqOn ρ₁ ρ₂ Γ
+  := λ _ hx => h (hx.tail _)
+
 inductive Ctx.HasVar {ν α : Type u} (A : α) : ℕ → Ctx ν α → Prop
   | head : Ctx.HasVar A 0 (⟨n, A⟩::Γ)
   | tail : Ctx.HasVar A n Γ → Ctx.HasVar A (n+1) (x::Γ)
@@ -187,3 +239,45 @@ theorem LCtx.Wk.Iso.comp {L K M : LCtx ν α} {L' K' M' : LCtx ν' α'}
   induction hr generalizing L
   <;> cases hl
   <;> repeat first | apply Ctx.Wk.Iso.comp | apply_assumption | constructor
+
+def Var.rename {ν ν' α} (ρ : ν → ν') (v : Var ν α) : Var ν' α
+  := ⟨ρ v.name, v.ty⟩
+
+theorem Var.rename_eq {ν ν' α} (v: Var ν α) (ρ₁ ρ₂: ν → ν')
+  : ρ₁ v.name = ρ₂ v.name → Var.rename ρ₁ v = Var.rename ρ₂ v
+  := by cases v; simp [rename]
+
+def Ctx.rename {ν ν' α} (ρ : ν → ν') (Γ : Ctx ν α) : Ctx ν' α
+  := Γ.map (Var.rename ρ)
+
+theorem Ctx.Fresh.rename {ν α} {ρ: ν → ν'} {Γ : Ctx ν α} {n}
+  (hΓ : Γ.InjOn ρ) (hn : ∀x ∈ Γ.names, x ≠ n → ρ x ≠ ρ n)
+  : Fresh n Γ → Fresh (ρ n) (rename ρ Γ)
+  | nil => nil
+  | cons hxn hn' => cons (hn _ (by simp) hxn) (hn'.rename hΓ.tail (λ x hx => hn _ (hx.tail _)))
+
+def Ctx.Wk.rename {ν α} {ρ : ν → ν'} {Γ Δ : Ctx ν α} (hΓ : Γ.InjOn ρ)
+  : Γ.Wk Δ → (rename ρ Γ).Wk (rename ρ Δ)
+  | nil => nil
+  | cons x h => cons ⟨ρ x.name, x.ty⟩ (rename hΓ.tail h)
+  | skip hxn h => skip
+    (hxn.rename (hΓ.wk (skip hxn h)) (hΓ.wk (cons _ h)).head_ne)
+    (rename hΓ.tail h)
+
+def Ctx.Wk.rename_iso {Γ Δ : Ctx ν α} {ρ: ν → ν'} (hΓ : Γ.InjOn ρ) (w: Γ.Wk Δ)
+  : w.Iso (w.rename hΓ) := match Γ, Δ, w with
+  | [], [], nil => Iso.nil
+  | _::_, _::_, cons _ w => Iso.cons (w.rename_iso hΓ.tail)
+  | _::_, _, skip _ w => Iso.skip (w.rename_iso hΓ.tail)
+
+theorem Ctx.rename_id: (Γ : Ctx ν α) → Γ.rename id = Γ
+  | [] => rfl
+  | _::Γ => congrArg _ (rename_id Γ)
+
+theorem Ctx.EqOn.rename {ρ₁ ρ₂ : ν → ν'} {Γ : Ctx ν α} (hΓ : Γ.EqOn ρ₁ ρ₂)
+  : Γ.rename ρ₁ = Γ.rename ρ₂
+  := List.map_congr (λ_ hx => Var.rename_eq _ _ _  (hΓ (List.mem_map_of_mem _ hx)))
+
+theorem Ctx.EqOn.rename_id {ρ : ν → ν} {Γ : Ctx ν α} (hΓ : Γ.EqOn ρ id)
+  : Γ.rename ρ = Γ
+  := hΓ.rename.trans Γ.rename_id
