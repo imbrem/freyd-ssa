@@ -237,14 +237,13 @@ structure InstSet.Body.Renaming {Φ: InstSet (Ty α)}
   val : Φ.Body p Γ' Δ'
   isIso : b.Iso val
 
-structure InstSet.Body.SSAForm {Φ: InstSet (Ty α)}
-  {Γ Δ : Ctx ν (Ty α)} (b: Φ.Body p Γ Δ) (Γ' Δ': Ctx ν' (Ty α))
-  extends Renaming b Γ' Δ' where
-  isSSA : val.SSA
-
 structure InstSet.SSABody {Φ: InstSet (Ty α)} (p: Purity) (Γ Δ: Ctx ν (Ty α)) where
   val : Φ.Body p Γ Δ
   isSSA : val.SSA
+
+structure InstSet.Body.SSAForm {Φ: InstSet (Ty α)}
+  {Γ Δ : Ctx ν (Ty α)} (b: Φ.Body p Γ Δ) (Γ' Δ': Ctx ν' (Ty α))
+  extends Renaming b Γ' Δ', SSABody p Γ' Δ'
 
 -- TODO: every body, w/ de-Bruijn indices, can be placed into SSA...
 

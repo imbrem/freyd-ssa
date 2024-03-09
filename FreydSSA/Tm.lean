@@ -73,6 +73,20 @@ theorem InstSet.Tm.Iso.wk {Φ : InstSet (Ty α)}
   | var => simp only [Tm.wk]; constructor; apply Ctx.Wk.Iso.comp <;> assumption
   | _ => simp only [Tm.wk]; constructor <;> apply_assumption <;> assumption
 
+def InstSet.Tm.deBruijn {Φ : InstSet (Ty α)} {Γ : Ctx ν (Ty α)} {A : Ty α} (n: ℕ)
+  : Φ.Tm p Γ A → Φ.Tm p (Γ.deBruijn n) A
+  | var p w => var p (w.var_deBruijn n)
+  | op f e => op f (e.deBruijn n)
+  | pair p l r => pair p (l.deBruijn n) (r.deBruijn n)
+  | unit p => unit p
+  | bool p b => bool p b
+
+theorem InstSet.Tm.deBruijn_iso {Φ : InstSet (Ty α)} {Γ : Ctx ν (Ty α)} {A : Ty α}
+  (e: Φ.Tm p Γ A) : e.Iso (e.deBruijn n)
+  := by induction e with
+  | var p w => simp only [deBruijn]; exact Iso.var p (w.iso_var_deBruijn n)
+  | _ => simp only [deBruijn]; constructor <;> assumption
+
 def InstSet.Tm.rename {Φ : InstSet (Ty α)} {Γ : Ctx ν (Ty α)} {a : Ty α}
   {ρ : ν → ν'} (hρ : Γ.InjOn ρ) : Φ.Tm p Γ a → Φ.Tm p (Γ.rename ρ) a
   | var p h' => @var _ _ _ _ (ρ _) _ p (h'.rename hρ)
