@@ -510,9 +510,13 @@ theorem Ctx.max_name_le_next_name {ν α} [Preorder ν] [OrderBot ν] [SuccOrder
       rw [hm]
       apply WithBot.none_le
 
--- theorem Ctx.le_next_name_of_mem {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν]
---   [DecidableRel λl r: ν => l < r] {Γ : Ctx ν α} {x : ν} (hx : x ∈ Γ.names)
---   : x ≤ Γ.next_name := by sorry
+theorem Ctx.le_next_name_of_mem {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν]
+  {Γ : Ctx ν α} {x : ν} (hx : x ∈ Γ.names)
+  : x ≤ Γ.next_name := by
+    rw [<-WithBot.coe_le_coe]
+    apply le_trans
+    apply le_max_name_of_mem' hx
+    apply max_name_le_next_name
 
 theorem Ctx.max_name_lt_next_name_or_max {ν α} [Preorder ν] [OrderBot ν] [s: SuccOrder ν]
   [DecidableRel λl r: ν => l < r] (Γ : Ctx ν α)
@@ -542,27 +546,48 @@ theorem Ctx.max_name_lt_next_name_or_max {ν α} [Preorder ν] [OrderBot ν] [s:
       simp only [WithBot.lt_coe_bot]
       rfl
 
--- theorem Ctx.lt_next_name_of_mem_or_max {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν]
---   [DecidableRel λl r: ν => l < r] {Γ : Ctx ν α} {x : ν} (hx : x ∈ Γ.names)
---   : x < Γ.next_name ∨ IsMax Γ.next_name := by sorry
+theorem Ctx.lt_next_name_of_mem_or_max {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν]
+  {Γ : Ctx ν α} {x : ν} (hx : x ∈ Γ.names)
+  : x < Γ.next_name ∨ IsMax Γ.next_name := by match Γ.max_name_lt_next_name_or_max with
+  | Or.inl h =>
+    apply Or.inl
+    rw [<-WithBot.coe_lt_coe]
+    apply lt_of_le_of_lt
+    apply Ctx.le_max_name_of_mem' hx
+    exact h
+  | Or.inr h => exact Or.inr h
 
--- theorem Ctx.lt_next_name_of_mem_or_max' {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν]
---   [DecidableRel λl r: ν => l < r] {Γ : Ctx ν α} {x : ν} (hx : x ∈ Γ.names)
---   : x < Γ.next_name ∨ IsMax x
---   := by if h : x < Γ.next_name then
---       exact Or.inl h
---     else
---       apply Or.inr
---       cases lt_next_name_of_mem_or_max hx with
---       | inl => contradiction
---       | inr h' =>
---         if h'' : Γ.next_name ≤ x then
---           apply IsMax.mono
---           apply h'
---           apply h''
---         else
---          exact (h (lt_of_le_not_le (le_next_name_of_mem hx) h'')).elim
+theorem Ctx.lt_next_name_of_mem_or_max' {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν]
+  {Γ : Ctx ν α} {x : ν} (hx : x ∈ Γ.names)
+  : x < Γ.next_name ∨ IsMax x
+  := by if h : x < Γ.next_name then
+      exact Or.inl h
+    else
+      apply Or.inr
+      cases lt_next_name_of_mem_or_max hx with
+      | inl => contradiction
+      | inr h' =>
+        if h'' : Γ.next_name ≤ x then
+          apply IsMax.mono
+          apply h'
+          apply h''
+        else
+         exact (h (lt_of_le_not_le (le_next_name_of_mem hx) h'')).elim
 
--- theorem Ctx.lt_next_name_of_mem {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν] [NoMaxOrder ν]
---   [DecidableRel λl r: ν => l < r] {Γ : Ctx ν α} {x : ν} (hx : x ∈ Γ.names)
---   : x < Γ.next_name := by sorry
+theorem Ctx.lt_next_name_of_mem {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν] [NoMaxOrder ν]
+  {Γ : Ctx ν α} {x : ν} (hx : x ∈ Γ.names)
+  : x < Γ.next_name := match Γ.lt_next_name_of_mem_or_max' hx with
+  | Or.inl h => h
+  | Or.inr h =>
+    have ⟨b, hb⟩ := NoMaxOrder.exists_gt x
+    (isMax_iff_forall_not_lt.mp h b hb).elim
+
+theorem Ctx.ne_next_name_of_mem {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν] [NoMaxOrder ν]
+  {Γ : Ctx ν α} {x : ν} (hx : x ∈ Γ.names)
+  : x ≠ Γ.next_name := ne_of_lt (lt_next_name_of_mem hx)
+
+theorem Ctx.next_name_not_mem {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν] [NoMaxOrder ν]
+  (Γ : Ctx ν α) : Γ.next_name ∉ Γ.names := λh => Γ.ne_next_name_of_mem h rfl
+
+theorem Ctx.next_name_fresh {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν] [NoMaxOrder ν]
+  (Γ : Ctx ν α) : Γ.Fresh Γ.next_name := Fresh.of_not_mem_names (Γ.next_name_not_mem)
