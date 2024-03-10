@@ -444,6 +444,8 @@ theorem Ctx.Wk.iso_var_deBruijn {ν α} {Γ : Ctx ν α} {x : ν} {A : α} (n : 
     apply var_target_deBruijn
     )
 
+--TODO: pass in base name to begin induction from?
+
 def Ctx.max_name {ν α} [Preorder ν] [DecidableRel λl r: ν => l < r] (Γ : Ctx ν α) : WithBot ν
   := (Γ.argmax Var.name).map Var.name
 
@@ -451,7 +453,16 @@ theorem Ctx.max_name_maximum_names {ν α} [Preorder ν] [DecidableRel λl r: ν
   (Γ : Ctx ν α) : Γ.max_name = Γ.names.maximum
   := List.argmax_map Γ Var.name
 
---TODO: le_max_name_of_mem, le_max_name_of_mem'
+theorem Ctx.le_max_name_of_mem {ν α} [LinearOrder ν]
+  {Γ : Ctx ν α} {x m : ν} (hx : x ∈ Γ.names) (hm: Γ.max_name = m) : x ≤ m := by
+  rw [max_name_maximum_names] at hm
+  apply List.le_maximum_of_mem hx
+  exact hm
+
+theorem Ctx.le_max_name_of_mem' {ν α} [LinearOrder ν]
+  {Γ : Ctx ν α} {x: ν} (hx : x ∈ Γ.names) : x ≤ Γ.max_name := by
+  rw [max_name_maximum_names]
+  apply List.le_maximum_of_mem' hx
 
 def Ctx.min_name {ν α} [Preorder ν] [DecidableRel λl r: ν => l < r] (Γ : Ctx ν α) : WithTop ν
   := (Γ.argmin Var.name).map Var.name
@@ -475,22 +486,83 @@ theorem Ctx.next_name_nil {ν α} [Preorder ν] [OrderBot ν] [SuccOrder ν]
   : Ctx.next_name (@List.nil (Var ν α)) = ⊥
   := rfl
 
-theorem Ctx.next_name_succ_max_name {ν α} [Preorder ν] [OrderBot ν] [s: SuccOrder ν]
+theorem Ctx.next_name_succ_max_name {ν α} [Preorder ν] [OrderBot ν] [SuccOrder ν]
   [DecidableRel λl r: ν => l < r] (Γ : Ctx ν α)
-  : Γ.next_name = match Γ.max_name with | some x => s.succ x | none => ⊥
+  : Γ.next_name = match Γ.max_name with | some x => Order.succ x | none => ⊥
   := by
     simp only [next_name, max_name, Option.map]
     generalize hm: List.argmax Var.name Γ = m
     cases m <;> rfl
 
---TODO: max_name ≤ next_name
+theorem Ctx.max_name_le_next_name {ν α} [Preorder ν] [OrderBot ν] [SuccOrder ν]
+  [DecidableRel λl r: ν => l < r] (Γ : Ctx ν α)
+  : Γ.max_name ≤ Γ.next_name
+  := by
+    rw [next_name_succ_max_name]
+    split
+    . rename_i hmn
+      rw [WithBot.le_coe_iff]
+      intro m hm
+      rw [hm] at hmn
+      cases hmn
+      apply SuccOrder.le_succ
+    . rename_i hm
+      rw [hm]
+      apply WithBot.none_le
 
---TODO: le_next_name_of_mem, le_next_name_of_mem'
+-- theorem Ctx.le_next_name_of_mem {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν]
+--   [DecidableRel λl r: ν => l < r] {Γ : Ctx ν α} {x : ν} (hx : x ∈ Γ.names)
+--   : x ≤ Γ.next_name := by sorry
 
---TODO: max_name < next_name ∨ IsMax
+theorem Ctx.max_name_lt_next_name_or_max {ν α} [Preorder ν] [OrderBot ν] [s: SuccOrder ν]
+  [DecidableRel λl r: ν => l < r] (Γ : Ctx ν α)
+  : Γ.max_name < Γ.next_name ∨ IsMax Γ.next_name
+  := by
+    rw [next_name_succ_max_name]
+    split
+    . rename_i x hmn
+      rw [WithBot.lt_coe_iff]
+      if h : Order.succ x ≤ x then
+        apply Or.inr
+        apply IsMax.mono
+        apply Order.max_of_succ_le h
+        apply Order.le_succ
+      else
+        apply Or.inl
+        intro x hx
+        rw [hx] at hmn
+        cases hmn
+        rw [lt_iff_le_not_le]
+        constructor
+        apply Order.le_succ
+        assumption
+    . rename_i hm
+      rw [hm]
+      apply Or.inl
+      simp only [WithBot.lt_coe_bot]
+      rfl
 
---TODO: lt_next_name_of_mem ∨ IsMax, lt_next_name_of_mem' ∨ IsMax
+-- theorem Ctx.lt_next_name_of_mem_or_max {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν]
+--   [DecidableRel λl r: ν => l < r] {Γ : Ctx ν α} {x : ν} (hx : x ∈ Γ.names)
+--   : x < Γ.next_name ∨ IsMax Γ.next_name := by sorry
 
---TODO: lt_next_name_of_mem, lt_next_name_of_mem' w/ bounds
+-- theorem Ctx.lt_next_name_of_mem_or_max' {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν]
+--   [DecidableRel λl r: ν => l < r] {Γ : Ctx ν α} {x : ν} (hx : x ∈ Γ.names)
+--   : x < Γ.next_name ∨ IsMax x
+--   := by if h : x < Γ.next_name then
+--       exact Or.inl h
+--     else
+--       apply Or.inr
+--       cases lt_next_name_of_mem_or_max hx with
+--       | inl => contradiction
+--       | inr h' =>
+--         if h'' : Γ.next_name ≤ x then
+--           apply IsMax.mono
+--           apply h'
+--           apply h''
+--         else
+--          exact (h (lt_of_le_not_le (le_next_name_of_mem hx) h'')).elim
 
---TODO: something other than succ order for a bump? next order or smt?
+-- theorem Ctx.lt_next_name_of_mem {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν] [NoMaxOrder ν]
+--   [DecidableRel λl r: ν => l < r] {Γ : Ctx ν α} {x : ν} (hx : x ∈ Γ.names)
+--   : x < Γ.next_name := by sorry
