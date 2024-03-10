@@ -8,6 +8,8 @@ import FreydSSA.Ctx
 import FreydSSA.InstSet
 import FreydSSA.Tm
 
+--TODO: do we need a version which forbids shadowing? but still need SSA reasoning...
+
 inductive InstSet.Body {ν : Type u} {α : Type v} (Φ : InstSet (Ty α))
   : Purity → Ctx ν (Ty α) → Ctx ν (Ty α) → Type (max u v) where
   | nil (p) : Γ.Wk Δ → Body Φ p Γ Δ
@@ -159,7 +161,7 @@ def InstSet.Body.defs {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)}
   : Φ.Body p Γ Δ → List ν
   | nil _ _ => []
   | @let1 _ _ _ _ _ _ x _ _ b => x::b.defs
-  | @let2 _ _ _ _ _ _ _ x y _ _ b => x::y::b.defs
+  | @let2 _ _ _ _ _ _ _ x y _ _ b => y::x::b.defs
 
 inductive InstSet.Body.NotDef {Φ : InstSet (Ty α)} (n: ν)
   : {Γ Δ : Ctx ν (Ty α)} → Φ.Body p Γ Δ → Prop
@@ -177,7 +179,7 @@ theorem InstSet.Body.NotDef.not_mem_defs {Φ: InstSet (Ty α)} {b: Φ.Body p Γ 
     exact ⟨hx.symm, b.not_mem_defs⟩
   | let2 hx hy e b => by
     simp only [defs, List.mem_cons, not_or]
-    exact ⟨hx.symm, hy.symm, b.not_mem_defs⟩
+    exact ⟨hy.symm, hx.symm, b.not_mem_defs⟩
 
 theorem InstSet.Body.NotDef.of_not_mem_defs {Φ: InstSet (Ty α)} {b: Φ.Body p Γ Δ}
   : n ∉ b.defs → b.NotDef n
@@ -193,8 +195,8 @@ theorem InstSet.Body.NotDef.of_not_mem_defs {Φ: InstSet (Ty α)} {b: Φ.Body p 
     simp only [defs, List.mem_cons, not_or, and_imp]
     intro hx hy hn
     constructor
-    exact Ne.symm hx
     exact Ne.symm hy
+    exact Ne.symm hx
     exact I hn
 
 theorem InstSet.Body.NotDef.iff_not_mem_defs {Φ: InstSet (Ty α)} {b: Φ.Body p Γ Δ}
@@ -274,3 +276,81 @@ theorem InstSet.Body.rename_iso {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)}
     constructor
     exact e.rename_iso (hb.entry)
     apply I
+
+def InstSet.Body.head_var {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)}
+  (_: Φ.Body p (v::Γ) Δ) : Var ν (Ty α) := v
+
+def InstSet.Body.head2_var {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)}
+  (_: Φ.Body p (v'::v::Γ) Δ) : Var ν (Ty α) := v
+
+def InstSet.Body.inner_ctx {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)}
+  : (b: Φ.Body p Γ Δ) → Ctx ν (Ty α)
+  | nil _ _ => Γ
+  | let1 _ b => b.inner_ctx
+  | let2 _ b => b.inner_ctx
+
+--TODO: why the poor defeq?
+def InstSet.Body.target_inner_ctx {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)}
+  : (b: Φ.Body p Γ Δ) → Φ.Body p Γ b.inner_ctx
+  | nil _ w => by simp only [inner_ctx]; exact nil _ (Ctx.Wk.refl _)
+  | let1 e b => by simp only [inner_ctx]; exact let1 e b.target_inner_ctx
+  | let2 e b => by simp only [inner_ctx]; exact let2 e b.target_inner_ctx
+
+def InstSet.Body.inner_ctx_wk_exit {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)}
+  : (b: Φ.Body p Γ Δ) → b.inner_ctx.Wk Δ
+  | nil _ w => by simp only [inner_ctx]; exact w
+  | let1 _ b => by simp only [inner_ctx]; exact b.inner_ctx_wk_exit
+  | let2 _ b => by simp only [inner_ctx]; exact b.inner_ctx_wk_exit
+
+def InstSet.Body.inner_ctx_wk_entry {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)}
+  : {b: Φ.Body p Γ Δ} → b.SSA → b.inner_ctx.Wk Γ
+  | nil _ _, _=> by simp only [inner_ctx]; exact Ctx.Wk.refl Γ
+  | let1 _ b, h => by
+    simp only [inner_ctx]
+    apply Ctx.Wk.comp
+    apply inner_ctx_wk_entry (by cases h; assumption)
+    apply Ctx.Wk.skip
+    cases h
+    assumption
+    apply Ctx.Wk.refl
+  | let2 _ b, h => by
+    simp only [inner_ctx]
+    apply Ctx.Wk.comp
+    apply inner_ctx_wk_entry (by cases h; assumption)
+    apply Ctx.Wk.skip
+    cases h
+    assumption
+    apply Ctx.Wk.skip
+    cases h
+    assumption
+    apply Ctx.Wk.refl
+
+def InstSet.Body.def_ctx {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)}
+  : (b: Φ.Body p Γ Δ) → Ctx ν (Ty α)
+  | nil _ _ => []
+  | @let1 _ _ _ _ _ A x _ _ b => ⟨x, A⟩::b.def_ctx
+  | @let2 _ _ _ _ _ A B x y _ _ b => ⟨y, B⟩::⟨x, A⟩::b.def_ctx
+
+theorem InstSet.Body.def_ctx_names_eq_defs {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)}
+  (b: Φ.Body p Γ Δ) : b.def_ctx.names = b.defs
+  := by induction b with
+  | nil _ _ => simp [defs, def_ctx, Ctx.names]
+  | let1 _ b I =>
+    simp only [defs, def_ctx, Ctx.names, <-I]
+    rfl
+  | let2 _ b I =>
+    simp only [defs, def_ctx, Ctx.names, <-I]
+    rfl
+
+theorem InstSet.Body.inner_ctx_eq_def_ctx_reverse_append_entry {Φ : InstSet (Ty α)}
+  {Γ Δ : Ctx ν (Ty α)} (b: Φ.Body p Γ Δ) : b.inner_ctx = b.def_ctx.reverse ++ Γ
+  := by induction b with
+  | nil _ _ => simp [inner_ctx, def_ctx, List.nil_append _, Ctx.reverse]
+  | let1 _ b I =>
+    simp only [inner_ctx, I, Ctx.reverse, def_ctx, List.reverse_cons]
+    rw [List.append_assoc]
+    rfl
+  | let2 _ b I =>
+    simp only [inner_ctx, I, Ctx.reverse, def_ctx, List.reverse_cons]
+    rw [List.append_assoc, List.append_assoc]
+    rfl

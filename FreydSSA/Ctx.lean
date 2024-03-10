@@ -591,3 +591,9 @@ theorem Ctx.next_name_not_mem {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder 
 
 theorem Ctx.next_name_fresh {ν α} [LinearOrder ν] [OrderBot ν] [SuccOrder ν] [NoMaxOrder ν]
   (Γ : Ctx ν α) : Γ.Fresh Γ.next_name := Fresh.of_not_mem_names (Γ.next_name_not_mem)
+
+instance : Append (Ctx ν α) := ⟨List.append⟩
+
+def Ctx.reverse {ν α} (Γ : Ctx ν α) : Ctx ν α := List.reverse Γ
+
+--TODO: Define SCtx guaranteeing unique variable names?
