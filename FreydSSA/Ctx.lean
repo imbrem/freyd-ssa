@@ -1,8 +1,11 @@
 import Mathlib.Data.List.Basic
-import Std.Data.List.Basic
+import Mathlib.Data.List.MinMax
 import Mathlib.Data.Set.Basic
 import Mathlib.Data.Set.Function
 import Mathlib.Init.Classical
+import Mathlib.Order.SuccPred.Basic
+
+import FreydSSA.Utils
 
 open List.«term_<+_»
 
@@ -12,13 +15,41 @@ structure Var (ν : Type u) (α : Type v) : Type (max u v) where
 
 def Ctx (ν : Type u) (α : Type v) : Type (max u v) := List (Var ν α)
 
+instance {ν α} : Membership (Var ν α) (Ctx ν α) := List.instMembershipList
+
 @[simp]
 def Ctx.names {ν α} (Γ : Ctx ν α): List ν
   := Γ.map Var.name
 
+instance {ν α} : Membership ν (Ctx ν α) where
+  mem a Γ := a ∈ Γ.names
+
 inductive Ctx.Fresh {ν α} (n : ν) : Ctx ν α → Prop
   | nil : Ctx.Fresh n []
   | cons {Γ x} : x.name ≠ n → Ctx.Fresh n Γ → Ctx.Fresh n (x::Γ)
+
+theorem Ctx.Fresh.not_mem_names {ν α} {n} {Γ : Ctx ν α}
+  : Γ.Fresh n → n ∉ Γ.names
+  | nil, h => by cases h
+  | cons hx hΓ, h => by cases h with
+    | head => contradiction
+    | tail _ h => exact not_mem_names hΓ h
+
+theorem Ctx.Fresh.of_not_mem_names {ν α} {n} {Γ : Ctx ν α} (h: n ∉ Γ.names): Ctx.Fresh n Γ
+  := by induction Γ with
+  | nil => exact Fresh.nil
+  | cons x Γ I =>
+    apply Fresh.cons
+    apply Ne.symm
+    apply List.ne_of_not_mem_cons
+    exact h
+    apply I
+    apply List.not_mem_of_not_mem_cons
+    exact h
+
+theorem Ctx.Fresh.iff_not_mem_names {ν α} (n) (Γ : Ctx ν α)
+  : Γ.Fresh n ↔ n ∉ Γ.names
+  := ⟨Fresh.not_mem_names, Fresh.of_not_mem_names⟩
 
 theorem Ctx.Fresh.head {ν α} {n} {y : Var ν α} {Γ : Ctx ν α}
   : Ctx.Fresh n (y::Γ) → y.name ≠ n
@@ -412,3 +443,54 @@ theorem Ctx.Wk.iso_var_deBruijn {ν α} {Γ : Ctx ν α} {x : ν} {A : α} (n : 
     rfl
     apply var_target_deBruijn
     )
+
+def Ctx.max_name {ν α} [Preorder ν] [DecidableRel λl r: ν => l < r] (Γ : Ctx ν α) : WithBot ν
+  := (Γ.argmax Var.name).map Var.name
+
+theorem Ctx.max_name_maximum_names {ν α} [Preorder ν] [DecidableRel λl r: ν => l < r]
+  (Γ : Ctx ν α) : Γ.max_name = Γ.names.maximum
+  := List.argmax_map Γ Var.name
+
+--TODO: le_max_name_of_mem, le_max_name_of_mem'
+
+def Ctx.min_name {ν α} [Preorder ν] [DecidableRel λl r: ν => l < r] (Γ : Ctx ν α) : WithTop ν
+  := (Γ.argmin Var.name).map Var.name
+
+theorem Ctx.max_name_nil {ν α} [Preorder ν] [DecidableRel λl r: ν => l < r]
+  : Ctx.max_name (@List.nil (Var ν α)) = ⊥
+  := rfl
+
+theorem Ctx.min_name_nil {ν α} [Preorder ν] [DecidableRel λl r: ν => l < r]
+  : Ctx.min_name (@List.nil (Var ν α)) = ⊤
+  := rfl
+
+def Ctx.next_name {ν α}
+  [Preorder ν] [OrderBot ν] [s: SuccOrder ν] [DecidableRel λl r: ν => l < r] (Γ : Ctx ν α) : ν
+  := match Γ.argmax Var.name with
+  | some v => s.succ v.name
+  | none => ⊥
+
+theorem Ctx.next_name_nil {ν α} [Preorder ν] [OrderBot ν] [SuccOrder ν]
+  [DecidableRel λl r: ν => l < r]
+  : Ctx.next_name (@List.nil (Var ν α)) = ⊥
+  := rfl
+
+theorem Ctx.next_name_succ_max_name {ν α} [Preorder ν] [OrderBot ν] [s: SuccOrder ν]
+  [DecidableRel λl r: ν => l < r] (Γ : Ctx ν α)
+  : Γ.next_name = match Γ.max_name with | some x => s.succ x | none => ⊥
+  := by
+    simp only [next_name, max_name, Option.map]
+    generalize hm: List.argmax Var.name Γ = m
+    cases m <;> rfl
+
+--TODO: max_name ≤ next_name
+
+--TODO: le_next_name_of_mem, le_next_name_of_mem'
+
+--TODO: max_name < next_name ∨ IsMax
+
+--TODO: lt_next_name_of_mem ∨ IsMax, lt_next_name_of_mem' ∨ IsMax
+
+--TODO: lt_next_name_of_mem, lt_next_name_of_mem' w/ bounds
+
+--TODO: something other than succ order for a bump? next order or smt?
