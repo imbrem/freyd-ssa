@@ -36,6 +36,8 @@ theorem InstSet.Tm.Iso.refl {Φ : InstSet (Ty α)} {Γ : Ctx ν (Ty α)} {A : Ty
   | var => constructor; apply Ctx.Wk.Iso.refl
   | _ => constructor <;> apply_assumption
 
+--TODO: isomorphic terms for the same context are equal!
+
 theorem InstSet.Tm.Iso.symm {Φ : InstSet (Ty α)}
   {e : Φ.Tm p Γ A} {e' : Φ.Tm p Γ' A}
   (h : e.Iso e') : e'.Iso e
@@ -56,6 +58,11 @@ def InstSet.Tm.to_impure {Φ : InstSet (Ty α)} {A : Ty α} : Φ.Tm p Γ A → �
   | pair p x y => pair 0 x y
   | unit p => unit 0
   | bool p b => bool 0 b
+
+instance {Φ : InstSet (Ty α)} : Coe (Φ.Tm 1 Γ A) (Φ.Tm p Γ A) where
+  coe := match p with
+    | 1 => id
+    | 0 => InstSet.Tm.to_impure
 
 def InstSet.Tm.wk {Φ : InstSet (Ty α)} {A : Ty α} : Γ.Wk Δ → Φ.Tm p Δ A → Φ.Tm p Γ A
   | h, var p h' => var p (h.comp h')

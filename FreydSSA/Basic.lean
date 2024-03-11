@@ -10,16 +10,16 @@ import FreydSSA.Tm
 import FreydSSA.Body
 
 inductive InstSet.Terminator
-  (Φ : InstSet (Ty α)) (Γ : Ctx ν (Ty α)) (L : LCtx ν (Ty α))
+  (Φ : InstSet (Ty α)) (Γ : Ctx ν (Ty α)) (L : LCtx ν κ (Ty α))
   : Type _
-  | br : Φ.Tm 1 Γ A → LCtx.Wk [⟨⟨n, A⟩, Γ⟩] L → Φ.Terminator Γ L
+  | br : Φ.Tm 1 Γ A → LCtx.Wk [⟨ℓ, A, Γ⟩] L → Φ.Terminator Γ L
   | ite : Φ.Tm 1 Γ Ty.bool → Φ.Terminator Γ L → Φ.Terminator Γ L → Φ.Terminator Γ L
 
 def InstSet.Terminator.wk_entry {Φ : InstSet (Ty α)}
   (w: Γ.Wk Δ): Φ.Terminator Δ L → Φ.Terminator Γ L
   | br e h => br (e.wk w) --TODO: clean this up
-    (@LCtx.Wk.comp _ _ [⟨_, Γ⟩] [⟨_, Δ⟩] _
-      (LCtx.Wk.cons ⟨rfl, w⟩ LCtx.Wk.nil) h)
+    (@LCtx.Wk.comp _ _ _ [⟨_, _, Γ⟩] [⟨_, _, Δ⟩] _
+      (LCtx.Wk.cons ⟨rfl, rfl, w⟩ LCtx.Wk.nil) h)
   | ite e t f => ite (e.wk w) (t.wk_entry w) (f.wk_entry w)
 
 def InstSet.Terminator.wk_exit {Φ: InstSet (Ty α)}
@@ -27,7 +27,7 @@ def InstSet.Terminator.wk_exit {Φ: InstSet (Ty α)}
   | br e h, w => br e (h.comp w)
   | ite e t f, w => ite e (t.wk_exit w) (f.wk_exit w)
 
-structure InstSet.BB (Φ : InstSet (Ty α)) (Γ : Ctx ν (Ty α)) (L : LCtx ν (Ty α)) where
+structure InstSet.BB (Φ : InstSet (Ty α)) (Γ : Ctx ν (Ty α)) (L : LCtx ν κ (Ty α)) where
   body: Φ.Body p Γ Δ
   -- Issue: underspecified: can change Δ, so must quotient somehow
   terminator: Φ.Terminator Δ L
@@ -44,90 +44,48 @@ def InstSet.BB.wk_exit {Φ : InstSet (Ty α)}
 
 inductive InstSet.ICFG
   (Φ : InstSet (Ty α))
-  : (L K : LCtx ν (Ty α)) -> Type _
+  : (L K : LCtx ν κ (Ty α)) -> Type _
   | nil : L.Wk K → InstSet.ICFG Φ L K
-  | cons : InstSet.ICFG Φ L (⟨x, Γ⟩::K) → Φ.BB (x::Γ) L → InstSet.ICFG Φ L K
+  | cons : InstSet.ICFG Φ L (⟨ℓ, A, Γ⟩::K) → Φ.BB (⟨x, A⟩::Γ) L → InstSet.ICFG Φ L K
 
 def InstSet.ICFG.wk_exit
-  {Φ : InstSet (Ty α)} {L K M : LCtx ν (Ty α)}
+  {Φ : InstSet (Ty α)} {L K M : LCtx ν κ (Ty α)}
   : (κ: Φ.ICFG L K) → K.Wk M → Φ.ICFG L M
   | nil w, w' => nil (w.comp w')
   | cons κ β, w' => cons (κ.wk_exit (w'.cons (Label.Wk.refl _))) β
 
-structure InstSet.CFG (Φ : InstSet (Ty α)) (L K : LCtx ν (Ty α))
+structure InstSet.CFG (Φ : InstSet (Ty α)) (L K : LCtx ν κ (Ty α))
   where
   looped : L.Wk W
   inner : Φ.ICFG W K
 
 def InstSet.CFG.wk_exit
-  {Φ : InstSet (Ty α)} {L K M : LCtx ν (Ty α)}
+  {Φ : InstSet (Ty α)} {L K M : LCtx ν κ (Ty α)}
   (κ: Φ.CFG L K) (w: K.Wk M): Φ.CFG L M where
   looped := κ.looped
   inner := κ.inner.wk_exit w
 
 def InstSet.CFG.wk_entry
-  {Φ : InstSet (Ty α)} {L K M : LCtx ν (Ty α)}
+  {Φ : InstSet (Ty α)} {L K M : LCtx ν κ (Ty α)}
   (w: L.Wk K) (κ: Φ.CFG K M): Φ.CFG L M where
   looped := w.comp κ.looped
   inner := κ.inner
 
-structure InstSet.Region (Φ : InstSet (Ty α)) (Γ : Ctx ν (Ty α)) (L : LCtx ν (Ty α)) where
+structure InstSet.Region (Φ : InstSet (Ty α)) (Γ : Ctx ν (Ty α)) (L : LCtx ν κ (Ty α)) where
   entry : Φ.BB Γ K
   -- Issue: underspecified: can change K, so must quotient somehow
   cfg : Φ.ICFG K L
 
-inductive GCtx (ν : Type u) (α : Type v) where
-  | ctx : Ctx ν α → GCtx ν α
-  | lctx : LCtx ν α → GCtx ν α
+inductive GCtx (ν κ : Type u) (α : Type v) where
+  | ctx : Ctx ν α → GCtx ν κ α
+  | lctx : LCtx ν κ α → GCtx ν κ α
 
-inductive InstSet.GRegion (Φ : InstSet (Ty α)) : GCtx ν (Ty α) → LCtx ν (Ty α) → Type _
-  | br : Φ.Tm 1 Γ A → LCtx.Wk [⟨⟨n, A⟩, Γ⟩] L → Φ.GRegion (GCtx.ctx Γ) L
+inductive InstSet.GRegion (Φ : InstSet (Ty α)) : GCtx ν κ (Ty α) → LCtx ν κ (Ty α) → Type _
+  | br : Φ.Tm 1 Γ A → LCtx.Wk [⟨ℓ, A, Γ⟩] L → Φ.GRegion (GCtx.ctx Γ) L
   | ite : Φ.Tm 1 Γ Ty.bool
     → Φ.GRegion (GCtx.ctx Γ) L
     → Φ.GRegion (GCtx.ctx Γ) L
     → Φ.GRegion (GCtx.ctx Γ) L
   | dom : Φ.GRegion (GCtx.ctx Γ) K → Φ.GRegion (GCtx.lctx L) K → Φ.GRegion (GCtx.ctx Γ) L
   | nil : L.Wk K → Φ.GRegion (GCtx.lctx L) K
-  | cons : Φ.GRegion (GCtx.lctx L) (⟨x, Γ⟩::K) → Φ.BB (x::Γ) L → Φ.GRegion (GCtx.lctx L) K
-
-inductive InstSet.UTm {α : Type v} (Φ : InstSet (Ty α)) (ν : Type u)
-  : Type (max u v) where
-  | var : ν → Φ.UTm ν
-  | op : Φ.Op p A B → Φ.UTm ν
-  | pair : Φ.UTm ν → Φ.UTm ν → Φ.UTm ν
-  | unit : Φ.UTm ν
-  | bool : Bool → Φ.UTm ν
-
-inductive InstSet.UBody {α : Type v} (Φ : InstSet (Ty α)) (ν : Type u)
-  : Type (max u v) where
-  | nil : Φ.UBody ν
-  | let1 : Φ.UTm ν → Φ.UBody ν → Φ.UBody ν
-  | let2 : Φ.UTm ν → Φ.UBody ν → Φ.UBody ν
-
-inductive InstSet.UTerminator {α : Type v} (Φ : InstSet (Ty α)) (ν : Type u)
-  : Type (max u v) where
-  | br : Φ.UTm ν → List ν → Φ.UTerminator ν
-  | ite : Φ.UTm ν → Φ.UTerminator ν → Φ.UTerminator ν → Φ.UTerminator ν
-
-structure InstSet.UBB {α : Type v} (Φ : InstSet (Ty α)) (ν : Type u)
-  : Type (max u v) where
-  body : Φ.UBody ν
-  terminator : Φ.UTerminator ν
-
-inductive InstSet.UCFG {α : Type v} (Φ : InstSet (Ty α)) (ν : Type u)
-  : Type (max u v) where
-  | nil : Φ.UCFG ν
-  | cons : Φ.UCFG ν → Φ.UBB ν → Φ.UCFG ν
-
-structure InstSet.URegion {α : Type v} (Φ : InstSet (Ty α)) (ν : Type u)
-  : Type (max u v) where
-  entry : Φ.UBB ν
-  cfg : Φ.UCFG ν
-
-inductive InstSet.UGRegion {α : Type v} (Φ : InstSet (Ty α)) (ν : Type u)
-  : Type (max u v) where
-  | br : Φ.UTm ν → List ν → Φ.UGRegion ν
-  | ite : Φ.UTm ν → Φ.UGRegion ν → Φ.UGRegion ν → Φ.UGRegion ν
-  | dom : Φ.UGRegion ν → Φ.UGRegion ν → Φ.UGRegion ν
-  | nil : List ν → Φ.UGRegion ν
-  | cons : Φ.UGRegion ν → Φ.UBB ν → Φ.UGRegion ν
+  | cons : Φ.GRegion (GCtx.lctx L) (⟨ℓ, A, Γ⟩::K) → Φ.BB (⟨x, A⟩::Γ) L → Φ.GRegion (GCtx.lctx L) K
