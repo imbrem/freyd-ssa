@@ -8,6 +8,8 @@ import FreydSSA.Ctx
 import FreydSSA.InstSet
 import FreydSSA.Tm
 import FreydSSA.Body
+import FreydSSA.Subst
+import FreydSSA.Untyped
 
 inductive InstSet.Terminator
   (Φ : InstSet (Ty α)) (Γ : Ctx ν (Ty α)) (L : LCtx ν κ (Ty α))

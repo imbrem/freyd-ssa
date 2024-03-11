@@ -1,7 +1,9 @@
 import Mathlib.Data.List.Basic
 import Mathlib.Data.List.MinMax
+import Mathlib.Data.List.Nodup
 import Mathlib.Data.Set.Basic
 import Mathlib.Data.Set.Function
+import Mathlib.Data.Fin.Basic
 import Mathlib.Init.Classical
 import Mathlib.Order.SuccPred.Basic
 
@@ -17,9 +19,34 @@ def Ctx (ν : Type u) (α : Type v) : Type (max u v) := List (Var ν α)
 
 instance {ν α} : Membership (Var ν α) (Ctx ν α) := List.instMembershipList
 
+def Ctx.Typed (Γ : Ctx ν α) : Prop
+  := ∀ v ∈ Γ, ∀ v' ∈ Γ, v.name = v'.name → v.ty = v'.ty
+
 @[simp]
 def Ctx.names {ν α} (Γ : Ctx ν α): List ν
   := Γ.map Var.name
+
+def Ctx.Nodup {ν α} (Γ : Ctx ν α) : Prop
+  := Γ.names.Nodup
+
+theorem Ctx.Nodup.typed {Γ : Ctx ν α} (h : Γ.Nodup) : Γ.Typed
+  := λ v hv v' hv' hvv' => open Classical in Classical.by_contradiction (λb => by
+    induction Γ with
+    | nil => cases hv
+    | cons x Γ I =>
+      cases hv with
+      | head => cases hv' with
+        | head => contradiction
+        | tail _ hm =>
+          have hm := List.mem_map_of_mem Var.name hm
+          exact h.not_mem (hvv' ▸ hm)
+      | tail _ hm =>
+        cases hv' with
+        | head =>
+          have hm := List.mem_map_of_mem Var.name hm
+          exact h.not_mem (hvv' ▸ hm)
+        | tail _ hm' => exact I h.of_cons hm hm'
+  )
 
 instance {ν α} : Membership ν (Ctx ν α) where
   mem a Γ := a ∈ Γ.names
@@ -95,6 +122,45 @@ def Ctx.Wk.refl {ν α} : (Γ : Ctx ν α) → Γ.Wk Γ
 def Ctx.Wk.drop {ν α} : (Γ : Ctx ν α) → Γ.Wk []
   | [] => nil
   | _::Γ => skip Fresh.nil (drop Γ)
+
+def Ctx.Wk.head {ν α} (v : Var ν α) (Γ : Ctx ν α) : Wk (v::Γ) [v]
+  := cons v (drop Γ)
+
+def Ctx.get_wk {ν α} (Γ : Ctx ν α) (i : Fin Γ.length)
+  (hi : ∀ j, (Γ.get i).name = (Γ.get j).name -> i ≤ j) : Wk Γ [Γ.get i]
+  := match Γ, i with
+  | x::Γ, ⟨0, _⟩ => Wk.head x Γ
+  | x::Γ, ⟨i+1, h⟩ => Wk.skip (Fresh.of_not_mem_names
+      (λhm => by
+        match x with
+        | ⟨x, A⟩ =>
+          simp only [
+            names, List.get_cons_succ, List.map_cons, List.map_nil,
+            List.mem_singleton
+          ] at hm
+          apply Nat.not_succ_le_zero
+          apply hi ⟨0, by simp⟩
+          simp [hm]
+        )
+    )
+    (get_wk Γ
+      ⟨i, Nat.lt_of_succ_lt_succ h⟩
+      λj hj => Nat.le_of_succ_le_succ (hi j.succ hj))
+
+def Ctx.Nodup.get {ν α} {Γ : Ctx ν α} (hΓ : Γ.Nodup) (i : Fin Γ.length)
+  : Wk Γ [Γ.get i]
+  := Γ.get_wk i (λ⟨j, hj⟩ hj' => le_of_eq $ open Classical in by
+    match i with
+    | ⟨i, hi⟩ =>
+      apply Fin.ext
+      rw [<-@List.get_indexOf _ (Classical.typeDecidableEq _) _ hΓ
+        ⟨i, by rw [names, List.length_map]; exact hi⟩]
+      rw [<-@List.get_indexOf _ (Classical.typeDecidableEq _) _ hΓ
+        ⟨j, by rw [names, List.length_map]; exact hj⟩]
+      simp [hj']
+  )
+
+--TODO: Ctx.Typed.get, equal to other gets
 
 inductive Ctx.Iso : Ctx ν α → Ctx ν' α → Prop
   | nil : Ctx.Iso [] []

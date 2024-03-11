@@ -1,4 +1,5 @@
 import Mathlib.Data.List.Basic
+import Mathlib.Data.List.DropRight
 import Std.Data.List.Basic
 import Mathlib.Data.Set.Basic
 import Mathlib.Data.Set.Function
@@ -14,6 +15,12 @@ inductive InstSet.Subst (Φ : InstSet (Ty α)) : Ctx ν (Ty α) → Ctx ν (Ty �
   Φ.Tm 1 Γ A →
   Subst Φ Γ Δ →
   Subst Φ Γ (⟨x, A⟩::Δ)
+
+def InstSet.Subst.fromTuple {Φ : InstSet (Ty α)} {Γ Δ : Ctx ν (Ty α)}
+  (f: (i : Fin Δ.length) → Φ.Tm 1 Γ (Δ.get i).ty) : Φ.Subst Γ Δ
+  := match Δ with
+  | [] => nil _
+  | x::Δ => cons (f ⟨0, by simp⟩) (fromTuple (λi => f i.succ))
 
 def InstSet.Subst.wk_entry {Φ : InstSet (Ty α)}
   {Γ Δ Ξ : Ctx ν (Ty α)} (w: Γ.Wk Δ) : Φ.Subst Δ Ξ → Φ.Subst Γ Ξ
@@ -45,9 +52,9 @@ def InstSet.Subst.comp {Φ : InstSet (Ty α)}
   | nil _ => nil _
   | cons e τ => cons (e.subst σ) (σ.comp τ)
 
---TODO: Subst.id, Subst.comp_id
-
 --TODO: Subst.comp_assoc
+
+--TODO: Subst.id, Subst.comp_id _for Typed_
 
 --TODO: Subst.ofWk, Subst.comp_wk, Subst.wk_comp, Subst.wk_comp_wk, etc.
 

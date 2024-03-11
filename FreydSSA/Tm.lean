@@ -9,11 +9,15 @@ import FreydSSA.InstSet
 
 inductive InstSet.Tm {ν : Type u} {α : Type v} (Φ : InstSet (Ty α))
   : Purity → Ctx ν (Ty α) → Ty α → Type (max u v) where
-  | var {n a} (p) : Γ.Wk [⟨n, a⟩] → Tm Φ p Γ a
+  | var {n A} (p) : Γ.Wk [⟨n, A⟩] → Tm Φ p Γ A
   | op (f: Φ.Op p A B) : Tm Φ 1 Γ A → Tm Φ p Γ B
   | pair (p) : Tm Φ 1 Γ A → Tm Φ 1 Γ B → Tm Φ p Γ (Ty.pair A B)
   | unit (p) : Tm Φ p Γ Ty.unit
   | bool (p) (b: Bool) : Tm Φ p Γ Ty.bool
+
+def InstSet.Tm.var_head {Φ : InstSet (Ty α)} (p)
+  (x : ν) (A : Ty α) (Γ : Ctx ν (Ty α)) : Φ.Tm p (⟨x, A⟩::Γ) A
+  := Tm.var p (Ctx.Wk.head _ _)
 
 inductive InstSet.Tm.IsoSh {Φ : InstSet (Ty α)}: Φ.Tm p Γ A → Φ.Tm p' Γ' A' → Prop
   | var (p p') : w.Iso w' → IsoSh (Tm.var p w) (Tm.var p' w')
