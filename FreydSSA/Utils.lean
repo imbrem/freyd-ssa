@@ -1,6 +1,6 @@
 import Mathlib.Data.List.MinMax
 
-theorem List.argmax_map [Preorder β] [DecidableRel λ l r: β => l < r] (Γ: List α) (f: α → β)
+theorem List.argmax_map [Preorder β] [DecidableRel λ l r : β => l < r] (Γ : List α) (f : α → β)
   : (Γ.argmax f).map f = (Γ.map f).maximum := by
   simp only [map_cons, maximum, argmax, foldl]
   generalize hbase: @none α = base

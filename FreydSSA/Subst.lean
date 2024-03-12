@@ -113,6 +113,12 @@ def InstSet.Subst.cons2 {Φ : InstSet (Ty α)}
   : Φ.Subst (x::Γ) (x::Δ)
   := (σ.wk_entry (Ctx.Wk.skip hx (Ctx.Wk.refl Γ))).cons (Tm.var 1 (Ctx.Wk.head _ _))
 
+def InstSet.Subst.cons2' {Φ : InstSet (Ty α)}
+  {Γ Δ : Ctx ν (Ty α)} {x : Var ν (Ty α)} (σ : Φ.Subst Γ Δ) (hx : x.name ∉ Γ.names)
+  : Φ.Subst (x::Γ) (x::Δ)
+  := (σ.wk_entry (Ctx.Wk.skip (Ctx.Fresh.of_not_mem_names hx) (Ctx.Wk.refl Γ))).cons
+    (Tm.var 1 (Ctx.Wk.head _ _))
+
 theorem InstSet.Subst.ofWk_refl {Φ : InstSet (Ty α)}
   {Γ : Ctx ν (Ty α)} (hΓ : Γ.Nodup)
   : @ofWk _ _ Φ _ _ (Ctx.Wk.refl Γ) hΓ = Subst.id hΓ
