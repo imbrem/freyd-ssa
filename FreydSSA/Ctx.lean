@@ -160,6 +160,66 @@ def Ctx.Nodup.get {ν α} {Γ : Ctx ν α} (hΓ : Γ.Nodup) (i : Fin Γ.length)
       simp [hj']
   )
 
+theorem Ctx.names_indexOf_lt_length {ν α} [DecidableEq ν] {x : ν} {Γ : Ctx ν α}
+  (h : x ∈ Γ.names) : Γ.names.indexOf x < Γ.length
+  := cast (by simp) (List.indexOf_lt_length.mpr h)
+
+-- Note this is just a poor reimplementation of Sigma, so maybe just use that...
+def Ctx.nameIndex {ν α} [DecidableEq ν] (Γ : Ctx ν α) (x : ν): ℕ
+  := Γ.findIdx (λv => v.name = x)
+
+def Ctx.nameIndex_lt_length_of_mem {ν α} [DecidableEq ν] {x : ν} {Γ : Ctx ν α}
+  (h : x ∈ Γ.names) : Γ.nameIndex x < Γ.length
+  := List.findIdx_lt_length_of_exists (by
+      induction Γ with
+      | nil => cases h
+      | cons v Γ I =>
+        if h' : v.name = x then
+          exact ⟨v, List.Mem.head _, by simp [h']⟩
+        else
+          cases h with
+          | head => contradiction
+          | tail _ h =>
+            have ⟨v', hv', hveq⟩ := I h;
+            exact ⟨v', hv'.tail _, hveq⟩
+  )
+
+theorem Ctx.get_nameIndex {ν α} [DecidableEq ν] {x : ν} {Γ : Ctx ν α}
+  (h : x ∈ Γ.names) : (Γ.get ⟨Γ.nameIndex x, Γ.nameIndex_lt_length_of_mem h⟩).name = x
+  := by
+    simp only [nameIndex]
+    apply of_decide_eq_true
+    apply @List.findIdx_get _ (λv => v.name = x) Γ
+
+theorem Ctx.nameIndex_cons {ν α} [DecidableEq ν] (v : Var ν α) (Γ : Ctx ν α) (x : ν)
+  : nameIndex (v::Γ) x = if v.name = x then 0 else (nameIndex Γ x) + 1
+  := by simp [nameIndex, List.findIdx_cons _ v Γ]
+
+-- TODO: make this general findIdx, findIndex lemma; why is this not in stdlib
+theorem Ctx.nameIndex_first {ν α} [DecidableEq ν] (x : ν) (Γ : Ctx ν α)
+  : ∀j, x = (Γ.get j).name → Γ.nameIndex x ≤ j
+  := λj hj => by induction Γ with
+    | nil => exact Nat.zero_le _
+    | cons v Γ I =>
+      rw [nameIndex_cons]
+      split
+      simp
+      match j with
+      | ⟨0, _⟩ => cases hj; contradiction
+      | ⟨j + 1, hj'⟩ =>
+        simp only [add_le_add_iff_right]
+        exact I ⟨j, (Nat.lt_of_succ_lt_succ hj')⟩ hj
+
+def Ctx.get_first {ν α} [DecidableEq ν] {x : ν} {Γ : Ctx ν α} (h: x ∈ Γ.names)
+   : Wk Γ [Γ.get ⟨Γ.nameIndex x, Γ.nameIndex_lt_length_of_mem h⟩]
+  := Γ.get_wk
+    ⟨Γ.nameIndex x, Γ.nameIndex_lt_length_of_mem h⟩
+    ((Γ.get_nameIndex h).symm ▸ (Γ.nameIndex_first x))
+
+-- def Ctx.get_typed {ν α} [DecidableEq ν] {v : Var ν α} {Γ : Ctx ν α} (h : v ∈ Γ)
+--   (ht : ∀ v' ∈ Γ, v.name = v'.name → v.ty = v'.ty) : ...
+--   := sorry
+
 --TODO: Ctx.Typed.get, equal to other gets
 
 inductive Ctx.Iso : Ctx ν α → Ctx ν' α → Prop
