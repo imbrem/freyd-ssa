@@ -6,9 +6,8 @@ import Mathlib.Init.Classical
 
 import FreydSSA.Ctx
 import FreydSSA.InstSet
-import FreydSSA.Tm
+import FreydSSA.Term
 import FreydSSA.Body
-import FreydSSA.Subst
 import FreydSSA.Untyped
 
 inductive InstSet.Terminator

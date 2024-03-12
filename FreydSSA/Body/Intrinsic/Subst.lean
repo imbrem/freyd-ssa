@@ -1,5 +1,5 @@
-import FreydSSA.Body.Basic
-import FreydSSA.Subst
+import FreydSSA.Body.Intrinsic.Basic
+import FreydSSA.Term.Intrinsic.Subst
 
 -- def InstSet.Body.SSA.subst [Φ : InstSet φ (Ty α)] {Γ Δ Ξ : Ctx ν (Ty α)} (σ: Φ.Subst Γ Δ)
 --   : {b: Φ.Body p Δ Ξ} → b.SSA → Γ.names.Disjoint b.defs

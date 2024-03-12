@@ -6,7 +6,7 @@ import Mathlib.Init.Classical
 
 import FreydSSA.Ctx
 import FreydSSA.InstSet
-import FreydSSA.Tm
+import FreydSSA.Term.Intrinsic.Basic
 
 --TODO: do we need a version which forbids shadowing? but still need SSA reasoning...
 

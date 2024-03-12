@@ -1,2 +1,2 @@
-import FreydSSA.Body.Basic
-import FreydSSA.Body.Subst
+import FreydSSA.Body.Intrinsic.Basic
+import FreydSSA.Body.Intrinsic.Subst

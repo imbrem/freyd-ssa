@@ -7,7 +7,7 @@ import Mathlib.Init.Classical
 
 import FreydSSA.Ctx
 import FreydSSA.InstSet
-import FreydSSA.Tm
+import FreydSSA.Term.Intrinsic.Basic
 
 inductive InstSet.Subst [Φ : InstSet φ (Ty α)] : Ctx ν (Ty α) → Ctx ν (Ty α) → Type _
 | nil (Γ) : Φ.Subst Γ []
