@@ -1,7 +1,7 @@
 import FreydSSA.Body.Basic
 import FreydSSA.Subst
 
--- def InstSet.Body.SSA.subst {Φ : InstSet (Ty α)} {Γ Δ Ξ : Ctx ν (Ty α)} (σ: Φ.Subst Γ Δ)
+-- def InstSet.Body.SSA.subst [Φ : InstSet φ (Ty α)] {Γ Δ Ξ : Ctx ν (Ty α)} (σ: Φ.Subst Γ Δ)
 --   : {b: Φ.Body p Δ Ξ} → b.SSA → Γ.names.Disjoint b.defs
 --     → (Ξ' : Ctx ν (Ty α)) × Φ.Body p Γ Ξ' × Φ.Subst Ξ' Ξ
 --   | Body.nil _ w, _, _ => ⟨Γ, Body.nil p (Ctx.Wk.refl _), σ.wk_exit w⟩

@@ -1,51 +1,53 @@
 import FreydSSA.Ctx
 import FreydSSA.InstSet
 
-inductive InstSet.UTm {α : Type v} (Φ : InstSet α) (ν : Type u)
-  : Type (max u v) where
-  | var : ν → Φ.UTm ν
-  | op : Φ.Op p A B → Φ.UTm ν → Φ.UTm ν
-  | pair : Φ.UTm ν → Φ.UTm ν → Φ.UTm ν
-  | unit : Φ.UTm ν
-  | bool : Bool → Φ.UTm ν
+--TODO: map_inst
 
-def InstSet.UTm.rename {α : Type v} {Φ : InstSet α} {ν ν'}
-  (σ : ν → ν') : Φ.UTm ν → Φ.UTm ν'
+inductive UTm (φ : Type _) (ν  : Type _)
+   : Type _ where
+  | var : ν → UTm φ ν
+  | op : φ → UTm φ ν → UTm φ ν
+  | pair : UTm φ ν → UTm φ ν → UTm φ ν
+  | unit : UTm φ ν
+  | bool : Bool → UTm φ ν
+
+def UTm.rename {ν ν'}
+  (σ : ν → ν') : UTm φ ν → UTm φ ν'
   | var x => var (σ x)
   | op f e => op f (e.rename σ)
   | pair l r => pair (l.rename σ) (r.rename σ)
   | unit => unit
   | bool b => bool b
 
-def InstSet.UTm.rewrite {α : Type v} {Φ : InstSet α} {ν ν'}
-  (σ : ν → Φ.UTm ν') : Φ.UTm ν → Φ.UTm ν'
+def UTm.rewrite {ν ν'}
+  (σ : ν → UTm φ ν') : UTm φ ν → UTm φ ν'
   | var x => σ x
   | op f e => op f (e.rewrite σ)
   | pair l r => pair (l.rewrite σ) (r.rewrite σ)
   | unit => unit
   | bool b => bool b
 
-inductive InstSet.UBody {α : Type v} (Φ : InstSet α) (ν : Type u)
-  : Type (max u v) where
-  | nil : Φ.UBody ν
-  | let1 : ν → Φ.UTm ν → Φ.UBody ν → Φ.UBody ν
-  | let2 : ν → ν → Φ.UTm ν → Φ.UBody ν → Φ.UBody ν
+inductive UBody (φ : Type _) (ν  : Type _)
+   : Type _ where
+  | nil : UBody φ ν
+  | let1 : ν → UTm φ ν → UBody φ ν → UBody φ ν
+  | let2 : ν → ν → UTm φ ν → UBody φ ν → UBody φ ν
 
-def InstSet.UBody.rename {α : Type v} {Φ : InstSet α} {ν ν'}
-  (σ : ν → ν') : Φ.UBody ν → Φ.UBody ν'
+def UBody.rename {φ ν ν'}
+  (σ : ν → ν') : UBody φ ν → UBody φ ν'
   | nil => nil
   | let1 x e b => let1 (σ x) (e.rename σ) (b.rename σ)
   | let2 x y e b => let2 (σ x) (σ y) (e.rename σ) (b.rename σ)
 
 --TODO: define capture avoiding substitution?
-def InstSet.UBody.rewrite {α : Type v} {Φ : InstSet α} {ν}
-  (σ : ν → Φ.UTm ν) : Φ.UBody ν → Φ.UBody ν
+def UBody.rewrite {φ ν}
+  (σ : ν → UTm φ ν) : UBody φ ν → UBody φ ν
   | nil => nil
   | let1 x e b => let1 x (e.rewrite σ) (b.rewrite σ)
   | let2 x y e b => let2 x y (e.rewrite σ) (b.rewrite σ)
 
-def InstSet.UBody.rewrite' {α : Type v} {Φ : InstSet α} {ν}
-  (σ : ν → ν' ⊕ Φ.UTm ν') : Φ.UBody ν → Φ.UBody ν'
+def UBody.rewrite' {φ ν}
+  (σ : ν → ν' ⊕ UTm φ ν') : UBody φ ν → UBody φ ν'
   | nil => nil
   | let1 x e b => match σ x with
     | Sum.inl x' => let1 x' (e.rewrite (λz => (σ z).elim UTm.var id)) (b.rewrite' σ)
@@ -55,86 +57,88 @@ def InstSet.UBody.rewrite' {α : Type v} {Φ : InstSet α} {ν}
       => let2 x' y' (e.rewrite (λz => (σ z).elim UTm.var id)) (b.rewrite' σ)
     | _, _ => (b.rewrite' σ)
 
-inductive InstSet.UTerminator {α : Type v} (Φ : InstSet α) (ν κ : Type u)
-  : Type (max u v) where
-  | br : κ → Φ.UTm ν → Φ.UTerminator ν κ
-  | ite : Φ.UTm ν → Φ.UTerminator ν κ → Φ.UTerminator ν κ → Φ.UTerminator ν κ
+inductive UTerminator (φ : Type _) (ν : Type _) (κ : Type _)
+   : Type _ where
+  | br : κ → UTm φ ν → UTerminator φ ν κ
+  | ite : UTm φ ν → UTerminator φ ν κ → UTerminator φ ν κ → UTerminator φ ν κ
 
-def InstSet.UTerminator.rename {α : Type v} {Φ : InstSet α} {ν ν'}
-  (σ : ν → ν') : Φ.UTerminator ν κ → Φ.UTerminator ν' κ
+def UTerminator.rename {φ ν ν' κ}
+  (σ : ν → ν') : UTerminator φ ν κ → UTerminator φ ν' κ
   | br ℓ e => br ℓ (e.rename σ)
   | ite c t f => ite (c.rename σ) (t.rename σ) (f.rename σ)
 
-def InstSet.UTerminator.rename_label {α : Type v} {Φ : InstSet α} {ν}
-  (σ : κ → κ') : Φ.UTerminator ν κ → Φ.UTerminator ν κ'
+def UTerminator.rename_label {φ ν}
+  (σ : κ → κ') : UTerminator φ ν κ → UTerminator φ ν κ'
   | br ℓ e => br (σ ℓ) e
   | ite c t f => ite c (t.rename_label σ) (f.rename_label σ)
 
-structure InstSet.UBB {α : Type v} (Φ : InstSet α) (ν κ : Type u)
-  : Type (max u v) where
-  body : Φ.UBody ν
-  terminator : Φ.UTerminator ν κ
+structure UBB (φ : Type _) (ν : Type _) (κ : Type _)
+  : Type _ where
+  body : UBody φ ν
+  terminator : UTerminator φ ν κ
 
-def InstSet.UBB.rename {α : Type v} {Φ : InstSet α} {ν ν' κ}
-  (σ : ν → ν') (β : Φ.UBB ν κ) : Φ.UBB ν' κ where
+def UBB.rename {φ ν ν' κ}
+  (σ : ν → ν') (β : UBB φ ν κ) : UBB φ ν' κ where
   body := β.body.rename σ
   terminator := β.terminator.rename σ
 
-def InstSet.UBB.rename_label {α : Type v} {Φ : InstSet α} {ν κ κ'}
-  (σ : κ → κ') (β : Φ.UBB ν κ) : Φ.UBB ν κ' where
+def UBB.rename_label {φ ν κ κ'}
+  (σ : κ → κ') (β : UBB φ ν κ) : UBB φ ν κ' where
   body := β.body
   terminator := β.terminator.rename_label σ
 
-inductive InstSet.UCFG {α : Type v} (Φ : InstSet α) (ν κ : Type u)
-  : Type (max u v) where
-  | nil : Φ.UCFG ν κ
-  | cons : Φ.UCFG ν κ → κ → ν → α → Φ.UBB ν κ → Φ.UCFG ν κ
+inductive UCFG (φ : Type _) (α : Type _) (ν : Type _) (κ : Type _)
+  : Type _ where
+  | nil : UCFG φ α ν κ
+  | cons : UCFG φ α ν κ → κ → ν → α → UBB φ ν κ → UCFG φ α ν κ
 
-def InstSet.UCFG.rename {α : Type v} {Φ : InstSet α} {ν ν' κ}
-  (σ : ν → ν') : Φ.UCFG ν κ → Φ.UCFG ν' κ
+def UCFG.rename {φ α ν ν' κ}
+  (σ : ν → ν') : UCFG φ α ν κ → UCFG φ α ν' κ
   | nil => nil
   | cons Φ κ x t b => cons (Φ.rename σ) κ (σ x) t (b.rename σ)
 
-def InstSet.UCFG.rename_label {α : Type v} {Φ : InstSet α} {ν κ κ'}
-  (σ : κ → κ') : Φ.UCFG ν κ → Φ.UCFG ν κ'
+def UCFG.rename_label {φ α ν κ κ'}
+  (σ : κ → κ') : UCFG φ α ν κ → UCFG φ α ν κ'
   | nil => nil
   | cons Φ κ x t b => cons (Φ.rename_label σ) (σ κ) x t (b.rename_label σ)
 
-structure InstSet.URegion {α : Type v} (Φ : InstSet α) (ν κ : Type u)
-  : Type (max u v) where
-  entry : Φ.UBB ν κ
-  cfg : Φ.UCFG ν κ
+structure URegion (φ : Type _) (α : Type _) (ν : Type _) (κ : Type _)
+  : Type _ where
+  entry : UBB φ ν κ
+  cfg : UCFG φ α ν κ
 
-def InstSet.URegion.rename {α : Type v} {Φ : InstSet α} {ν ν' κ}
-  (σ : ν → ν') (β : Φ.URegion ν κ) : Φ.URegion ν' κ where
+def URegion.rename {φ α ν ν' κ}
+  (σ : ν → ν') (β : URegion φ α ν κ) : URegion φ α ν' κ where
   entry := β.entry.rename σ
   cfg := β.cfg.rename σ
 
-def InstSet.URegion.rename_label {α : Type v} {Φ : InstSet α} {ν κ κ'}
-  (σ : κ → κ') (β : Φ.URegion ν κ) : Φ.URegion ν κ' where
+def URegion.rename_label {φ α ν κ κ'}
+  (σ : κ → κ') (β : URegion φ α ν κ) : URegion φ α ν κ' where
   entry := β.entry.rename_label σ
   cfg := β.cfg.rename_label σ
 
-inductive InstSet.UGRegion {α : Type v} (Φ : InstSet α) (ν κ : Type u)
-  : Type (max u v) where
-  | br : Φ.UTm ν → List ν → Φ.UGRegion ν κ
-  | ite : Φ.UTm ν → Φ.UGRegion ν κ → Φ.UGRegion ν κ → Φ.UGRegion ν κ
-  | dom : Φ.UGRegion ν κ → Φ.UGRegion ν κ → Φ.UGRegion ν κ
-  | nil : Φ.UGRegion ν κ
-  | cons : Φ.UGRegion ν κ → κ → ν → α → Φ.UBB ν κ → Φ.UGRegion ν κ
+inductive UGRegion (φ : Type _) (α : Type _) (ν : Type _) (κ : Type _)
+  : Type _ where
+  | br : κ → UTm φ ν → UGRegion φ α ν κ
+  | ite : UTm φ ν → UGRegion φ α ν κ → UGRegion φ α ν κ → UGRegion φ α ν κ
+  | dom : UGRegion φ α ν κ → UGRegion φ α ν κ → UGRegion φ α ν κ
+  | nil : UGRegion φ α ν κ
+  | cons : UGRegion φ α ν κ → κ → ν → α → UGRegion φ α ν κ → UGRegion φ α ν κ
 
-def InstSet.UGRegion.rename {α : Type v} {Φ : InstSet α} {ν ν' κ}
-  (σ : ν → ν') : Φ.UGRegion ν κ → Φ.UGRegion ν' κ
-  | br e xs => br (e.rename σ) (xs.map σ)
+def UGRegion.rename {φ α ν ν' κ}
+  (σ : ν → ν') : UGRegion φ α ν κ → UGRegion φ α ν' κ
+  | br ℓ e => br ℓ (e.rename σ)
   | ite c t f => ite (c.rename σ) (t.rename σ) (f.rename σ)
   | dom d r => dom (d.rename σ) (r.rename σ)
   | nil => nil
   | cons r ℓ x t b => cons (r.rename σ) ℓ (σ x) t (b.rename σ)
 
-def InstSet.UGRegion.rename_label {α : Type v} {Φ : InstSet α} {ν κ κ'}
-  (σ : κ → κ') : Φ.UGRegion ν κ → Φ.UGRegion ν κ'
-  | br e xs => br e xs
+def UGRegion.rename_label {φ α ν κ κ'}
+  (σ : κ → κ') : UGRegion φ α ν κ → UGRegion φ α ν κ'
+  | br ℓ e => br (σ ℓ) e
   | ite c t f => ite c (t.rename_label σ) (f.rename_label σ)
   | dom d r => dom (d.rename_label σ) (r.rename_label σ)
   | nil => nil
   | cons r ℓ x t b => cons (r.rename_label σ) (σ ℓ) x t (b.rename_label σ)
+
+--TODO: map_ty for UGRegion

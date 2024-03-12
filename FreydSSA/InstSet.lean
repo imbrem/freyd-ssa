@@ -8,18 +8,27 @@ inductive Purity
   | pure
   | impure
 
+-- TODO: think about this annotation
+@[reducible]
 instance : OfNat Purity 0 where
   ofNat := Purity.impure
 
+@[reducible]
 instance : OfNat Purity 1 where
   ofNat := Purity.pure
 
-structure InstSet (α : Type u) : Type _ where
-  Op : Purity → α → α → Type
-  pure_to_impure : Op 1 a b → Op 0 a b
+class InstSet (φ: Type u) (α : Type v) : Type _ where
+  Op : φ → Purity → α → α → Prop
+  pure_to_impure : Op f 1 A B → Op f 0 A B
 
-def InstSet.to_impure {α : Type u} (Φ : InstSet α) {p} {A B : α} (f : Φ.Op p A B)
-  : Φ.Op 0 A B
+def InstSet.to_impure [InstSet φ α] {p} {f : φ} {A B : α}
+  (h : Op f p A B) : Op f 0 A B
   := match p with
-  | Purity.pure => Φ.pure_to_impure f
-  | Purity.impure => f
+  | Purity.pure => pure_to_impure h
+  | Purity.impure => h
+
+def InstSet.from_pure [InstSet φ α] {p} {f : φ} {A B : α}
+  (h : Op f 1 A B) : Op f p A B
+  := match p with
+  | Purity.pure => h
+  | Purity.impure => pure_to_impure h
