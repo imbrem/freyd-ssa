@@ -78,6 +78,10 @@ theorem Ctx.Fresh.iff_not_mem_names {ν α} (n) (Γ : Ctx ν α)
   : Γ.Fresh n ↔ n ∉ Γ.names
   := ⟨Fresh.not_mem_names, Fresh.of_not_mem_names⟩
 
+theorem Ctx.nodup_cons {ν α} {v : Var ν α} {Γ : Ctx ν α}
+  : Ctx.Nodup (v::Γ) ↔ Γ.Fresh v.name ∧ Γ.Nodup
+  := by simp only [Fresh.iff_not_mem_names]; exact List.nodup_cons
+
 theorem Ctx.Fresh.head {ν α} {n} {y : Var ν α} {Γ : Ctx ν α}
   : Ctx.Fresh n (y::Γ) → y.name ≠ n
   | cons hxn _ => hxn
@@ -85,6 +89,14 @@ theorem Ctx.Fresh.head {ν α} {n} {y : Var ν α} {Γ : Ctx ν α}
 theorem Ctx.Fresh.tail {ν α} {n} {y : Var ν α} {Γ : Ctx ν α}
   : Ctx.Fresh n (y::Γ) → Ctx.Fresh n Γ
   | cons _ hn => hn
+
+theorem Ctx.Nodup.head {ν α} {v : Var ν α} {Γ : Ctx ν α}
+  : Ctx.Nodup (v::Γ) → Γ.Fresh v.name
+  := λh => (Ctx.nodup_cons.mp h).1
+
+theorem Ctx.Nodup.tail {ν α} {v : Var ν α} {Γ : Ctx ν α}
+  : Ctx.Nodup (v::Γ) → Γ.Nodup
+  := λh => (Ctx.nodup_cons.mp h).2
 
 inductive Ctx.Wk {ν: Type u} {α: Type v} : Ctx ν α → Ctx ν α → Type (max u v)
   | nil : Ctx.Wk [] []
@@ -98,6 +110,15 @@ theorem Ctx.Fresh.wk {ν α} {Γ Δ: Ctx ν α} {n: ν}: Fresh n Γ → Γ.Wk Δ
   | _, Wk.nil => nil
   | cons hxn hn, Wk.cons _ h => cons hxn (hn.wk h)
   | cons _ hn, Wk.skip _ h => hn.wk h
+
+theorem Ctx.Nodup.wk {ν α} {Γ Δ: Ctx ν α} (hΓ: Γ.Nodup) (h: Γ.Wk Δ) : Δ.Nodup
+  := by induction h with
+  | nil => exact hΓ
+  | cons v w I =>
+    simp [Ctx.nodup_cons]
+    exact ⟨hΓ.head.wk w, I hΓ.tail⟩
+  | skip _ _ I =>
+    exact I hΓ.tail
 
 def Ctx.Wk.comp {ν α} {Γ Δ Ξ : Ctx ν α} : Γ.Wk Δ → Δ.Wk Ξ → Γ.Wk Ξ
   | nil, h => h
