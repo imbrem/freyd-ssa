@@ -1,4 +1,5 @@
 import Mathlib.Data.List.Basic
+import Mathlib.Data.List.Lattice
 import Std.Data.List.Basic
 import Mathlib.Data.Set.Basic
 import Mathlib.Data.Set.Function
@@ -248,6 +249,68 @@ theorem InstSet.Body.SSA.freshl [Φ : InstSet φ (Ty α)] {Γ Δ: Ctx ν (Ty α)
 
 theorem InstSet.Body.SSA.freshr [Φ : InstSet φ (Ty α)] {Γ Δ: Ctx ν (Ty α)} {p}
   {b: Φ.Body p (⟨x, A⟩::⟨y, B⟩::Γ) Δ} {e: Φ.Tm p Γ (A.pair B)} (h: (b.let2 e).SSA) : Γ.Fresh y
+  := by cases h; assumption
+
+theorem InstSet.Body.SSA.entry_disjoint_defs [Φ : InstSet φ (Ty α)] {Γ Δ: Ctx ν (Ty α)} {p}
+  {b: Φ.Body p Γ Δ} (h: b.SSA) : Γ.names.Disjoint b.defs
+  := by induction h with
+  | nil => simp [defs]
+  | let1 hx e b I =>
+    simp only [defs, Ctx.names, List.disjoint_cons_right, not_or, and_imp]
+    exact ⟨hx.not_mem_names, List.disjoint_of_disjoint_cons_left I⟩
+  | let2 hxy hx hy e b I =>
+    simp only [defs, Ctx.names, List.disjoint_cons_right, not_or, and_imp]
+    exact ⟨hy.not_mem_names, hx.not_mem_names,
+      List.disjoint_of_disjoint_cons_left $ List.disjoint_of_disjoint_cons_left I⟩
+
+theorem InstSet.Body.SSA.nodup_defs [Φ : InstSet φ (Ty α)] {Γ Δ : Ctx ν (Ty α)} {p}
+  {b: Φ.Body p Γ Δ} (h: b.SSA) : b.defs.Nodup
+  := by induction h with
+  | nil _ => simp [defs]
+  | let1 hx e b I =>
+    simp only [defs, List.nodup_cons, not_or, and_imp]
+    exact ⟨entry_disjoint_defs b (by simp), I⟩
+  | let2 hxy hx hy e b I =>
+    simp only [defs, List.nodup_cons, List.mem_cons, not_or]
+    exact ⟨⟨hxy.symm, entry_disjoint_defs b (by simp)⟩, entry_disjoint_defs b (by simp), I⟩
+
+--TODO: SSA of entry_disjoint_defs and nodup_defs; iff
+
+theorem InstSet.Body.SSA.notdef [Φ : InstSet φ (Ty α)] {Γ Δ: Ctx ν (Ty α)} {p}
+  {b: Φ.Body p (⟨x, A⟩::Γ) Δ} (h: b.SSA) : x ∉ b.defs
+  := by
+    have h' := h.entry_disjoint_defs;
+    simp only [Ctx.names, List.map_cons, List.disjoint_cons_left] at h'
+    exact h'.1
+
+theorem InstSet.Body.SSA.notdefl [Φ : InstSet φ (Ty α)] {Γ Δ: Ctx ν (Ty α)} {p}
+  {b: Φ.Body p (⟨x, A⟩::⟨y, B⟩::Γ) Δ} (h: b.SSA) : x ∉ b.defs
+  := by
+    have h' := h.entry_disjoint_defs;
+    simp only [Ctx.names, List.map_cons, List.disjoint_cons_left] at h'
+    exact h'.1
+
+theorem InstSet.Body.SSA.notdefr [Φ : InstSet φ (Ty α)] {Γ Δ: Ctx ν (Ty α)} {p}
+  {b: Φ.Body p (⟨x, A⟩::⟨y, B⟩::Γ) Δ} (h: b.SSA) : y ∉ b.defs
+  := by
+    have h' := h.entry_disjoint_defs;
+    simp only [Ctx.names, List.map_cons, List.disjoint_cons_left] at h'
+    exact h'.2.1
+
+theorem InstSet.Body.SSA.notdef' [Φ : InstSet φ (Ty α)] {Γ Δ: Ctx ν (Ty α)} {p}
+  {b: Φ.Body p (⟨x, A⟩::Γ) Δ} {e: Φ.Tm p Γ A} (h: (b.let1 e).SSA) : x ∉ b.defs
+  := h.of_let1.notdef
+
+theorem InstSet.Body.SSA.notdefl' [Φ : InstSet φ (Ty α)] {Γ Δ: Ctx ν (Ty α)} {p}
+  {b: Φ.Body p (⟨x, A⟩::⟨y, B⟩::Γ) Δ} {e: Φ.Tm p Γ (A.pair B)} (h: (b.let2 e).SSA) : x ∉ b.defs
+  := h.of_let2.notdefl
+
+theorem InstSet.Body.SSA.notdefr' [Φ : InstSet φ (Ty α)] {Γ Δ: Ctx ν (Ty α)} {p}
+  {b: Φ.Body p (⟨x, A⟩::⟨y, B⟩::Γ) Δ} {e: Φ.Tm p Γ (A.pair B)} (h: (b.let2 e).SSA) : y ∉ b.defs
+  := h.of_let2.notdefr
+
+theorem InstSet.Body.SSA.l_ne_r [Φ : InstSet φ (Ty α)] {Γ Δ: Ctx ν (Ty α)} {p}
+  {b: Φ.Body p (⟨x, A⟩::⟨y, B⟩::Γ) Δ} {e: Φ.Tm p Γ (A.pair B)} (h: (b.let2 e).SSA) : x ≠ y
   := by cases h; assumption
 
 def InstSet.Body.αSSA [Φ : InstSet φ (Ty α)] (b: Φ.Body p Γ Δ): Prop

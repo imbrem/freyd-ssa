@@ -10,6 +10,8 @@ import FreydSSA.Term
 import FreydSSA.Body
 import FreydSSA.Untyped
 
+--TODO: change Fresh to ∉ names by default?
+
 inductive InstSet.Terminator
   [Φ : InstSet φ (Ty α)] (Γ : Ctx ν (Ty α)) (L : LCtx ν κ (Ty α))
   : Type _
