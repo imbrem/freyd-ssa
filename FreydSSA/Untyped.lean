@@ -1,5 +1,6 @@
 import FreydSSA.Ctx
 import FreydSSA.InstSet
+import FreydSSA.Utils
 
 --TODO: map_inst
 
@@ -57,6 +58,12 @@ def UBody.rewrite' {φ ν}
       => let2 x' y' (e.rewrite (λz => (σ z).elim UTm.var id)) (b.rewrite' σ)
     | _, _ => (b.rewrite' σ)
 
+def UBody.defs {φ ν}
+  : UBody φ ν → List ν
+  | nil => []
+  | let1 x _ b => x :: b.defs
+  | let2 x y _ b => x :: y :: b.defs
+
 def UBody.comp {φ ν}
   : UBody φ ν → UBody φ ν → UBody φ ν
   | nil, b => b
@@ -72,6 +79,44 @@ theorem UBody.comp_nil {φ ν} (b : UBody φ ν)
 theorem UBody.comp_assoc {φ ν} (b₁ b₂ b₃ : UBody φ ν)
   : UBody.comp (UBody.comp b₁ b₂) b₃ = UBody.comp b₁ (UBody.comp b₂ b₃)
   := by induction b₁ <;> simp [UBody.comp, *]
+
+def UBody.comp_defs {φ ν}
+  (b₁ b₂ : UBody φ ν) : (b₁.comp b₂).defs = b₁.defs ++ b₂.defs
+  := by induction b₁ <;> simp [defs, comp, *]
+
+def UBody.SSA {φ ν} (Γ : List ν) (b : UBody φ ν) : Prop
+  := Γ.Disjoint b.defs ∧ b.defs.Nodup
+
+def UBody.NSSA {φ ν}
+  (Γ : List ν) (b : UBody φ ν) : Prop
+  := (Γ ++ b.defs).Nodup
+
+theorem UBody.NSSA.toSSA {φ ν}
+  {Γ : List ν} {b : UBody φ ν} (h : UBody.NSSA Γ b) : UBody.SSA Γ b
+  := ⟨List.disjoint_of_nodup_append h, h.of_append_right⟩
+
+theorem UBody.SSA.entry_nodup {φ ν}
+  {Γ : List ν} {b : UBody φ ν} (h : UBody.SSA Γ b) (h' : Γ.Nodup) : UBody.NSSA Γ b
+  := h'.append h.2 h.1
+
+theorem UBody.SSA.comp {φ ν}
+  {Γ : List ν} {b₁ b₂ : UBody φ ν}
+  (h₁ : UBody.SSA Γ b₁) (h₂ : UBody.SSA (b₁.defs.reverse ++ Γ) b₂)
+  : UBody.SSA Γ (b₁.comp b₂)
+  := by
+    simp only
+      [SSA, List.disjoint_append_left, comp_defs, List.disjoint_append_right,
+        List.Disjoint.iff_reverse_left] at *
+    exact ⟨⟨h₁.1, h₂.1.2⟩, h₁.2.append h₂.2 h₂.1.1⟩
+
+theorem UBody.NSSA.comp {φ ν}
+  {Γ : List ν} {b₁ b₂ : UBody φ ν}
+  (h₂ : UBody.NSSA (b₁.defs.reverse ++ Γ) b₂)
+  : UBody.NSSA Γ (b₁.comp b₂)
+  := by
+    simp only [NSSA, List.nodup_append, List.append_assoc, List.nodup_reverse,
+      List.disjoint_append_right, List.Disjoint.iff_reverse_left, comp_defs] at *
+    exact ⟨h₂.2.1.1, ⟨h₂.1, h₂.2.1.2.1, h₂.2.2.2⟩, h₂.2.2.1.symm, h₂.2.1.2.2⟩
 
 inductive UTerminator (φ : Type _) (ν : Type _) (κ : Type _)
    : Type _ where
@@ -117,6 +162,52 @@ def UCFG.rename_label {φ α ν κ κ'}
   (σ : κ → κ') : UCFG φ α ν κ → UCFG φ α ν κ'
   | nil => nil
   | cons Φ κ x t b => cons (Φ.rename_label σ) (σ κ) x t (b.rename_label σ)
+
+def UCFG.labels {φ α ν κ}
+  : UCFG φ α ν κ → List κ
+  | nil => []
+  | cons Φ κ _ _ _ => κ :: Φ.labels
+
+def UCFG.defs {φ α ν κ}
+  : UCFG φ α ν κ → List ν
+  | nil => []
+  | cons Φ _ x _ _ => x :: Φ.defs
+
+def UCFG.comp {φ α ν κ}
+  : UCFG φ α ν κ → UCFG φ α ν κ → UCFG φ α ν κ
+  | nil, Φ => Φ
+  | cons Φ κ x t b, Φ' => cons (Φ.comp Φ') κ x t b
+
+def UCFG.nil_comp {φ α ν κ} (Φ : UCFG φ α ν κ)
+  : UCFG.nil.comp Φ = Φ := rfl
+
+def UCFG.comp_nil {φ α ν κ}
+  (Φ : UCFG φ α ν κ) : Φ.comp UCFG.nil = Φ
+  := by induction Φ <;> simp [comp, *]
+
+def UCFG.comp_labels {φ α ν κ}
+  (Φ Φ' : UCFG φ α ν κ) : (Φ.comp Φ').labels = Φ.labels ++ Φ'.labels
+  := by induction Φ <;> simp [labels, comp, *]
+
+def UCFG.comp_defs {φ α ν κ}
+  (Φ Φ' : UCFG φ α ν κ) : (Φ.comp Φ').defs = Φ.defs ++ Φ'.defs
+  := by induction Φ <;> simp [defs, comp, *]
+
+def UCFG.SSA {φ α ν κ}
+  (Γ : List ν) (Φ : UCFG φ α ν κ) : Prop
+  := Γ.Disjoint Φ.defs ∧ Φ.defs.Nodup
+
+def UCFG.NSSA {φ α ν κ}
+  (Γ : List ν) (Φ : UCFG φ α ν κ) : Prop
+  := (Γ ++ Φ.defs).Nodup
+
+def UCFG.NSSA.toSSA {φ α ν κ}
+  {Γ : List ν} {Φ : UCFG φ α ν κ} (h : UCFG.NSSA Γ Φ) : UCFG.SSA Γ Φ
+  := ⟨List.disjoint_of_nodup_append h, h.of_append_right⟩
+
+def UCFG.SSA.entry_nodup {φ α ν κ}
+  {Γ : List ν} {Φ : UCFG φ α ν κ} (h : UCFG.SSA Γ Φ) (h' : Γ.Nodup) : UCFG.NSSA Γ Φ
+  := h'.append h.2 h.1
 
 structure URegion (φ : Type _) (α : Type _) (ν : Type _) (κ : Type _)
   : Type _ where
