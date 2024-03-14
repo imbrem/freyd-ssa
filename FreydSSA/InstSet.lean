@@ -32,3 +32,12 @@ def InstSet.from_pure [InstSet φ α] {p} {f : φ} {A B : α}
   := match p with
   | Purity.pure => h
   | Purity.impure => pure_to_impure h
+
+open InstSet
+
+class CohInstSet (φ α) [InstSet φ α] : Type _ where
+  coh_trg {f : φ} {A B B' : α} : Op f p A B → Op f p' A B' → B = B'
+
+def CohInstSet.coh_trg' [InstSet φ α] [CohInstSet φ α] {f : φ} {A B A' B' : α}
+  (h : Op f p A B) (h' : Op f p' A' B') (h'' : A = A') : B = B'
+  := CohInstSet.coh_trg h (h''.symm ▸ h')
