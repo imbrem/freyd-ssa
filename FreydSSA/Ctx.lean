@@ -270,6 +270,31 @@ theorem Ctx.Wk.iso_refl {Γ Δ : Ctx ν α} : (w: Γ.Wk Δ) → w.Iso w
   | Wk.cons h w => Iso.cons w.iso_refl
   | Wk.skip h w => Iso.skip w.iso_refl
 
+def Ctx.Wk.Iso.of_length_eq
+  : {Γ : Ctx ν α} → {Γ' : Ctx ν' α'}
+    → Γ.length = Γ'.length
+    → (Ctx.Wk.refl Γ).Iso (Ctx.Wk.refl Γ')
+  | [], [], rfl => nil
+  | _::Γ, _::Γ', h => cons (of_length_eq
+    (by simp only [List.length_cons, Nat.succ.injEq] at h; exact h))
+
+def Ctx.Wk.Iso.length_eq_src {Γ Δ : Ctx ν α} {Γ' Δ' : Ctx ν' α'}
+  {w : Γ.Wk Δ} {w' : Γ'.Wk Δ'} : w.Iso w' → Γ.length = Γ'.length
+  | nil => rfl
+  | cons hw => by simp [hw.length_eq_src]
+  | skip hw => by simp [hw.length_eq_src]
+
+def Ctx.Wk.Iso.length_eq_trg {Γ Δ : Ctx ν α} {Γ' Δ' : Ctx ν' α'}
+  {w : Γ.Wk Δ} {w' : Γ'.Wk Δ'} : w.Iso w' → Δ.length = Δ'.length
+  | nil => rfl
+  | cons hw => by simp [hw.length_eq_trg]
+  | skip hw => hw.length_eq_trg
+
+theorem Ctx.Iso.toWk {Γ : Ctx ν α} {Γ' : Ctx ν' α}
+  : (h: Ctx.Iso Γ Γ') → (Ctx.Wk.refl Γ).Iso (Ctx.Wk.refl Γ')
+  | nil => Wk.Iso.nil
+  | cons h => Wk.Iso.cons (toWk h)
+
 theorem Ctx.Wk.Iso.refl {Γ Δ : Ctx ν α} : (w: Γ.Wk Δ) → w.Iso w
   | Wk.nil => Iso.nil
   | Wk.cons h w => Iso.cons w.iso_refl

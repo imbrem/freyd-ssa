@@ -57,6 +57,22 @@ def UBody.rewrite' {φ ν}
       => let2 x' y' (e.rewrite (λz => (σ z).elim UTm.var id)) (b.rewrite' σ)
     | _, _ => (b.rewrite' σ)
 
+def UBody.comp {φ ν}
+  : UBody φ ν → UBody φ ν → UBody φ ν
+  | nil, b => b
+  | let1 x e b, b' => let1 x e (b.comp b')
+  | let2 x y e b, b' => let2 x y e (b.comp b')
+
+theorem UBody.nil_comp {φ ν} (b : UBody φ ν)
+  : UBody.comp UBody.nil b = b := rfl
+
+theorem UBody.comp_nil {φ ν} (b : UBody φ ν)
+  : UBody.comp b UBody.nil = b := by induction b <;> simp [UBody.comp, *]
+
+theorem UBody.comp_assoc {φ ν} (b₁ b₂ b₃ : UBody φ ν)
+  : UBody.comp (UBody.comp b₁ b₂) b₃ = UBody.comp b₁ (UBody.comp b₂ b₃)
+  := by induction b₁ <;> simp [UBody.comp, *]
+
 inductive UTerminator (φ : Type _) (ν : Type _) (κ : Type _)
    : Type _ where
   | br : κ → UTm φ ν → UTerminator φ ν κ

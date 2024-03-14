@@ -75,3 +75,15 @@ theorem UTm.Wf.Iso.trans
   | pair p dl dr, pair _ dl' dr' => pair p (dl.trans dl') (dr.trans dr')
   | unit _, unit _ => unit _
   | bool _ _, bool _ _ => bool _ _
+
+theorem UTm.Wf.Iso.wk
+  {Γ Δ : Ctx ν (Ty α)} {Γ' Δ' : Ctx ν' (Ty α)} {e : UTm φ ν} {e' : UTm φ ν'}
+  {w : Γ.Wk Δ} {w' : Γ'.Wk Δ'}
+  {de : e.Wf p Δ A} {de' : e'.Wf p Δ' A}
+  (hw : w.Iso w')
+  : de.Iso de' → (de.wk w).Iso (de'.wk w')
+  | var p hw' => var p (hw.comp hw')
+  | op hf de => op hf (de.wk hw)
+  | pair p dl dr => pair p (dl.wk hw) (dr.wk hw)
+  | unit p => unit p
+  | bool p b => bool p b

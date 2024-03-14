@@ -34,14 +34,45 @@ def UBody.Wf.wk_exit {Γ Δ Ξ : Ctx ν (Ty α)} {b : UBody φ ν}
   | let1 de db, w => let1 de (db.wk_exit w)
   | let2 de db, w => let2 de (db.wk_exit w)
 
---TODO: wk_{entry, exit} is iso-preserving
+def UBody.Wf.comp {Γ Δ Ξ : Ctx ν (Ty α)} {b b' : UBody φ ν}
+  : b.Wf p Γ Δ → b'.Wf p Δ Ξ → (b.comp b').Wf p Γ Ξ
+  | nil p w, db' => wk_entry w db'
+  | let1 de db, db' => let1 de (db.comp db')
+  | let2 de db, db' => let2 de (db.comp db')
 
 inductive UBody.Wf.Iso
   : {Γ Δ : Ctx ν (Ty α)} → {Γ' Δ' : Ctx ν' (Ty α)}
   → {b : UBody φ ν} → {b' : UBody φ ν'} → b.Wf p Γ Δ → b'.Wf p Γ' Δ' → Prop
-  | nil {w w'} : w.Iso w' → Iso (nil p w) (nil p w')
+  | nil (p) {w w'} : w.Iso w' → Iso (nil p w) (nil p w')
   | let1 : de.Iso de' → db.Iso db' → Iso (let1 de db) (let1 de' db')
   | let2 : de.Iso de' → db.Iso db' → Iso (let2 de db) (let2 de' db')
+
+theorem UBody.Wf.Iso.wk_entry {Γ Δ Ξ : Ctx ν (Ty α)} {Γ' Δ' Ξ' : Ctx ν' (Ty α)}
+  {b : UBody φ ν} {b' : UBody φ ν'}
+  {w : Γ.Wk Δ} {w' : Γ'.Wk Δ'}
+  {db : b.Wf p Δ Ξ} {db' : b'.Wf p Δ' Ξ'}
+  (hw : w.Iso w') : db.Iso db' → (db.wk_entry w).Iso (db'.wk_entry w')
+  | nil p hw' => nil p (hw.comp hw')
+  | let1 he hb => let1 (he.wk hw) (hb.wk_entry hw.cons)
+  | let2 he hb => let2 (he.wk hw) (hb.wk_entry hw.cons.cons)
+
+theorem UBody.Wf.Iso.wk_exit {Γ Δ Ξ : Ctx ν (Ty α)} {Γ' Δ' Ξ' : Ctx ν' (Ty α)}
+  {b : UBody φ ν} {b' : UBody φ ν'}
+  {w : Δ.Wk Ξ} {w' : Δ'.Wk Ξ'}
+  {db : b.Wf p Γ Δ} {db' : b'.Wf p Γ' Δ'}
+  (hw : w.Iso w') : db.Iso db' → (db.wk_exit w).Iso (db'.wk_exit w')
+  | nil p hw' => nil p (hw'.comp hw)
+  | let1 he hb => let1 he (hb.wk_exit hw)
+  | let2 he hb => let2 he (hb.wk_exit hw)
+
+theorem UBody.Wf.Iso.comp {Γ Δ Ξ : Ctx ν (Ty α)} {Γ' Δ' Ξ' : Ctx ν' (Ty α)}
+  {b₁ b₂ : UBody φ ν} {b₁' b₂' : UBody φ ν'}
+  {db₁ : b₁.Wf p Γ Δ} {db₁' : b₁'.Wf p Γ' Δ'}
+  {db₂ : b₂.Wf p Δ Ξ} {db₂' : b₂'.Wf p Δ' Ξ'}
+  : db₁.Iso db₁' → db₂.Iso db₂' → (db₁.comp db₂).Iso (db₁'.comp db₂')
+  | nil _p hw, db' => db'.wk_entry hw
+  | let1 he hb, db' => let1 he (hb.comp db')
+  | let2 he hb, db' => let2 he (hb.comp db')
 
 inductive UBody.WfM : Purity → Ctx ν (Ty α) → UBody φ ν → Ctx ν (Ty α) → Type _
   | nil (p Γ) : WfM p Γ nil Γ
@@ -66,7 +97,7 @@ theorem UBody.WfM.trgEq {Γ Δ Δ' : Ctx ν (Ty α)}  {b : UBody φ ν}
 inductive UBody.WfM.Iso
   : {Γ Δ : Ctx ν (Ty α)} → {Γ' Δ' : Ctx ν' (Ty α)}
   → {b : UBody φ ν} → {b' : UBody φ ν'} → b.WfM p Γ Δ → b'.WfM p Γ' Δ' → Prop
-  | nil {w w'} : w.Iso w' → Iso (nil p w) (nil p w')
+  | nil (p) : Γ.length = Γ'.length → Iso (nil p Γ) (nil p Γ')
   | let1 : de.Iso de' → db.Iso db' → Iso (let1 de db) (let1 de' db')
   | let2 : de.Iso de' → db.Iso db' → Iso (let2 de db) (let2 de' db')
 
@@ -76,7 +107,28 @@ def UBody.WfM.toWf {Γ Δ : Ctx ν (Ty α)} {b : UBody φ ν}
   | let1 de db => Wf.let1 de (db.toWf)
   | let2 de db => Wf.let2 de (db.toWf)
 
---TODO: toWf is iso-preserving
+theorem UBody.WfM.Iso.toWf {Γ Δ : Ctx ν (Ty α)}
+  {Γ' Δ' : Ctx ν' (Ty α)}  {b : UBody φ ν} {b' : UBody φ ν'}
+  {db : b.WfM p Γ Δ} {db' : b'.WfM p Γ' Δ'}
+  : db.Iso db' → db.toWf.Iso db'.toWf
+  | nil p hΓ => Wf.Iso.nil p (Ctx.Wk.Iso.of_length_eq hΓ)
+  | let1 he hb => Wf.Iso.let1 he hb.toWf
+  | let2 he hb => Wf.Iso.let2 he hb.toWf
+
+def UBody.WfM.comp {Γ Δ Ξ : Ctx ν (Ty α)} {b b' : UBody φ ν}
+  : b.WfM p Γ Δ → b'.WfM p Δ Ξ → (b.comp b').WfM p Γ Ξ
+  | nil _ _, db' => db' --TODO: why the unused variable warning?
+  | let1 de db, db' => let1 de (db.comp db')
+  | let2 de db, db' => let2 de (db.comp db')
+
+theorem UBody.WfM.Iso.comp {Γ Δ Ξ : Ctx ν (Ty α)} {Γ' Δ' Ξ' : Ctx ν' (Ty α)}
+  {b₁ b₂ : UBody φ ν} {b₁' b₂' : UBody φ ν'}
+  {db₁ : b₁.WfM p Γ Δ} {db₁' : b₁'.WfM p Γ' Δ'}
+  {db₂ : b₂.WfM p Δ Ξ} {db₂' : b₂'.WfM p Δ' Ξ'}
+  : db₁.Iso db₁' → db₂.Iso db₂' → (db₁.comp db₂).Iso (db₁'.comp db₂')
+  | nil _p _, db' => db'
+  | let1 he hb, db' => let1 he (hb.comp db')
+  | let2 he hb, db' => let2 he (hb.comp db')
 
 def UBody.Wf.maxTrg {Γ Δ : Ctx ν (Ty α)} {b : UBody φ ν}
   : b.Wf p Γ Δ → Ctx ν (Ty α)
@@ -104,7 +156,21 @@ def UBody.Wf.toWfM {Γ Δ : Ctx ν (Ty α)} {b : UBody φ ν}
   | let1 de db => WfM.let1 de (db.toWfM)
   | let2 de db => WfM.let2 de (db.toWfM)
 
---TODO: toWfM is iso-preserving
+theorem UBody.Wf.Iso.toWfM {Γ Δ : Ctx ν (Ty α)}
+  {Γ' Δ' : Ctx ν' (Ty α)}  {b : UBody φ ν} {b' : UBody φ ν'}
+  {db : b.Wf p Γ Δ} {db' : b'.Wf p Γ' Δ'}
+  : db.Iso db' → db.toWfM.Iso db'.toWfM
+  | nil p hΓ => WfM.Iso.nil p hΓ.length_eq_src
+  | let1 he hb => WfM.Iso.let1 he hb.toWfM
+  | let2 he hb => WfM.Iso.let2 he hb.toWfM
+
+theorem UBody.Wf.Iso.wkMaxTrg {Γ Δ : Ctx ν (Ty α)}
+  {Γ' Δ' : Ctx ν' (Ty α)}  {b : UBody φ ν} {b' : UBody φ ν'}
+  {db : b.Wf p Γ Δ} {db' : b'.Wf p Γ' Δ'}
+  : db.Iso db' → db.wkMaxTrg.Iso db'.wkMaxTrg
+  | nil p hΓ => hΓ
+  | let1 _ hb => hb.wkMaxTrg
+  | let2 _ hb => hb.wkMaxTrg
 
 structure UBody.Wf' (p : Purity) (Γ) (b : UBody φ ν) (Δ : Ctx ν (Ty α)) : Type _ :=
   maxTrg : Ctx ν (Ty α)
@@ -137,4 +203,15 @@ structure UBody.Wf'.Iso {p} {Γ Δ : Ctx ν (Ty α)} {Γ' Δ' : Ctx ν' (Ty α)}
   wfM : db.wfM.Iso db'.wfM
   wk : db.wk.Iso db'.wk
 
---TODO: toWf', toWf are iso-preserving
+theorem UBody.Wf.Iso.toWf' {p} {Γ Δ : Ctx ν (Ty α)} {Γ' Δ' : Ctx ν' (Ty α)}
+  {b : UBody φ ν} {b' : UBody φ ν'}
+  {db : b.Wf p Γ Δ} {db' : b'.Wf p Γ' Δ'}
+  (hb : db.Iso db') : db.toWf'.Iso db'.toWf' where
+  wfM := hb.toWfM
+  wk := hb.wkMaxTrg
+
+theorem UBody.Wf'.Iso.toWf {p} {Γ Δ : Ctx ν (Ty α)} {Γ' Δ' : Ctx ν' (Ty α)}
+  {b : UBody φ ν} {b' : UBody φ ν'}
+  {db : b.Wf' p Γ Δ} {db' : b'.Wf' p Γ' Δ'}
+  (hb : db.Iso db') : db.toWf.Iso db'.toWf
+  := hb.wfM.toWf.wk_exit hb.wk
