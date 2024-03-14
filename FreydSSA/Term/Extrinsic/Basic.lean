@@ -41,3 +41,37 @@ def UTm.Wf.wk {e : UTm φ ν} (w : Γ.Wk Δ) : e.Wf p Δ A → e.Wf p Γ A
   | pair p dl dr => pair p (dl.wk w) (dr.wk w)
   | unit p => unit p
   | bool p b => bool p b
+
+inductive UTm.Wf.Iso {Γ' : Ctx ν' (Ty α)}
+  : {e : UTm φ ν} → {e' : UTm φ ν'} → e.Wf p Γ A → e'.Wf p Γ' A → Prop
+  | var (p) : w.Iso w' → Iso (var p w) (var p w')
+  | op (hf) : de.Iso de' → Iso (op hf de) (op hf de')
+  | pair (p) : dl.Iso dl' → dr.Iso dr' → Iso (pair p dl dr) (pair p dl' dr')
+  | unit (p) : Iso (unit p) (unit p)
+  | bool (p b) : Iso (bool p b) (bool p b)
+
+theorem UTm.Wf.Iso.refl {Γ : Ctx ν (Ty α)} {e : UTm φ ν} : (de : e.Wf p Γ A) → de.Iso de
+  | Wf.var p w => var p (Ctx.Wk.Iso.refl w)
+  | Wf.op hf de => op hf (refl de)
+  | Wf.pair p dl dr => pair p (refl dl) (refl dr)
+  | Wf.unit p => unit p
+  | Wf.bool p b => bool p b
+
+theorem UTm.Wf.Iso.symm {Γ : Ctx ν (Ty α)} {Γ' : Ctx ν' (Ty α)} {e : UTm φ ν} {e' : UTm φ ν'}
+  {de : e.Wf p Γ A} {de' : e'.Wf p Γ' A} : de.Iso de' → de'.Iso de
+  | var p w => var p w.symm
+  | op hf de => op hf (symm de)
+  | pair p dl dr => pair p (symm dl) (symm dr)
+  | unit p => unit p
+  | bool p b => bool p b
+
+theorem UTm.Wf.Iso.trans
+  {Γ : Ctx ν (Ty α)} {Γ' : Ctx ν' (Ty α)} {Γ'' : Ctx ν'' (Ty α)}
+  {e : UTm φ ν} {e' : UTm φ ν'} {e'' : UTm φ ν''}
+  {de : e.Wf p Γ A} {de' : e'.Wf p Γ' A} {de'' : e''.Wf p Γ'' A}
+  : de.Iso de' → de'.Iso de'' → de.Iso de''
+  | var p w, var _ w' => var p (w.trans w')
+  | op hf de, op _ de' => op hf (de.trans de')
+  | pair p dl dr, pair _ dl' dr' => pair p (dl.trans dl') (dr.trans dr')
+  | unit _, unit _ => unit _
+  | bool _ _, bool _ _ => bool _ _

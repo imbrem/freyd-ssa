@@ -103,6 +103,9 @@ inductive Ctx.Wk {ν: Type u} {α: Type v} : Ctx ν α → Ctx ν α → Type (m
   | cons {Γ Δ} (x : Var ν α) : Ctx.Wk Γ Δ → Ctx.Wk (x::Γ) (x::Δ)
   | skip {Γ Δ} : Ctx.Fresh x.name Δ → Ctx.Wk Γ Δ → Ctx.Wk (x::Γ) Δ
 
+def Ctx.Wk.src {ν α} {Γ Δ : Ctx ν α} (_: Γ.Wk Δ) : Ctx ν α := Γ
+def Ctx.Wk.trg {ν α} {Γ Δ : Ctx ν α} (_: Γ.Wk Δ) : Ctx ν α := Δ
+
 theorem Ctx.Wk.ty_eq {Γ : Ctx ν α} : Wk Γ [⟨x, A⟩] → Wk Γ [⟨x, A'⟩] → A = A'
   | cons _ _, cons _ _ => rfl
   | cons _ _, skip hx _ | skip hx _, cons _ _ => by cases hx; contradiction
