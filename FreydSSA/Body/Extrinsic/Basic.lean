@@ -1,9 +1,3 @@
-import Mathlib.Data.List.Basic
-import Std.Data.List.Basic
-import Mathlib.Data.Set.Basic
-import Mathlib.Data.Set.Function
-import Mathlib.Init.Classical
-
 import FreydSSA.Term.Extrinsic.Basic
 
 variable {φ ν α} [Φ : InstSet φ (Ty α)] [Φc : CohInstSet φ (Ty α)]

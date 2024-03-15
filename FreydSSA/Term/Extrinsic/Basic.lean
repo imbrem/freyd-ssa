@@ -1,9 +1,3 @@
-import Mathlib.Data.List.Basic
-import Std.Data.List.Basic
-import Mathlib.Data.Set.Basic
-import Mathlib.Data.Set.Function
-import Mathlib.Init.Classical
-
 import FreydSSA.Ctx
 import FreydSSA.InstSet
 import FreydSSA.Untyped
