@@ -87,6 +87,45 @@ def UBody.comp_defs {φ ν}
 def UBody.SSA {φ ν} (Γ : List ν) (b : UBody φ ν) : Prop
   := Γ.Disjoint b.defs ∧ b.defs.Nodup
 
+theorem UBody.SSA.of_let1 {φ ν}
+  {Γ : List ν} {x : ν} {e : UTm φ ν} {b : UBody φ ν}
+  (h : UBody.SSA Γ (let1 x e b)) : UBody.SSA (x :: Γ) b
+  := ⟨
+    List.disjoint_cons_left.mpr ⟨h.2.not_mem, (List.disjoint_cons_right.mp h.1).2⟩,
+    h.2.of_cons
+  ⟩
+
+theorem UBody.SSA.of_let2 {φ ν}
+  {Γ : List ν} {x y : ν} {e : UTm φ ν} {b : UBody φ ν}
+  (h : UBody.SSA Γ (let2 x y e b)) : UBody.SSA (x :: y :: Γ) b
+  := ⟨
+    List.disjoint_cons_left.mpr
+      ⟨List.not_mem_of_not_mem_cons h.2.not_mem,
+        List.disjoint_cons_left.mpr ⟨h.2.of_cons.not_mem,
+        (List.disjoint_cons_right.mp (List.disjoint_cons_right.mp h.1).2).2⟩⟩,
+    h.2.of_cons.of_cons
+  ⟩
+
+theorem UBody.SSA.of_let1' {φ ν}
+  {Γ : Ctx ν α} {x : Var ν α} {e : UTm φ ν} {b : UBody φ ν}
+  (h : UBody.SSA Γ.names (let1 x.name e b)) : UBody.SSA (Ctx.names (x :: Γ)) b
+  := h.of_let1
+
+theorem UBody.SSA.of_let1'' {φ ν}
+  {Γ : Ctx ν α} {x A} {e : UTm φ ν} {b : UBody φ ν}
+  (h : UBody.SSA Γ.names (let1 x e b)) : UBody.SSA (Ctx.names (⟨x, A⟩ :: Γ)) b
+  := h.of_let1
+
+theorem UBody.SSA.of_let2' {φ ν}
+  {Γ : Ctx ν α} {x y : Var ν α} {e : UTm φ ν} {b : UBody φ ν}
+  (h : UBody.SSA Γ.names (let2 x.name y.name e b)) : UBody.SSA (Ctx.names (x :: y :: Γ)) b
+  := h.of_let2
+
+theorem UBody.SSA.of_let2'' {φ ν}
+  {Γ : Ctx ν α} {x A y B} {e : UTm φ ν} {b : UBody φ ν}
+  (h : UBody.SSA Γ.names (let2 x y e b)) : UBody.SSA (Ctx.names (⟨x, A⟩ :: ⟨y, B⟩ :: Γ)) b
+  := h.of_let2
+
 def UBody.NSSA {φ ν}
   (Γ : List ν) (b : UBody φ ν) : Prop
   := (Γ ++ b.defs).Nodup

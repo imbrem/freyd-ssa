@@ -58,7 +58,7 @@ theorem InstSet.Tm.Iso.trans [Φ : InstSet φ (Ty α)]
 
 def InstSet.Tm.to_impure [Φ : InstSet φ (Ty α)] {A : Ty α} : Φ.Tm p Γ A → Φ.Tm 0 Γ A
   | var p h => var 0 h
-  | op p f h e => op 0 f (Φ.to_impure h) e
+  | op p f h e => op 0 f h.to_impure e
   | pair p x y => pair 0 x y
   | unit p => unit 0
   | bool p b => bool 0 b

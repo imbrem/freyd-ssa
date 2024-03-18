@@ -38,3 +38,30 @@ theorem InstSet.USubst.get_fromTuple [Φ : InstSet φ (Ty α)] {Γ Δ : Ctx ν (
   | cons v Δ I =>
     funext ⟨i, hi⟩
     cases i <;> simp only [fromTuple, get, Fin.succ, *]
+
+def InstSet.USubst.wk_entry [Φ : InstSet φ (Ty α)] {Γ Γ' Δ : Ctx ν (Ty α)} {σ}
+  : Γ'.Wk Γ → Φ.USubst σ Γ Δ → Φ.USubst σ Γ' Δ
+  | _, nil _ => nil _
+  | w, cons e hσ => cons (e.wk w) (wk_entry w hσ)
+
+def InstSet.USubst.wk_exit [Φ : InstSet φ (Ty α)] {Γ Δ Δ' : Ctx ν (Ty α)} {σ}
+  : Φ.USubst σ Γ Δ → Δ.Wk Δ' → Φ.USubst σ Γ Δ'
+  | nil _, Ctx.Wk.nil => nil _
+  | cons _ hσ, Ctx.Wk.skip _ w => hσ.wk_exit w
+  | cons e hσ, Ctx.Wk.cons _ w => cons e (hσ.wk_exit w)
+
+def InstSet.USubst.tensor [Φ : InstSet φ (Ty α)] {Γ Δ : Ctx ν (Ty α)} {σ}
+  (hx : x.name ∉ Γ.names)
+  (hx' : σ x.name = UTm.var x.name)
+  (hσ : Φ.USubst σ Γ Δ) : Φ.USubst σ (x::Γ) (x::Δ)
+  := cons
+    (hx' ▸ (UTm.Wf.var _ (Ctx.Wk.head _ _)))
+    (hσ.wk_entry (Ctx.Wk.skip (Ctx.Fresh.of_not_mem_names hx) (Ctx.Wk.refl _)))
+
+def UTm.Wf.subst [Φ : InstSet φ (Ty α)] {σ : ν → UTm φ ν} {Γ Δ : Ctx ν (Ty α)}
+  {e : UTm φ ν} (hσ : Φ.USubst σ Γ Δ) : e.Wf p Δ A → (e.rewrite σ).Wf p Γ A
+  | var x w => match hσ.wk_exit w with | InstSet.USubst.cons e _ => e.of_pure
+  | op f e => op f (e.subst hσ)
+  | pair p l r => pair p (l.subst hσ) (r.subst hσ)
+  | unit p => unit p
+  | bool p b => bool p b

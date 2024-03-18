@@ -13,6 +13,13 @@ inductive UTm.Wf : Purity → Ctx ν (Ty α) → UTm φ ν → Ty α → Type _
 
 variable {Γ Δ : Ctx ν (Ty α)}
 
+def UTm.Wf.of_pure {e : UTm φ ν} : e.Wf 1 Γ A → e.Wf p Γ A
+  | Wf.var _ w => Wf.var p w
+  | Wf.op hf de => Wf.op hf.of_pure (de.of_pure)
+  | Wf.pair _ dl dr => Wf.pair p (dl.of_pure) (dr.of_pure)
+  | Wf.unit _ => Wf.unit p
+  | Wf.bool _ b => Wf.bool p b
+
 theorem UTm.Wf.ty_eq [Φc : CohInstSet φ (Ty α)] {e : UTm φ ν}
   (de : e.Wf p Γ A) (de' : e.Wf p' Γ A') : A = A' := by induction de generalizing p' A' with
   | var _ w => cases de' with | var _ w' => exact w.ty_eq w'
