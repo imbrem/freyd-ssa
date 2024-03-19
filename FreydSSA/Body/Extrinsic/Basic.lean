@@ -115,6 +115,16 @@ def UBody.WfM.comp {Γ Δ Ξ : Ctx ν (Ty α)} {b b' : UBody φ ν}
   | let1 de db, db' => let1 de (db.comp db')
   | let2 de db, db' => let2 de (db.comp db')
 
+def UBody.WfM.wk_entry {Γ Δ Ξ : Ctx ν (Ty α)} {b : UBody φ ν} (w : Γ.Wk Δ)
+  : b.WfM p Δ Ξ → (Ξ' : Ctx ν (Ty α)) × (b.WfM p Γ Ξ') × (Ξ'.Wk Ξ)
+  | nil p Γ => ⟨_, nil p _, w⟩
+  | let1 de db =>
+    let ⟨Ξ', db', w'⟩ := db.wk_entry (w.cons _);
+    ⟨Ξ', let1 (de.wk w) db', w'⟩
+  | let2 de db =>
+    let ⟨Ξ', db', w'⟩ := db.wk_entry ((w.cons _).cons _);
+    ⟨Ξ', let2 (de.wk w) db', w'⟩
+
 theorem UBody.WfM.Iso.comp {Γ Δ Ξ : Ctx ν (Ty α)} {Γ' Δ' Ξ' : Ctx ν' (Ty α)}
   {b₁ b₂ : UBody φ ν} {b₁' b₂' : UBody φ ν'}
   {db₁ : b₁.WfM p Γ Δ} {db₁' : b₁'.WfM p Γ' Δ'}
@@ -181,15 +191,25 @@ theorem UBody.Wf'.allEq {p} {Γ Δ : Ctx ν (Ty α)} {b : UBody φ ν}
   : (db db' : b.Wf' p Γ Δ) → db = db'
   | ⟨_, db, w⟩, ⟨_, db', w'⟩ => by cases db.trgEq db'; cases db.allEq db'; cases w.allEq w'; rfl
 
-theorem UBody.Wf'.wk_exit {p} {Γ Δ Ξ : Ctx ν (Ty α)} {b : UBody φ ν}
+def UBody.Wf'.wk_exit {p} {Γ Δ Ξ : Ctx ν (Ty α)} {b : UBody φ ν}
   (db : b.Wf' p Γ Δ) (w : Δ.Wk Ξ) : b.Wf' p Γ Ξ where
   maxTrg := db.maxTrg
   wfM := db.wfM
   wk := db.wk.comp w
 
-theorem UBody.Wf'.wk_entry {p} {Γ Δ Ξ : Ctx ν (Ty α)} {b : UBody φ ν}
+def UBody.Wf'.wk_entry {p} {Γ Δ Ξ : Ctx ν (Ty α)} {b : UBody φ ν}
   (w : Γ.Wk Δ) (db : b.Wf' p Δ Ξ) : b.Wf' p Γ Ξ
   := (db.toWf.wk_entry w).toWf'
+
+def UBody.WfM.comp' {p} {Γ Δ Ξ : Ctx ν (Ty α)} {b b' : UBody φ ν}
+  (db : b.WfM p Γ Δ) (db' : b'.Wf' p Δ Ξ) : (b.comp b').Wf' p Γ Ξ where
+  maxTrg := db'.maxTrg
+  wfM := db.comp db'.wfM
+  wk := db'.wk
+
+def UBody.Wf'.comp {p} {Γ Δ Ξ : Ctx ν (Ty α)} {b b' : UBody φ ν}
+  (db : b.Wf' p Γ Δ) (db' : b'.Wf' p Δ Ξ) : (b.comp b').Wf' p Γ Ξ
+  := db.wfM.comp' (db'.wk_entry db.wk)
 
 structure UBody.Wf'.Iso {p} {Γ Δ : Ctx ν (Ty α)} {Γ' Δ' : Ctx ν' (Ty α)}
   {b : UBody φ ν} {b' : UBody φ ν'}

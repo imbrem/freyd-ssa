@@ -187,6 +187,10 @@ def UBB.rename_label {φ ν κ κ'}
   body := β.body
   terminator := β.terminator.rename_label σ
 
+def UBody.compBB {φ ν}
+  (b : UBody φ ν) (β : UBB φ ν κ) : UBB φ ν κ
+  := ⟨b.comp β.body, β.terminator⟩
+
 inductive UCFG (φ : Type _) (α : Type _) (ν : Type _) (κ : Type _)
   : Type _ where
   | nil : UCFG φ α ν κ
@@ -301,16 +305,16 @@ def UTerminator.toUGRegion {φ α ν κ}
     | UTerminator.br ℓ e => UGRegion.br ℓ e
     | UTerminator.ite c t f => UGRegion.ite c (t.toUGRegion) (f.toUGRegion)
 
-def UBody.comp_region {φ α ν κ}
+def UBody.compRegion {φ α ν κ}
   (b : UBody φ ν) (r : UGRegion φ α ν κ) : UGRegion φ α ν κ
   := match b with
     | UBody.nil => r
-    | UBody.let1 x e b => UGRegion.let1 x e (b.comp_region r)
-    | UBody.let2 x y e b => UGRegion.let2 x y e (b.comp_region r)
+    | UBody.let1 x e b => UGRegion.let1 x e (b.compRegion r)
+    | UBody.let2 x y e b => UGRegion.let2 x y e (b.compRegion r)
 
 def UBB.toUGRegion {φ α ν κ}
   (b : UBB φ ν κ) : UGRegion φ α ν κ
-  := b.body.comp_region b.terminator.toUGRegion
+  := b.body.compRegion b.terminator.toUGRegion
 
 def UCFG.toUGRegion {φ α ν κ}
   (Φ : UCFG φ α ν κ) : UGRegion φ α ν κ
