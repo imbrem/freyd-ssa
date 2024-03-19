@@ -388,14 +388,26 @@ def Label.Wk.refl (ℓ : Label ν κ α) : ℓ.Wk ℓ := ⟨rfl, rfl, Ctx.Wk.ref
 def Label.Wk.comp {ℓ ℓ' ℓ'' : Label ν κ α} (w : ℓ.Wk ℓ') (w' : ℓ'.Wk ℓ'') : ℓ.Wk ℓ''
   := ⟨w.name.trans w'.name, w.param.trans w'.param, w.live.comp w'.live⟩
 
-abbrev Label.Wk.Iso {ℓ ℓ' ℓ'' ℓ''' : Label ν κ α} (w : ℓ.Wk ℓ') (w' : ℓ''.Wk ℓ''')
+def Label.Wk.Iso {ℓ₁ ℓ₂ : Label ν κ α} {ℓ₁' ℓ₂' : Label ν' κ' α} (w : ℓ₁.Wk ℓ₂) (w' : ℓ₁'.Wk ℓ₂')
   := w.live.Iso w'.live
+
+def Label.Wk.Iso.comp {ℓ₁ ℓ₂ ℓ₃ : Label ν κ α} {ℓ₁' ℓ₂' ℓ₃' : Label ν' κ' α}
+  {l : ℓ₁.Wk ℓ₂}
+  {r : ℓ₂.Wk ℓ₃}
+  {l' : ℓ₁'.Wk ℓ₂'}
+  {r' : ℓ₂'.Wk ℓ₃'}
+  (hl : l.Iso l') (hr : r.Iso r')
+  : (l.comp r).Iso (l'.comp r')
+  := Ctx.Wk.Iso.comp hl hr
 
 structure Label.Fresh (ℓ : Label ν κ α) (n : ν): Prop where
   -- name : ℓ.name ≠ n
   live : ℓ.live.Fresh n
 
 def LCtx (ν κ: Type u) (α: Type v) := List (Label ν κ α)
+
+def LCtx.labels {ν κ α} (L : LCtx ν κ α): List κ
+  := L.map Label.name
 
 inductive LCtx.Fresh {ν κ α} (n : ν) : LCtx ν κ α → Prop
   | nil : LCtx.Fresh n []
@@ -412,42 +424,73 @@ theorem LCtx.Fresh.tail {ν α} {n} {ℓ : Label ν κ α} {L : LCtx ν κ α}
 inductive LCtx.Wk {ν : Type u} {α : Type v} : LCtx ν κ α → LCtx ν κ α → Type (max u v)
   | nil : Wk [] []
   | cons {ℓ ℓ' : Label ν κ α} : ℓ.Wk ℓ' → Wk L K → Wk (ℓ::L) (ℓ'::K)
-  | skip (ℓ : Label ν κ α) : Wk L K → Wk L (ℓ::K) --TODO: freshness?
+  | skip {ℓ : Label ν κ α} : ℓ.name ∉ L.labels → Wk L K → Wk L (ℓ::K)
+
+theorem LCtx.Wk.not_mem {ν κ α} {ℓ : Label ν κ α} {L K : LCtx ν κ α}
+  (w : L.Wk K) (h : ℓ.name ∉ K.labels) : ℓ.name ∉ L.labels := by induction w with
+  | nil => exact h
+  | cons hℓ _ I =>
+    apply List.not_mem_cons_of_ne_of_not_mem
+    apply List.ne_of_not_mem_cons
+    rw [hℓ.name]
+    exact h
+    apply I
+    apply List.not_mem_of_not_mem_cons
+    exact h
+  | skip _ _ I =>
+    apply I
+    apply List.not_mem_of_not_mem_cons
+    exact h
 
 def LCtx.Wk.comp {L K M : LCtx ν κ α} : L.Wk K → K.Wk M → L.Wk M
   | Wk.nil, w => w
   | Wk.cons h w, Wk.cons h' w' => Wk.cons (h.comp h') (w.comp w')
-  | Wk.skip _ w, Wk.cons h w' => Wk.skip _ (w.comp w')
-  | w, Wk.skip ℓ w' => Wk.skip _ (w.comp w')
+  | Wk.skip hℓ w, Wk.cons hℓw w' => Wk.skip (hℓw.name ▸ hℓ) (w.comp w')
+  | w, Wk.skip hℓ w' => Wk.skip (w.not_mem hℓ) (w.comp w')
 
 inductive LCtx.Wk.Iso : {L K : LCtx ν κ α} → {L' K' : LCtx ν' κ' α'} → Wk L K → Wk L' K' → Prop
   | nil : Iso nil nil
   | cons : h.Iso h' → Iso w w' → Iso (cons h w) (cons h' w')
-  | skip (ℓ ℓ') : Iso w w' → Iso (skip ℓ w) (skip ℓ' w')
+  | skip : Iso w w' → Iso (skip hℓ w) (skip hℓ' w')
 
 theorem LCtx.Wk.Iso.refl {L K : LCtx ν κ α} : (w: L.Wk K) → w.Iso w
   | Wk.nil => nil
   | Wk.cons h w => cons h.live.iso_refl (refl w)
-  | Wk.skip _ w => skip _ _ (refl w)
+  | Wk.skip h w => skip (refl w)
 
 theorem LCtx.Wk.Iso.symm {L K : LCtx ν κ α} {L' K' : LCtx ν' κ' α'}
   {w: L.Wk K} {w': L'.Wk K'} : (h: w.Iso w') → w'.Iso w
   | nil => nil
   | cons h w => cons h.symm w.symm
-  | skip _v _ w => skip _ _ w.symm
+  | skip w => skip w.symm
 
 theorem LCtx.Wk.Iso.trans {L K : LCtx ν κ α} {L' K' : LCtx ν' κ' α'} {L'' K'' : LCtx ν'' κ'' α''}
   {w: L.Wk K} {w': L'.Wk K'} {w'': L''.Wk K''} : (h: w.Iso w') → (h': w'.Iso w'') → w.Iso w''
   | nil, nil => nil
   | cons h w, cons h' w' => cons (h.trans h') (w.trans w')
-  | skip _ _v w, skip _ _ w' => skip _ _ (w.trans w')
+  | skip w, skip w' => skip (w.trans w')
 
 theorem LCtx.Wk.Iso.comp {L K M : LCtx ν κ α} {L' K' M' : LCtx ν' κ' α'}
   {l: L.Wk K} {r: K.Wk M} {l': L'.Wk K'} {r': K'.Wk M'}
   (hl: l.Iso l') (hr: r.Iso r'): (l.comp r).Iso (l'.comp r') := by
-  induction hr generalizing L
-  <;> cases hl
-  <;> repeat first | apply Ctx.Wk.Iso.comp | apply_assumption | constructor
+    induction hr generalizing L <;>
+    cases hl <;>
+    constructor
+    --TODO: probably go clean up or smt
+    apply Label.Wk.Iso.comp <;> assumption
+    apply_assumption
+    assumption
+    case cons.skip I _ _ _ _ h =>
+      apply_assumption
+      assumption
+    case skip.cons I =>
+      apply_assumption
+      constructor <;> assumption
+    case skip.skip I =>
+      apply_assumption
+      constructor
+      assumption
+    assumption
 
 def Var.rename {ν ν' α} (ρ : ν → ν') (v : Var ν α) : Var ν' α
   := ⟨ρ v.name, v.ty⟩
