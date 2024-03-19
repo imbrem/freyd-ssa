@@ -26,3 +26,7 @@ def UBody.Wf.subst [Φ : InstSet φ (Ty α)] {Γ Δ Γ' : Ctx ν (Ty α)} {σ}
       (λx hx => hσ' x ((hx.tail _).tail _))
       (UBody.SSA.of_let2'' hb);
     ⟨Δ', let2 (de.subst hσ) db', hσ'⟩
+
+--TODO: WfM.subst
+
+--TODO: Wf.subst is WfM.subst; formalize this...

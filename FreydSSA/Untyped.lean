@@ -265,6 +265,8 @@ def URegion.rename_label {φ α ν κ κ'}
 
 inductive UGRegion (φ : Type _) (α : Type _) (ν : Type _) (κ : Type _)
   : Type _ where
+  | let1 : ν → UTm φ ν → UGRegion φ α ν κ → UGRegion φ α ν κ
+  | let2 : ν → ν → UTm φ ν → UGRegion φ α ν κ → UGRegion φ α ν κ
   | br : κ → UTm φ ν → UGRegion φ α ν κ
   | ite : UTm φ ν → UGRegion φ α ν κ → UGRegion φ α ν κ → UGRegion φ α ν κ
   | dom : UGRegion φ α ν κ → UGRegion φ α ν κ → UGRegion φ α ν κ
@@ -273,6 +275,8 @@ inductive UGRegion (φ : Type _) (α : Type _) (ν : Type _) (κ : Type _)
 
 def UGRegion.rename {φ α ν ν' κ}
   (σ : ν → ν') : UGRegion φ α ν κ → UGRegion φ α ν' κ
+  | let1 x e b => let1 (σ x) (e.rename σ) (b.rename σ)
+  | let2 x y e b => let2 (σ x) (σ y) (e.rename σ) (b.rename σ)
   | br ℓ e => br ℓ (e.rename σ)
   | ite c t f => ite (c.rename σ) (t.rename σ) (f.rename σ)
   | dom d r => dom (d.rename σ) (r.rename σ)
@@ -281,6 +285,8 @@ def UGRegion.rename {φ α ν ν' κ}
 
 def UGRegion.rename_label {φ α ν κ κ'}
   (σ : κ → κ') : UGRegion φ α ν κ → UGRegion φ α ν κ'
+  | let1 x e b => let1 x e (b.rename_label σ)
+  | let2 x y e b => let2 x y e (b.rename_label σ)
   | br ℓ e => br (σ ℓ) e
   | ite c t f => ite c (t.rename_label σ) (f.rename_label σ)
   | dom d r => dom (d.rename_label σ) (r.rename_label σ)
@@ -288,3 +294,26 @@ def UGRegion.rename_label {φ α ν κ κ'}
   | cons r ℓ x t b => cons (r.rename_label σ) (σ ℓ) x t (b.rename_label σ)
 
 --TODO: map_ty for UGRegion
+
+def UTerminator.toUGRegion {φ α ν κ}
+  (t : UTerminator φ ν κ) : UGRegion φ α ν κ
+  := match t with
+    | UTerminator.br ℓ e => UGRegion.br ℓ e
+    | UTerminator.ite c t f => UGRegion.ite c (t.toUGRegion) (f.toUGRegion)
+
+def UBody.comp_region {φ α ν κ}
+  (b : UBody φ ν) (r : UGRegion φ α ν κ) : UGRegion φ α ν κ
+  := match b with
+    | UBody.nil => r
+    | UBody.let1 x e b => UGRegion.let1 x e (b.comp_region r)
+    | UBody.let2 x y e b => UGRegion.let2 x y e (b.comp_region r)
+
+def UBB.toUGRegion {φ α ν κ}
+  (b : UBB φ ν κ) : UGRegion φ α ν κ
+  := b.body.comp_region b.terminator.toUGRegion
+
+def UCFG.toUGRegion {φ α ν κ}
+  (Φ : UCFG φ α ν κ) : UGRegion φ α ν κ
+  := match Φ with
+    | UCFG.nil => UGRegion.nil
+    | UCFG.cons Φ κ x t b => UGRegion.cons (Φ.toUGRegion) κ x t (b.toUGRegion)

@@ -448,6 +448,10 @@ def LCtx.Wk.comp {L K M : LCtx ν κ α} : L.Wk K → K.Wk M → L.Wk M
   | Wk.skip hℓ w, Wk.cons hℓw w' => Wk.skip (hℓw.name ▸ hℓ) (w.comp w')
   | w, Wk.skip hℓ w' => Wk.skip (w.not_mem hℓ) (w.comp w')
 
+def Ctx.Wk.to_lctx {ν α κ} {Γ Δ : Ctx ν α} (ℓ: κ) (A: α) (w: Γ.Wk Δ)
+  : LCtx.Wk [⟨ℓ, A, Γ⟩] [⟨ℓ, A, Δ⟩]
+  := LCtx.Wk.cons ⟨rfl, rfl, w⟩ LCtx.Wk.nil
+
 inductive LCtx.Wk.Iso : {L K : LCtx ν κ α} → {L' K' : LCtx ν' κ' α'} → Wk L K → Wk L' K' → Prop
   | nil : Iso nil nil
   | cons : h.Iso h' → Iso w w' → Iso (cons h w) (cons h' w')
