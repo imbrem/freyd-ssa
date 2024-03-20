@@ -26,3 +26,21 @@ import FreydSSA.Region.Intrinsic.Basic
 -- import FreydSSA.Region.Intrinsic.Subst
 import FreydSSA.GRegion.Intrinsic.Basic
 -- import FreydSSA.GRegion.Intrinsic.Subst
+
+-- TODO: Intrinsic BodyM, Body' ==> fix Intrinsic BB
+-- TODO: Indexed intrinsic/extrinsic (dominator tree)
+-- TODO: Dominated intrinsic/extrinsic (dominator tree)
+-- TODO: capture-avoiding subst over extrinsic (which is just Γ ⊢ b ▷ Γ for blocks!)
+-- TODO: resource algebra for substructurality, r ⊗ ℓ ⊆ L, and so on...
+  -- TODO: resourceful intrinsic
+  -- TODO: resourceful extrinsic
+  -- TODO: resourceful indexed
+  -- TODO: resourceful intrinsic-dom
+  -- TODO: resourceful extrinsic-dom
+-- TODO: Freyd category semantics...
+-- TODO: Monadic semantics, equality w/ categorical semantics
+-- TODO: Initial model for Freyd: show quotient respects Freyd rules
+  -- TODO: use dominator quotient?
+-- TODO: Initial model for Elgot: show quotient respects Elgot rules
+  -- TODO: use dominator quotient?
+-- TODO: try contexts as (partial) functions?

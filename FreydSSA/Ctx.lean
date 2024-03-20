@@ -98,7 +98,7 @@ theorem Ctx.Nodup.tail {ν α} {v : Var ν α} {Γ : Ctx ν α}
   : Ctx.Nodup (v::Γ) → Γ.Nodup
   := λh => (Ctx.nodup_cons.mp h).2
 
-inductive Ctx.Wk {ν: Type u} {α: Type v} : Ctx ν α → Ctx ν α → Type (max u v)
+inductive Ctx.Wk : Ctx ν α → Ctx ν α → Type _
   | nil : Ctx.Wk [] []
   | cons {Γ Δ} (x : Var ν α) : Ctx.Wk Γ Δ → Ctx.Wk (x::Γ) (x::Δ)
   | skip {Γ Δ} : Ctx.Fresh x.name Δ → Ctx.Wk Γ Δ → Ctx.Wk (x::Γ) Δ
@@ -165,6 +165,150 @@ def Ctx.Wk.drop {ν α} : (Γ : Ctx ν α) → Γ.Wk []
 
 def Ctx.Wk.head {ν α} (v : Var ν α) (Γ : Ctx ν α) : Wk (v::Γ) [v]
   := cons v (drop Γ)
+
+def Ctx.Wk.join {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+  : Ctx ν α
+  := match Γ, w, w' with
+  | [], _, _ => []
+  | v::_, cons _ w, cons _ w' => v::(join w w')
+  | v::_, cons _ w, skip _ w' => v::(join w w')
+  | v::_, skip _ w, cons _ w' => v::(join w w')
+  | _::_, skip _ w, skip _ w' => join w w'
+
+def Ctx.Wk.join_left {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+  : (w.join w').Wk Δ
+  := match Γ, w, w' with
+  | [], nil, nil => nil
+  | _::_, cons _ w, cons _ w' => cons _ (w.join_left w')
+  | _::_, cons _ w, skip hx w' => cons _ (w.join_left w')
+  | _::_, skip hx w, cons _ w' => skip hx (w.join_left w')
+  | _::_, skip _ w, skip _ w' => w.join_left w'
+
+def Ctx.Wk.join_right {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+  : (w.join w').Wk Δ'
+  := match Γ, w, w' with
+  | [], nil, nil => nil
+  | _::_, cons _ w, cons _ w' => cons _ (w.join_right w')
+  | _::_, cons _ w, skip hx w' => skip hx (w.join_right w')
+  | _::_, skip _ w, cons _ w' => cons _ (w.join_right w')
+  | _::_, skip _ w, skip _ w' => w.join_right w'
+
+theorem Ctx.Fresh.join {ν α} {Γ Δ Δ' : Ctx ν α} {x : ν}
+  (f : Δ.Fresh x) (f' : Δ'.Fresh x)
+  (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+  : (w.join w').Fresh x
+  := match Γ, w, w' with
+  | [], Wk.nil, Wk.nil => nil
+  | _::_, Wk.cons _ w, Wk.cons _ w' => cons f.head (join f.tail f'.tail w w')
+  | _::_, Wk.cons _ w, Wk.skip hx w' => cons f.head (join f.tail f' w w')
+  | _::_, Wk.skip _ w, Wk.cons _ w' => cons f'.head (join f f'.tail w w')
+  | _::_, Wk.skip _ w, Wk.skip hx' w' => join f f' w w'
+
+def Ctx.Wk.join_entry {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+  : Γ.Wk (w.join w')
+  := match Γ, w, w' with
+  | [], nil, nil => nil
+  | _::_, cons _ w, cons _ w' => cons _ (w.join_entry w')
+  | _::_, cons _ w, skip hx w' => cons _ (w.join_entry w')
+  | _::_, skip _ w, cons _ w' => cons _ (w.join_entry w')
+  | _::_, skip f w, skip f' w' => skip (f.join f' w w') (w.join_entry w')
+
+theorem Ctx.Wk.join_nil {ν α} {Γ Δ : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk [])
+  : w.join w' = Δ
+  := by induction w <;> cases w' <;> simp [join, *]
+
+theorem Ctx.Wk.join_idem {ν α} {Γ Δ : Ctx ν α} (w : Γ.Wk Δ)
+  : w.join w = Δ
+  := by induction w  <;> simp [join, *]
+
+theorem Ctx.Wk.join_comm {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+  : w.join w' = w'.join w
+  := by induction w generalizing Δ' with
+  | nil => cases w'; simp [join]
+  | cons _ w I => cases w' with
+    | cons _ w' => simp [join, I w']
+    | skip _ w' => simp [join, I w']
+  | skip _ w I => cases w' with
+    | cons _ w' => simp [join, I w']
+    | skip _ w' => simp [join, I w']
+
+--TODO: join_assoc
+
+theorem Ctx.Wk.nil_join {ν α} {Γ Δ : Ctx ν α} (w : Γ.Wk []) (w' : Γ.Wk Δ)
+  : w.join w' = Δ
+  := by rw [join_comm, join_nil]
+
+theorem Ctx.Wk.join_left_right {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+  : (w.join_left w').join (w.join_right w') = w.join w'
+  := by induction w generalizing Δ' with
+  | nil => cases w'; simp [join_left, join_right]
+  | cons _ w I => cases w' with
+    | cons _ w' => simp [join, join_left, I w']
+    | skip _ w' => simp [join, join_left, I w']
+  | skip _ w I => cases w' with
+    | cons _ w' => simp [join, join_left, I w']
+    | skip _ w' => simp [join, join_left, join_right, I w']
+
+theorem Ctx.Wk.join_comp {ν α} {Γ' Γ Δ Δ' : Ctx ν α}
+  (w : Γ'.Wk Γ) (wl : Γ.Wk Δ) (wr : Γ.Wk Δ')
+  : (w.comp wl).join (w.comp wr) = wl.join wr
+  := by induction w generalizing Δ Δ' <;>
+    cases wl <;> cases wr <;> simp [join, comp, *]
+
+theorem Ctx.Wk.join_eq {Ω Γ Γ' Δ Δ' : Ctx ν α}
+  (w : Ω.Wk Γ) (w' : Ω.Wk Γ')
+  (wl : Γ.Wk Δ) (wr : Γ.Wk Δ') (wl' : Γ'.Wk Δ) (wr' : Γ'.Wk Δ')
+  : wl.join wr = wl'.join wr'
+  := by
+    rw [<-join_comp w wl wr, <-join_comp w' wl' wr']
+    congr 1 <;> apply Ctx.Wk.allEq
+
+--TODO: note this should work if Ω weakens both joins
+
+def Ctx.Wk.join_join {ν α} {Ω Γ Γ' Δ Δ' : Ctx ν α}
+  (w : Ω.Wk Γ) (w' : Ω.Wk Γ')
+  (wl : Γ.Wk Δ) (wr : Γ.Wk Δ') (wl' : Γ'.Wk Δ) (wr' : Γ'.Wk Δ') : Γ'.Wk (wl.join wr)
+  := w.join_eq w' wl wr wl' wr' ▸ wl'.join_entry wr'
+
+--TODO: join iso
+
+-- def Ctx.Wk.meet {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+--   : Ctx ν α
+--   := match Γ, w, w' with
+--   | [], nil, nil => []
+--   | v::_, cons _ w, cons _ w' => v::(meet w w')
+--   | _::_, cons _ w, skip _ w' => meet w w'
+--   | _::_, skip _ w, cons _ w' => meet w w'
+--   | _::_, skip _ w, skip _ w' => meet w w'
+
+-- def Ctx.Wk.meet_left {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+--   : Δ.Wk (w.meet w')
+--   := match Γ, w, w' with
+--   | [], nil, nil => nil
+--   | v::_, cons _ w, cons _ w' => cons _ (w.meet_left w')
+--   | _::_, cons _ w, skip hx w' => skip sorry (w.meet_left w')
+--   | _::_, skip _ w, cons _ w' => w.meet_left w'
+--   | _::_, skip _ w, skip _ w' => w.meet_left w'
+
+-- def Ctx.Wk.meet_right {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+--   : Δ'.Wk (w.join w')
+--   := sorry
+
+-- def Ctx.Wk.meet_entry {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+--   : Γ.Wk (w.meet w')
+--   := w.comp (w.meet_left w')
+
+-- TODO: Ctx.Fresh.meet
+
+-- TODO: meet_{nil, idem, comm, assoc}
+
+-- def Ctx.Wk.meet_meet {ν α} {Γ Δ Δ' Ξ : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+--   : Δ.Wk Ξ → Δ'.Wk Ξ → (w.meet w').Wk Ξ
+--   := sorry
+
+-- TODO: meet iso
+
+-- TODO: unique up to permutations?
 
 def Ctx.get_wk {ν α} (Γ : Ctx ν α) (i : Fin Γ.length)
   (hi : ∀ j, (Γ.get i).name = (Γ.get j).name -> i ≤ j) : Wk Γ [Γ.get i]
@@ -608,6 +752,10 @@ theorem LCtx.Wk.Iso.comp {L K M : LCtx ν κ α} {L' K' M' : LCtx ν' κ' α'}
       assumption
     assumption
 
+--TODO: LCtx join/meet, properties, isos
+
+-- TODO: unique up to permutations?
+
 inductive LCtx.PWk {ν κ α} : LCtx ν κ α → LCtx ν κ α → Type _
   | nil : PWk [] []
   | cons {ℓ ℓ' : Label ν κ α} : ℓ.Wk ℓ' → PWk L K → PWk (ℓ::L) (ℓ'::K)
@@ -990,4 +1138,8 @@ instance : Append (Ctx ν α) := ⟨List.append⟩
 
 def Ctx.reverse {ν α} (Γ : Ctx ν α) : Ctx ν α := List.reverse Γ
 
---TODO: Define SCtx guaranteeing unique variable names?
+-- TODO: factor into files
+
+-- TODO: indexed contexts, weakening of those, mappings; copy the Wk.lean file probably...
+
+-- TODO: deduplication and dedup-weakening ==> dedup-substitution
