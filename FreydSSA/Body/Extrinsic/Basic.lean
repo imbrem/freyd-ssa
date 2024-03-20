@@ -88,6 +88,10 @@ theorem UBody.WfM.trgEq {Γ Δ Δ' : Ctx ν (Ty α)}  {b : UBody φ ν}
   | let1 de db, let1 de' db' => by cases de.tyEq de'; rw [UBody.WfM.trgEq db db']
   | let2 de db, let2 de' db' => by cases de.tyEq de'; rw [UBody.WfM.trgEq db db']
 
+theorem UBody.WfM.allHeq {Γ Δ : Ctx ν (Ty α)} {b : UBody φ ν}
+  (db : b.WfM p Γ Δ) (db' : b.WfM p Γ Δ') : HEq db db' :=
+  by cases db.trgEq db'; exact (db.allEq db').heq
+
 inductive UBody.WfM.Iso
   : {Γ Δ : Ctx ν (Ty α)} → {Γ' Δ' : Ctx ν' (Ty α)}
   → {b : UBody φ ν} → {b' : UBody φ ν'} → b.WfM p Γ Δ → b'.WfM p Γ' Δ' → Prop
@@ -109,9 +113,11 @@ theorem UBody.WfM.Iso.toWf {Γ Δ : Ctx ν (Ty α)}
   | let1 he hb => Wf.Iso.let1 he hb.toWf
   | let2 he hb => Wf.Iso.let2 he hb.toWf
 
+--TODO: why the unused variable warning otherwise
+set_option linter.unusedVariables false in
 def UBody.WfM.comp {Γ Δ Ξ : Ctx ν (Ty α)} {b b' : UBody φ ν}
   : b.WfM p Γ Δ → b'.WfM p Δ Ξ → (b.comp b').WfM p Γ Ξ
-  | nil _ _, db' => db' --TODO: why the unused variable warning?
+  | nil _ _, db' => db'
   | let1 de db, db' => let1 de (db.comp db')
   | let2 de db, db' => let2 de (db.comp db')
 
@@ -159,6 +165,10 @@ def UBody.Wf.toWfM {Γ Δ : Ctx ν (Ty α)} {b : UBody φ ν}
   | nil p _ => WfM.nil p _
   | let1 de db => WfM.let1 de (db.toWfM)
   | let2 de db => WfM.let2 de (db.toWfM)
+
+theorem UBody.Wf.maxTrgEq {Γ Δ Δ' : Ctx ν (Ty α)} {b : UBody φ ν}
+  (db : b.Wf p Γ Δ) (db' : b.Wf p Γ Δ') : db.maxTrg = db'.maxTrg
+  := db.toWfM.trgEq db'.toWfM
 
 theorem UBody.Wf.Iso.toWfM {Γ Δ : Ctx ν (Ty α)}
   {Γ' Δ' : Ctx ν' (Ty α)}  {b : UBody φ ν} {b' : UBody φ ν'}
