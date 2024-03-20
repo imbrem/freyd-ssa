@@ -1,3 +1,5 @@
+import Mathlib.Logic.Lemmas
+
 import FreydSSA.Ctx
 import FreydSSA.InstSet
 import FreydSSA.Untyped
@@ -20,9 +22,9 @@ def UTm.Wf.of_pure {e : UTm φ ν} : e.Wf 1 Γ A → e.Wf p Γ A
   | Wf.unit _ => Wf.unit p
   | Wf.bool _ b => Wf.bool p b
 
-theorem UTm.Wf.ty_eq [Φc : CohInstSet φ (Ty α)] {e : UTm φ ν}
+theorem UTm.Wf.tyEq [Φc : CohInstSet φ (Ty α)] {e : UTm φ ν}
   (de : e.Wf p Γ A) (de' : e.Wf p' Γ A') : A = A' := by induction de generalizing p' A' with
-  | var _ w => cases de' with | var _ w' => exact w.ty_eq w'
+  | var _ w => cases de' with | var _ w' => exact w.tyEq w'
   | op hf _ I => cases de' with | op hf' de' => exact Φc.coh_trg' hf hf' (I de')
   | pair _ _ _ I1 I2 => cases de' with | pair _ dl' dr' => rw [I1 dl', I2 dr']
   | _ => cases de'; rfl
@@ -31,10 +33,14 @@ theorem UTm.Wf.allEq [Φc : CohInstSet φ (Ty α)] {e : UTm φ ν}
   (de : e.Wf p Γ A) (de' : e.Wf p Γ A) : de = de' := by induction de with
   | var _ w => cases de' with | var _ w' => rw [Ctx.Wk.allEq w w']
   | op hf de I => cases de' with | op hf' de' =>
-    cases de.ty_eq de'
+    cases de.tyEq de'
     rw [I de']
   | pair _ dl dr Il Ir => cases de' with | pair _ dl' dr' => rw [Il dl', Ir dr']
   | _ => cases de'; rfl
+
+theorem UTm.Wf.allHeq [Φc : CohInstSet φ (Ty α)] {e : UTm φ ν}
+  (de : e.Wf p Γ A) (de' : e.Wf p Γ A') : HEq de de'
+  := by cases de.tyEq de'; apply Eq.heq; apply allEq
 
 def UTm.Wf.wk {e : UTm φ ν} (w : Γ.Wk Δ) : e.Wf p Δ A → e.Wf p Γ A
   | var p w' => var p (w.comp w')

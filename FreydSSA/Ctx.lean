@@ -106,10 +106,10 @@ inductive Ctx.Wk {ν: Type u} {α: Type v} : Ctx ν α → Ctx ν α → Type (m
 def Ctx.Wk.src {ν α} {Γ Δ : Ctx ν α} (_: Γ.Wk Δ) : Ctx ν α := Γ
 def Ctx.Wk.trg {ν α} {Γ Δ : Ctx ν α} (_: Γ.Wk Δ) : Ctx ν α := Δ
 
-theorem Ctx.Wk.ty_eq {Γ : Ctx ν α} : Wk Γ [⟨x, A⟩] → Wk Γ [⟨x, A'⟩] → A = A'
+theorem Ctx.Wk.tyEq {Γ : Ctx ν α} : Wk Γ [⟨x, A⟩] → Wk Γ [⟨x, A'⟩] → A = A'
   | cons _ _, cons _ _ => rfl
   | cons _ _, skip hx _ | skip hx _, cons _ _ => by cases hx; contradiction
-  | skip _ w, skip _ w' => w.ty_eq w'
+  | skip _ w, skip _ w' => w.tyEq w'
 
 theorem Ctx.Wk.from_nil {ν α} {Γ : Ctx ν α} : Wk [] Γ → Γ = []
   | nil => rfl
@@ -383,6 +383,9 @@ structure Label.Wk (ℓ ℓ' : Label ν κ α) where
   param : ℓ.param = ℓ'.param
   live : ℓ.live.Wk ℓ'.live
 
+theorem Label.Wk.allEq {ℓ ℓ' : Label ν κ α} (D D': ℓ.Wk ℓ') : D = D'
+  := by cases D; cases D'; simp only [mk.injEq]; apply Ctx.Wk.allEq
+
 def Label.Wk.refl (ℓ : Label ν κ α) : ℓ.Wk ℓ := ⟨rfl, rfl, Ctx.Wk.refl _⟩
 
 def Label.Wk.comp {ℓ ℓ' ℓ'' : Label ν κ α} (w : ℓ.Wk ℓ') (w' : ℓ'.Wk ℓ'') : ℓ.Wk ℓ''
@@ -425,6 +428,19 @@ inductive LCtx.Wk {ν : Type u} {α : Type v} : LCtx ν κ α → LCtx ν κ α 
   | nil : Wk [] []
   | cons {ℓ ℓ' : Label ν κ α} : ℓ.Wk ℓ' → Wk L K → Wk (ℓ::L) (ℓ'::K)
   | skip {ℓ : Label ν κ α} : ℓ.name ∉ L.labels → Wk L K → Wk L (ℓ::K)
+
+theorem LCtx.Wk.allEq {ν α} {L K : LCtx ν κ α} (D D': L.Wk K): D = D'
+  := by induction D with
+  | nil => cases D'; rfl
+  | cons hℓ _ I => cases D' with
+    | cons =>
+      congr
+      apply Label.Wk.allEq
+      exact I _
+    | skip h => simp [labels, hℓ.name] at h
+  | skip h _ I => cases D' with
+    | cons hℓ _ => simp [labels, hℓ.name] at h
+    | skip h' => congr; exact I _
 
 theorem LCtx.Wk.not_mem {ν κ α} {ℓ : Label ν κ α} {L K : LCtx ν κ α}
   (w : L.Wk K) (h : ℓ.name ∉ K.labels) : ℓ.name ∉ L.labels := by induction w with

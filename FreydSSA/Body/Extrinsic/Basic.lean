@@ -13,8 +13,8 @@ def UBody.Wf.trg {Γ Δ : Ctx ν (Ty α)} {b : UBody φ ν} (_: b.Wf p Γ Δ) : 
 theorem UBody.Wf.allEq {Γ Δ : Ctx ν (Ty α)} [Φc : CohInstSet φ (Ty α)] {b : UBody φ ν}
   : (db db' : b.Wf p Γ Δ) → db = db'
   | nil _ w, nil _ w' => by rw [w.allEq w']
-  | let1 de db, let1 de' db' => by cases de.ty_eq de'; rw [de.allEq de', db.allEq db']
-  | let2 de db, let2 de' db' => by cases de.ty_eq de'; rw [de.allEq de', db.allEq db']
+  | let1 de db, let1 de' db' => by cases de.tyEq de'; rw [de.allEq de', db.allEq db']
+  | let2 de db, let2 de' db' => by cases de.tyEq de'; rw [de.allEq de', db.allEq db']
 
 def UBody.Wf.wk_entry {Γ Δ Ξ : Ctx ν (Ty α)} {b : UBody φ ν} (w : Γ.Wk Δ)
   : b.Wf p Δ Ξ → b.Wf p Γ Ξ
@@ -79,14 +79,14 @@ def UBody.WfM.trg {Γ Δ : Ctx ν (Ty α)} {b : UBody φ ν} (_: b.WfM p Γ Δ) 
 theorem UBody.WfM.allEq {Γ Δ : Ctx ν (Ty α)} {b : UBody φ ν}
   : (db db' : b.WfM p Γ Δ) → db = db'
   | nil _ _, nil _ _ => rfl
-  | let1 de db, let1 de' db' => by cases de.ty_eq de'; rw [de.allEq de', db.allEq db']
-  | let2 de db, let2 de' db' => by cases de.ty_eq de'; rw [de.allEq de', db.allEq db']
+  | let1 de db, let1 de' db' => by cases de.tyEq de'; rw [de.allEq de', db.allEq db']
+  | let2 de db, let2 de' db' => by cases de.tyEq de'; rw [de.allEq de', db.allEq db']
 
 theorem UBody.WfM.trgEq {Γ Δ Δ' : Ctx ν (Ty α)}  {b : UBody φ ν}
   : (db : b.WfM p Γ Δ) → (db' : b.WfM p Γ Δ') → Δ = Δ'
   | nil _ _, nil _ _ => rfl
-  | let1 de db, let1 de' db' => by cases de.ty_eq de'; rw [UBody.WfM.trgEq db db']
-  | let2 de db, let2 de' db' => by cases de.ty_eq de'; rw [UBody.WfM.trgEq db db']
+  | let1 de db, let1 de' db' => by cases de.tyEq de'; rw [UBody.WfM.trgEq db db']
+  | let2 de db, let2 de' db' => by cases de.tyEq de'; rw [UBody.WfM.trgEq db db']
 
 inductive UBody.WfM.Iso
   : {Γ Δ : Ctx ν (Ty α)} → {Γ' Δ' : Ctx ν' (Ty α)}
