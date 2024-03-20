@@ -407,7 +407,7 @@ structure Label.Fresh (ℓ : Label ν κ α) (n : ν): Prop where
   -- name : ℓ.name ≠ n
   live : ℓ.live.Fresh n
 
-def LCtx (ν κ: Type u) (α: Type v) := List (Label ν κ α)
+def LCtx (ν κ α) := List (Label ν κ α)
 
 def LCtx.labels {ν κ α} (L : LCtx ν κ α): List κ
   := L.map Label.name
@@ -424,12 +424,12 @@ theorem LCtx.Fresh.tail {ν α} {n} {ℓ : Label ν κ α} {L : LCtx ν κ α}
   : LCtx.Fresh n (ℓ::L) → L.Fresh n
   | cons _ h => h
 
-inductive LCtx.Wk {ν : Type u} {α : Type v} : LCtx ν κ α → LCtx ν κ α → Type (max u v)
+inductive LCtx.Wk {ν κ α} : LCtx ν κ α → LCtx ν κ α → Type _
   | nil : Wk [] []
   | cons {ℓ ℓ' : Label ν κ α} : ℓ.Wk ℓ' → Wk L K → Wk (ℓ::L) (ℓ'::K)
   | skip {ℓ : Label ν κ α} : ℓ.name ∉ L.labels → Wk L K → Wk L (ℓ::K)
 
-theorem LCtx.Wk.allEq {ν α} {L K : LCtx ν κ α} (D D': L.Wk K): D = D'
+theorem LCtx.Wk.allEq {ν κ α} {L K : LCtx ν κ α} (D D': L.Wk K): D = D'
   := by induction D with
   | nil => cases D'; rfl
   | cons hℓ _ I => cases D' with
