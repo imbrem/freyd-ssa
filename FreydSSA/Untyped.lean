@@ -20,6 +20,15 @@ def UTm.rename {ν ν'}
   | unit => unit
   | bool b => bool b
 
+theorem UTm.rename_id {ν}
+  (e : UTm φ ν) : e.rename id = e
+  := by induction e <;> simp [UTm.rename, *]
+
+theorem UTm.rename_comp {ν ν' ν''}
+  (σ : ν → ν') (σ' : ν' → ν'') (e : UTm φ ν)
+  : e.rename (σ' ∘ σ) = (e.rename σ).rename σ'
+  := by induction e <;> simp [UTm.rename, *]
+
 def UTm.rewrite {ν ν'}
   (σ : ν → UTm φ ν') : UTm φ ν → UTm φ ν'
   | var x => σ x
@@ -27,6 +36,32 @@ def UTm.rewrite {ν ν'}
   | pair l r => pair (l.rewrite σ) (r.rewrite σ)
   | unit => unit
   | bool b => bool b
+
+theorem UTm.rewrite_var {ν}
+  (e : UTm φ ν) : e.rewrite UTm.var = e
+  := by induction e <;> simp [UTm.rewrite, *]
+
+def UTm.comp
+  (σ : ν₁ → UTm φ ν₂) (σ' : ν₂ → UTm φ ν₃) (x : ν₁) : UTm φ ν₃
+  := (σ x).rewrite σ'
+
+theorem UTm.comp_var {ν ν'}
+  (σ : ν → UTm φ ν') : comp σ UTm.var = σ
+  := by funext x; simp [comp, UTm.rewrite_var]
+
+theorem UTm.var_comp {ν ν'}
+  (σ : ν → UTm φ ν') : comp UTm.var σ = σ
+  := rfl
+
+theorem UTm.rewrite_comp {ν ν' ν''}
+  (σ : ν → UTm φ ν') (σ' : ν' → UTm φ ν'') (e : UTm φ ν)
+  : e.rewrite (comp σ σ') = (e.rewrite σ).rewrite σ'
+  := by induction e <;> simp [comp, rewrite, *]
+
+theorem UTm.comp_assoc {ν ν' ν'' ν'''}
+  (σ : ν → UTm φ ν') (σ' : ν' → UTm φ ν'') (σ'' : ν'' → UTm φ ν''')
+  : comp (comp σ σ') σ'' = comp σ (comp σ' σ'')
+  := by funext x; simp [comp, rewrite_comp]
 
 inductive UBody (φ : Type _) (ν  : Type _)
    : Type _ where
@@ -40,12 +75,26 @@ def UBody.rename {φ ν ν'}
   | let1 x e b => let1 (σ x) (e.rename σ) (b.rename σ)
   | let2 x y e b => let2 (σ x) (σ y) (e.rename σ) (b.rename σ)
 
+theorem UBody.rename_comp {φ ν ν' ν''}
+  (σ : ν → ν') (σ' : ν' → ν'') (b : UBody φ ν)
+  : b.rename (σ' ∘ σ) = (b.rename σ).rename σ'
+  := by induction b <;> simp [UBody.rename, UTm.rename_comp, *]
+
 --TODO: define capture avoiding substitution?
 def UBody.rewrite {φ ν}
   (σ : ν → UTm φ ν) : UBody φ ν → UBody φ ν
   | nil => nil
   | let1 x e b => let1 x (e.rewrite σ) (b.rewrite σ)
   | let2 x y e b => let2 x y (e.rewrite σ) (b.rewrite σ)
+
+theorem UBody.rewrite_var {φ ν}
+  (b : UBody φ ν) : b.rewrite UTm.var = b
+  := by induction b <;> simp [UBody.rewrite, UTm.rewrite_var, *]
+
+theorem UBody.rewrite_comp {φ ν}
+  (σ σ' : ν → UTm φ ν) (b : UBody φ ν)
+  : b.rewrite (UTm.comp σ σ') = (b.rewrite σ).rewrite σ'
+  := by induction b <;> simp [UBody.rewrite, UTm.rewrite_comp, *]
 
 def UBody.rewrite' {φ ν}
   (σ : ν → ν' ⊕ UTm φ ν') : UBody φ ν → UBody φ ν'
@@ -79,6 +128,11 @@ theorem UBody.comp_nil {φ ν} (b : UBody φ ν)
 theorem UBody.comp_assoc {φ ν} (b₁ b₂ b₃ : UBody φ ν)
   : UBody.comp (UBody.comp b₁ b₂) b₃ = UBody.comp b₁ (UBody.comp b₂ b₃)
   := by induction b₁ <;> simp [UBody.comp, *]
+
+theorem UBody.comp_rewrite {φ ν}
+  (σ : ν → UTm φ ν) (b₁ b₂ : UBody φ ν)
+  : (b₁.comp b₂).rewrite σ = (b₁.rewrite σ).comp (b₂.rewrite σ)
+  := by induction b₁ <;> simp [UBody.comp, UBody.rewrite, *]
 
 def UBody.comp_defs {φ ν}
   (b₁ b₂ : UBody φ ν) : (b₁.comp b₂).defs = b₁.defs ++ b₂.defs
@@ -167,10 +221,71 @@ def UTerminator.rename {φ ν ν' κ}
   | br ℓ e => br ℓ (e.rename σ)
   | ite c t f => ite (c.rename σ) (t.rename σ) (f.rename σ)
 
-def UTerminator.rename_label {φ ν}
+theorem UTerminator.rename_comp {φ ν ν' ν'' κ}
+  (σ : ν → ν') (σ' : ν' → ν'') (t : UTerminator φ ν κ)
+  : t.rename (σ' ∘ σ) = (t.rename σ).rename σ'
+  := by induction t <;> simp [UTm.rename_comp, UTerminator.rename, *]
+
+def UTerminator.renameLabel {φ ν κ}
   (σ : κ → κ') : UTerminator φ ν κ → UTerminator φ ν κ'
   | br ℓ e => br (σ ℓ) e
-  | ite c t f => ite c (t.rename_label σ) (f.rename_label σ)
+  | ite c t f => ite c (t.renameLabel σ) (f.renameLabel σ)
+
+theorem UTerminator.renameLabel_comp {φ ν κ κ'}
+  (σ : κ → κ') (σ' : κ' → κ'') (t : UTerminator φ ν κ)
+  : t.renameLabel (σ' ∘ σ) = (t.renameLabel σ).renameLabel σ'
+  := by induction t <;> simp [UTm.rename_comp, UTerminator.renameLabel, *]
+
+def UTerminator.rewrite {φ ν κ}
+  (σ : ν → UTm φ ν) : UTerminator φ ν κ → UTerminator φ ν κ
+  | br ℓ e => br ℓ (e.rewrite σ)
+  | ite c t f => ite (c.rewrite σ) (t.rewrite σ) (f.rewrite σ)
+
+theorem UTerminator.rewrite_var {φ ν κ}
+  (t : UTerminator φ ν κ) : t.rewrite UTm.var = t
+  := by induction t <;> simp [UTm.rewrite_var, UTerminator.rewrite, *]
+
+theorem UTerminator.rewrite_comp {φ ν κ}
+  (σ σ' : ν → UTm φ ν) (t : UTerminator φ ν κ)
+  : t.rewrite (UTm.comp σ σ') = (t.rewrite σ).rewrite σ'
+  := by induction t <;> simp [UTm.rewrite_comp, UTerminator.rewrite, *]
+
+def UTerminator.rewriteBr {φ ν κ}
+  (σ : κ → UTm φ ν → UTerminator φ ν κ) : UTerminator φ ν κ → UTerminator φ ν κ
+  | br ℓ e => σ ℓ e
+  | ite c t f => ite c (t.rewriteBr σ) (f.rewriteBr σ)
+
+theorem UTerminator.rewriteBr_br {φ ν κ}
+  (e : UTerminator φ ν κ) : e.rewriteBr br = e := by
+    induction e <;> simp [UTm.rewrite_var, UTerminator.rewriteBr, *]
+
+def UTerminator.comp {φ ν κ}
+  (σ : κ → UTm φ ν → UTerminator φ ν κ) (τ : κ → UTm φ ν → UTerminator φ ν κ)
+  (ℓ : κ) (e : UTm φ ν) : UTerminator φ ν κ
+  := (σ ℓ e).rewriteBr τ
+
+theorem UTerminator.comp_br {φ ν κ}
+  (σ : κ → UTm φ ν → UTerminator φ ν κ)
+  : UTerminator.comp σ br = σ
+  := by funext ℓ e; simp [rewriteBr_br, comp]
+
+theorem UTerminator.br_comp {φ ν κ}
+  (σ : κ → UTm φ ν → UTerminator φ ν κ)
+  (ℓ : κ) (e : UTm φ ν)
+  : UTerminator.comp br σ ℓ e = σ ℓ e
+  := rfl
+
+theorem UTerminator.rewriteBr_comp {φ ν κ}
+  (σ σ' : κ → UTm φ ν → UTerminator φ ν κ) (t : UTerminator φ ν κ)
+  : t.rewriteBr (UTerminator.comp σ σ') = (t.rewriteBr σ).rewriteBr σ'
+  := by induction t <;> simp [rewriteBr_br, comp, rewriteBr, *]
+
+theorem UTerminator.comp_assoc {φ ν κ}
+  (σ : κ → UTm φ ν → UTerminator φ ν κ) (τ : κ → UTm φ ν → UTerminator φ ν κ)
+  (ρ : κ → UTm φ ν → UTerminator φ ν κ)
+  : UTerminator.comp (UTerminator.comp σ τ) ρ
+  = UTerminator.comp σ (UTerminator.comp τ ρ)
+  := by funext ℓ e; simp [comp, rewriteBr_comp, *]
 
 structure UBB (φ : Type _) (ν : Type _) (κ : Type _)
   : Type _ where
@@ -182,10 +297,48 @@ def UBB.rename {φ ν ν' κ}
   body := β.body.rename σ
   terminator := β.terminator.rename σ
 
-def UBB.rename_label {φ ν κ κ'}
+theorem UBB.rename_comp {φ ν ν' ν'' κ}
+  (σ : ν → ν') (σ' : ν' → ν'') (β : UBB φ ν κ)
+  : β.rename (σ' ∘ σ) = (β.rename σ).rename σ'
+  := by simp [UBB.rename, UBody.rename_comp, UTerminator.rename_comp]
+
+def UBB.renameLabel {φ ν κ κ'}
   (σ : κ → κ') (β : UBB φ ν κ) : UBB φ ν κ' where
   body := β.body
-  terminator := β.terminator.rename_label σ
+  terminator := β.terminator.renameLabel σ
+
+theorem UBB.renameLabel_comp {φ ν κ κ'}
+  (σ : κ → κ') (σ' : κ' → κ'') (β : UBB φ ν κ)
+  : β.renameLabel (σ' ∘ σ) = (β.renameLabel σ).renameLabel σ'
+  := by simp [UBB.renameLabel, UTerminator.renameLabel_comp]
+
+def UBB.rewrite {φ ν κ}
+  (σ : ν → UTm φ ν) (β : UBB φ ν κ) : UBB φ ν κ where
+  body := β.body.rewrite σ
+  terminator := β.terminator.rewrite σ
+
+theorem UBB.rewrite_var {φ ν κ}
+  (β : UBB φ ν κ) : β.rewrite UTm.var = β
+  := by simp [UBB.rewrite, UBody.rewrite_var, UTerminator.rewrite_var]
+
+theorem UBB.rewrite_comp {φ ν κ}
+  (σ σ' : ν → UTm φ ν) (β : UBB φ ν κ)
+  : β.rewrite (UTm.comp σ σ') = (β.rewrite σ).rewrite σ'
+  := by simp [UBB.rewrite, UBody.rewrite_comp, UTerminator.rewrite_comp]
+
+def UBB.rewriteBr {φ ν κ}
+  (σ : κ → UTm φ ν → UTerminator φ ν κ) (β : UBB φ ν κ) : UBB φ ν κ where
+  body := β.body
+  terminator := β.terminator.rewriteBr σ
+
+theorem UBB.rewriteBr_br {φ ν κ}
+  (β : UBB φ ν κ) : β.rewriteBr UTerminator.br = β := by
+    simp [UBB.rewriteBr, UTerminator.rewriteBr_br]
+
+theorem UBB.rewriteBr_comp {φ ν κ}
+  (σ σ' : κ → UTm φ ν → UTerminator φ ν κ) (β : UBB φ ν κ)
+  : β.rewriteBr (UTerminator.comp σ σ') = (β.rewriteBr σ).rewriteBr σ'
+  := by simp [UBB.rewriteBr, UTerminator.rewriteBr_comp]
 
 def UBody.compBB {φ ν}
   (b : UBody φ ν) (β : UBB φ ν κ) : UBB φ ν κ
@@ -201,10 +354,48 @@ def UCFG.rename {φ α ν ν' κ}
   | nil => nil
   | cons Φ κ x t b => cons (Φ.rename σ) κ (σ x) t (b.rename σ)
 
-def UCFG.rename_label {φ α ν κ κ'}
+theorem UCFG.rename_comp {φ α ν ν' ν'' κ}
+  (σ : ν → ν') (σ' : ν' → ν'') (Φ : UCFG φ α ν κ)
+  : Φ.rename (σ' ∘ σ) = (Φ.rename σ).rename σ'
+  := by induction Φ <;> simp [UCFG.rename, UBB.rename_comp, *]
+
+def UCFG.renameLabel {φ α ν κ κ'}
   (σ : κ → κ') : UCFG φ α ν κ → UCFG φ α ν κ'
   | nil => nil
-  | cons Φ κ x t b => cons (Φ.rename_label σ) (σ κ) x t (b.rename_label σ)
+  | cons Φ κ x A b => cons (Φ.renameLabel σ) (σ κ) x A (b.renameLabel σ)
+
+theorem UCFG.renameLabel_comp {φ α ν κ κ'}
+  (σ : κ → κ') (σ' : κ' → κ'') (Φ : UCFG φ α ν κ)
+  : Φ.renameLabel (σ' ∘ σ) = (Φ.renameLabel σ).renameLabel σ'
+  := by induction Φ <;> simp [UCFG.renameLabel, UBB.renameLabel_comp, *]
+
+def UCFG.rewrite {φ α ν κ}
+  (σ : ν → UTm φ ν) : UCFG φ α ν κ → UCFG φ α ν κ
+  | nil => nil
+  | cons Φ κ x A b => cons (Φ.rewrite σ) κ x A (b.rewrite σ)
+
+theorem UCFG.rewrite_var {φ α ν κ}
+  (Φ : UCFG φ α ν κ) : Φ.rewrite UTm.var = Φ := by
+    induction Φ <;> simp [UCFG.rewrite, UBB.rewrite_var, *]
+
+theorem UCFG.rewrite_comp {φ α ν κ}
+  (σ σ' : ν → UTm φ ν) (Φ : UCFG φ α ν κ)
+  : Φ.rewrite (UTm.comp σ σ') = (Φ.rewrite σ).rewrite σ'
+  := by induction Φ <;> simp [UCFG.rewrite, UBB.rewrite_comp, *]
+
+def UCFG.rewriteBr {φ α ν κ}
+  (σ : κ → UTm φ ν → UTerminator φ ν κ) : UCFG φ α ν κ → UCFG φ α ν κ
+  | nil => nil
+  | cons Φ κ x A b => cons (Φ.rewriteBr σ) κ x A (b.rewriteBr σ)
+
+theorem UCFG.rewriteBr_br {φ α ν κ}
+  (Φ : UCFG φ α ν κ) : Φ.rewriteBr UTerminator.br = Φ := by
+    induction Φ <;> simp [UCFG.rewriteBr, UBB.rewriteBr_br, *]
+
+theorem UCFG.rewriteBr_comp {φ α ν κ}
+  (σ σ' : κ → UTm φ ν → UTerminator φ ν κ) (Φ : UCFG φ α ν κ)
+  : Φ.rewriteBr (UTerminator.comp σ σ') = (Φ.rewriteBr σ).rewriteBr σ'
+  := by induction Φ <;> simp [UCFG.rewriteBr, UBB.rewriteBr_comp, *]
 
 def UCFG.labels {φ α ν κ}
   : UCFG φ α ν κ → List κ
@@ -219,20 +410,25 @@ def UCFG.defs {φ α ν κ}
 def UCFG.comp {φ α ν κ}
   : UCFG φ α ν κ → UCFG φ α ν κ → UCFG φ α ν κ
   | nil, Φ => Φ
-  | cons Φ κ x t b, Φ' => cons (Φ.comp Φ') κ x t b
+  | cons Φ κ x A b, Φ' => cons (Φ.comp Φ') κ x A b
 
-def UCFG.nil_comp {φ α ν κ} (Φ : UCFG φ α ν κ)
+theorem UCFG.nil_comp {φ α ν κ} (Φ : UCFG φ α ν κ)
   : UCFG.nil.comp Φ = Φ := rfl
 
-def UCFG.comp_nil {φ α ν κ}
+theorem UCFG.comp_nil {φ α ν κ}
   (Φ : UCFG φ α ν κ) : Φ.comp UCFG.nil = Φ
   := by induction Φ <;> simp [comp, *]
 
-def UCFG.comp_labels {φ α ν κ}
+theorem UCFG.comp_assoc {φ α ν κ}
+  (Φ Φ' Φ'' : UCFG φ α ν κ)
+  : (Φ.comp Φ').comp Φ'' = Φ.comp (Φ'.comp Φ'')
+  := by induction Φ <;> simp [comp, *]
+
+theorem UCFG.comp_labels {φ α ν κ}
   (Φ Φ' : UCFG φ α ν κ) : (Φ.comp Φ').labels = Φ.labels ++ Φ'.labels
   := by induction Φ <;> simp [labels, comp, *]
 
-def UCFG.comp_defs {φ α ν κ}
+theorem UCFG.comp_defs {φ α ν κ}
   (Φ Φ' : UCFG φ α ν κ) : (Φ.comp Φ').defs = Φ.defs ++ Φ'.defs
   := by induction Φ <;> simp [defs, comp, *]
 
@@ -262,10 +458,48 @@ def URegion.rename {φ α ν ν' κ}
   entry := β.entry.rename σ
   cfg := β.cfg.rename σ
 
-def URegion.rename_label {φ α ν κ κ'}
+theorem URegion.rename_comp {φ α ν ν' ν'' κ}
+  (σ : ν → ν') (σ' : ν' → ν'') (β : URegion φ α ν κ)
+  : β.rename (σ' ∘ σ) = (β.rename σ).rename σ'
+  := by simp [URegion.rename, UBB.rename_comp, UCFG.rename_comp]
+
+def URegion.renameLabel {φ α ν κ κ'}
   (σ : κ → κ') (β : URegion φ α ν κ) : URegion φ α ν κ' where
-  entry := β.entry.rename_label σ
-  cfg := β.cfg.rename_label σ
+  entry := β.entry.renameLabel σ
+  cfg := β.cfg.renameLabel σ
+
+theorem URegion.renameLabel_comp {φ α ν κ κ'}
+  (σ : κ → κ') (σ' : κ' → κ'') (β : URegion φ α ν κ)
+  : β.renameLabel (σ' ∘ σ) = (β.renameLabel σ).renameLabel σ'
+  := by simp [URegion.renameLabel, UBB.renameLabel_comp, UCFG.renameLabel_comp]
+
+def URegion.rewrite {φ α ν κ}
+  (σ : ν → UTm φ ν) (β : URegion φ α ν κ) : URegion φ α ν κ where
+  entry := β.entry.rewrite σ
+  cfg := β.cfg.rewrite σ
+
+theorem URegion.rewrite_var {φ α ν κ}
+  (β : URegion φ α ν κ) : β.rewrite UTm.var = β
+  := by simp [URegion.rewrite, UBB.rewrite_var, UCFG.rewrite_var]
+
+theorem URegion.rewrite_comp {φ α ν κ}
+  (σ σ' : ν → UTm φ ν) (β : URegion φ α ν κ)
+  : β.rewrite (UTm.comp σ σ') = (β.rewrite σ).rewrite σ'
+  := by simp [URegion.rewrite, UBB.rewrite_comp, UCFG.rewrite_comp]
+
+def URegion.rewriteBr {φ α ν κ}
+  (σ : κ → UTm φ ν → UTerminator φ ν κ) (β : URegion φ α ν κ) : URegion φ α ν κ where
+  entry := β.entry
+  cfg := β.cfg.rewriteBr σ
+
+theorem URegion.rewriteBr_br {φ α ν κ}
+  (β : URegion φ α ν κ) : β.rewriteBr UTerminator.br = β := by
+    simp [URegion.rewriteBr, UCFG.rewriteBr_br]
+
+theorem URegion.rewriteBr_comp {φ α ν κ}
+  (σ σ' : κ → UTm φ ν → UTerminator φ ν κ) (β : URegion φ α ν κ)
+  : β.rewriteBr (UTerminator.comp σ σ') = (β.rewriteBr σ).rewriteBr σ'
+  := by simp [URegion.rewriteBr, UCFG.rewriteBr_comp]
 
 inductive UGRegion (φ : Type _) (α : Type _) (ν : Type _) (κ : Type _)
   : Type _ where
@@ -285,17 +519,87 @@ def UGRegion.rename {φ α ν ν' κ}
   | ite c t f => ite (c.rename σ) (t.rename σ) (f.rename σ)
   | dom d r => dom (d.rename σ) (r.rename σ)
   | nil => nil
-  | cons r ℓ x t b => cons (r.rename σ) ℓ (σ x) t (b.rename σ)
+  | cons r ℓ x A b => cons (r.rename σ) ℓ (σ x) A (b.rename σ)
 
-def UGRegion.rename_label {φ α ν κ κ'}
+theorem UGRegion.rename_comp {φ α ν ν' ν'' κ}
+  (σ : ν → ν') (σ' : ν' → ν'') (r : UGRegion φ α ν κ)
+  : r.rename (σ' ∘ σ) = (r.rename σ).rename σ'
+  := by induction r <;> simp [UGRegion.rename, UTm.rename_comp, *]
+
+def UGRegion.renameLabel {φ α ν κ κ'}
   (σ : κ → κ') : UGRegion φ α ν κ → UGRegion φ α ν κ'
-  | let1 x e b => let1 x e (b.rename_label σ)
-  | let2 x y e b => let2 x y e (b.rename_label σ)
+  | let1 x e b => let1 x e (b.renameLabel σ)
+  | let2 x y e b => let2 x y e (b.renameLabel σ)
   | br ℓ e => br (σ ℓ) e
-  | ite c t f => ite c (t.rename_label σ) (f.rename_label σ)
-  | dom d r => dom (d.rename_label σ) (r.rename_label σ)
+  | ite c t f => ite c (t.renameLabel σ) (f.renameLabel σ)
+  | dom d r => dom (d.renameLabel σ) (r.renameLabel σ)
   | nil => nil
-  | cons r ℓ x t b => cons (r.rename_label σ) (σ ℓ) x t (b.rename_label σ)
+  | cons r ℓ x A b => cons (r.renameLabel σ) (σ ℓ) x A (b.renameLabel σ)
+
+theorem UGRegion.renameLabel_comp {φ α ν κ κ'}
+  (σ : κ → κ') (σ' : κ' → κ'') (r : UGRegion φ α ν κ)
+  : r.renameLabel (σ' ∘ σ) = (r.renameLabel σ).renameLabel σ'
+  := by induction r <;> simp [UGRegion.renameLabel, *]
+
+def UGRegion.rewrite {φ α ν κ}
+  (σ : ν → UTm φ ν) : UGRegion φ α ν κ → UGRegion φ α ν κ
+  | let1 x e b => let1 x (e.rewrite σ) (b.rewrite σ)
+  | let2 x y e b => let2 x y (e.rewrite σ) (b.rewrite σ)
+  | br ℓ e => br ℓ (e.rewrite σ)
+  | ite c t f => ite (c.rewrite σ) (t.rewrite σ) (f.rewrite σ)
+  | dom d r => dom (d.rewrite σ) (r.rewrite σ)
+  | nil => nil
+  | cons r ℓ x A b => cons (r.rewrite σ) ℓ x A (b.rewrite σ)
+
+theorem UGRegion.rewrite_var {φ α ν κ}
+  (r : UGRegion φ α ν κ) : r.rewrite UTm.var = r
+  := by induction r <;> simp [UGRegion.rewrite, UTm.rewrite_var, *]
+
+theorem UGRegion.rewrite_comp {φ α ν κ}
+  (σ σ' : ν → UTm φ ν) (r : UGRegion φ α ν κ)
+  : r.rewrite (UTm.comp σ σ') = (r.rewrite σ).rewrite σ'
+  := by induction r <;> simp [UGRegion.rewrite, UTm.rewrite_comp, *]
+
+def UGRegion.rewriteBr {φ α ν κ}
+  (σ : κ → UTm φ ν → UGRegion φ α ν κ) : UGRegion φ α ν κ → UGRegion φ α ν κ
+  | let1 x e b => let1 x e (b.rewriteBr σ)
+  | let2 x y e b => let2 x y e (b.rewriteBr σ)
+  | br ℓ e => σ ℓ e
+  | ite c t f => ite c (t.rewriteBr σ) (f.rewriteBr σ)
+  | dom d r => dom (d.rewriteBr σ) (r.rewriteBr σ)
+  | nil => nil
+  | cons r ℓ x A b => cons (r.rewriteBr σ) ℓ x A (b.rewriteBr σ)
+
+theorem UGRegion.rewriteBr_br {φ α ν κ}
+  (r : UGRegion φ α ν κ) : r.rewriteBr br = r := by
+    induction r <;> simp [UTm.rewrite_var, UGRegion.rewriteBr, *]
+
+def UGRegion.comp {φ α ν κ}
+  (σ : κ → UTm φ ν → UGRegion φ α ν κ) (τ : κ → UTm φ ν → UGRegion φ α ν κ)
+  (ℓ : κ) (e : UTm φ ν) : UGRegion φ α ν κ
+  := (σ ℓ e).rewriteBr τ
+
+theorem UGRegion.comp_br {φ α ν κ}
+  (σ : κ → UTm φ ν → UGRegion φ α ν κ)
+  : UGRegion.comp σ br = σ
+  := by funext ℓ e; simp [UGRegion.comp, rewriteBr_br]
+
+theorem UGRegion.br_comp {φ α ν κ}
+  (σ : κ → UTm φ ν → UGRegion φ α ν κ)
+  : UGRegion.comp br σ = σ
+  := rfl
+
+theorem UGRegion.rewriteBr_comp {φ α ν κ}
+  (σ σ' : κ → UTm φ ν → UGRegion φ α ν κ) (r : UGRegion φ α ν κ)
+  : r.rewriteBr (UGRegion.comp σ σ') = (r.rewriteBr σ).rewriteBr σ'
+  := by induction r <;> simp [UGRegion.rewriteBr, comp, *]
+
+theorem UGRegion.comp_assoc {φ α ν κ}
+  (σ : κ → UTm φ ν → UGRegion φ α ν κ) (τ : κ → UTm φ ν → UGRegion φ α ν κ)
+  (ρ : κ → UTm φ ν → UGRegion φ α ν κ)
+  : UGRegion.comp (UGRegion.comp σ τ) ρ
+  = UGRegion.comp σ (UGRegion.comp τ ρ)
+  := by funext ℓ e; simp [UGRegion.comp, rewriteBr_comp, *]
 
 --TODO: map_ty for UGRegion
 
