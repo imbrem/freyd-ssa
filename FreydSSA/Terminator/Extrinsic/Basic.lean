@@ -6,7 +6,7 @@ inductive UTerminator.Wf : Ctx ν (Ty α) → UTerminator φ ν κ → LCtx ν �
   | br : LCtx.Wk [⟨ℓ, A, Γ⟩] L → e.Wf 1 Γ A → Wf Γ (br ℓ e) L
   | ite : c.Wf 1 Γ Ty.bool → t.Wf Γ L → f.Wf Γ L → Wf Γ (ite c t f) L
 
-inductive UGRegion.WfTerminator : Ctx ν (Ty α) → UGRegion φ α ν κ → LCtx ν (Ty α) κ → Type _
+inductive UGRegion.WfTerminator : Ctx ν (Ty α) → UGRegion φ α ν κ → LCtx ν κ (Ty α) → Type _
   | br : LCtx.Wk [⟨ℓ, A, Γ⟩] L → e.Wf 1 Γ A → WfTerminator Γ (br ℓ e) L
   | ite : c.Wf 1 Γ Ty.bool → t.WfTerminator Γ L → f.WfTerminator Γ L → WfTerminator Γ (ite c t f) L
 
