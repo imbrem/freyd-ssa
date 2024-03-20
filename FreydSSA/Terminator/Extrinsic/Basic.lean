@@ -35,6 +35,15 @@ theorem UTerminator.Wf.allEq {Γ : Ctx ν (Ty α)} {t : UTerminator φ ν κ}
     apply_assumption
     apply_assumption
 
+-- def UTerminator.Wf.toMin {Γ : Ctx ν (Ty α)} {t : UTerminator φ ν κ}
+--   : Wf Γ t L → (L': LCtx ν κ (Ty α)) × Wf Γ t L' × L'.Wk L
+--   | br hℓ de => ⟨_, br (LCtx.Wk.refl _) de, hℓ⟩
+--   | ite dc dt df =>
+--     let ⟨Lt, dt', wt⟩ := dt.toMin
+--     let ⟨Lf, df', wf⟩ := df.toMin
+--     --TODO: lattice ops...
+--     sorry
+
 --TODO: Wf.toUGRegion
 
 --TODO: WfTerminator.wk_entry

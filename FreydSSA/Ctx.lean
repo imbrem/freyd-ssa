@@ -148,6 +148,17 @@ def Ctx.Wk.refl {ν α} : (Γ : Ctx ν α) → Γ.Wk Γ
   | [] => nil
   | x::Γ => cons x (refl Γ)
 
+theorem Ctx.Wk.antisymm {ν α} {Γ Δ : Ctx ν α} (h : Γ.Wk Δ) (h' : Δ.Wk Γ) : Γ = Δ
+  := by induction h with
+  | nil => cases h'; rfl
+  | cons x _ I =>
+    cases h' with
+    | cons x' h' =>
+      congr
+      exact I h'
+    | skip hx => exact (hx.head rfl).elim
+  | skip hx => exact ((hx.wk h').head rfl).elim
+
 def Ctx.Wk.drop {ν α} : (Γ : Ctx ν α) → Γ.Wk []
   | [] => nil
   | _::Γ => skip Fresh.nil (drop Γ)
@@ -383,6 +394,12 @@ structure Label.Wk (ℓ ℓ' : Label ν κ α) where
   param : ℓ.param = ℓ'.param
   live : ℓ.live.Wk ℓ'.live
 
+theorem Label.Wk.antisymm {ℓ ℓ' : Label ν κ α} (h : ℓ.Wk ℓ') (h' : ℓ'.Wk ℓ) : ℓ = ℓ'
+  := by
+    cases ℓ; cases ℓ';
+    simp only [Label.mk.injEq]
+    exact ⟨h.name, h.param, h.live.antisymm h'.live⟩
+
 theorem Label.Wk.allEq {ℓ ℓ' : Label ν κ α} (D D': ℓ.Wk ℓ') : D = D'
   := by cases D; cases D'; simp only [mk.injEq]; apply Ctx.Wk.allEq
 
@@ -403,31 +420,110 @@ def Label.Wk.Iso.comp {ℓ₁ ℓ₂ ℓ₃ : Label ν κ α} {ℓ₁' ℓ₂' �
   : (l.comp r).Iso (l'.comp r')
   := Ctx.Wk.Iso.comp hl hr
 
-structure Label.Fresh (ℓ : Label ν κ α) (n : ν): Prop where
-  -- name : ℓ.name ≠ n
-  live : ℓ.live.Fresh n
+def Label.FreshVar (ℓ : Label ν κ α) (n : ν) := ℓ.live.Fresh n
+
+theorem Label.FreshVar.wk {ℓ ℓ' : Label ν κ α} {l : ν}
+  (h : ℓ.FreshVar l) (w : ℓ.Wk ℓ') : ℓ'.FreshVar l
+  := Ctx.Fresh.wk h w.live
+
+def Label.Fresh (ℓ : Label ν κ α) (l : κ) := ℓ.name ≠ l
+
+theorem Label.Fresh.wk_exit {ℓ ℓ' : Label ν κ α} {l : κ}
+  (h : ℓ.Fresh l) (w : ℓ.Wk ℓ') : ℓ'.Fresh l
+  := by simp only [<-w.name, Fresh]; exact h
+
+theorem Label.Fresh.wk_entry {ℓ ℓ' : Label ν κ α} {l : κ}
+  (w : ℓ.Wk ℓ') (h : ℓ'.Fresh l) : ℓ.Fresh l
+  := by simp only [w.name, Fresh]; exact h
 
 def LCtx (ν κ α) := List (Label ν κ α)
 
 def LCtx.labels {ν κ α} (L : LCtx ν κ α): List κ
   := L.map Label.name
 
-inductive LCtx.Fresh {ν κ α} (n : ν) : LCtx ν κ α → Prop
-  | nil : LCtx.Fresh n []
-  | cons : ℓ.Fresh n → Fresh n L → Fresh n (ℓ::L)
+inductive LCtx.FreshVar {ν κ α} (n : ν) : LCtx ν κ α → Prop
+  | nil : LCtx.FreshVar n []
+  | cons : ℓ.FreshVar n → FreshVar n L → FreshVar n (ℓ::L)
 
-theorem LCtx.Fresh.head {ν α} {n} {ℓ : Label ν κ α} {L : LCtx ν κ α}
-  : LCtx.Fresh n (ℓ::L) → ℓ.Fresh n
+theorem LCtx.FreshVar.head {ν α} {n} {ℓ : Label ν κ α} {L : LCtx ν κ α}
+  : FreshVar n (ℓ::L) → ℓ.FreshVar n
   | cons hxn _ => hxn
 
-theorem LCtx.Fresh.tail {ν α} {n} {ℓ : Label ν κ α} {L : LCtx ν κ α}
-  : LCtx.Fresh n (ℓ::L) → L.Fresh n
+theorem LCtx.FreshVar.tail {ν α} {n} {ℓ : Label ν κ α} {L : LCtx ν κ α}
+  : FreshVar n (ℓ::L) → L.FreshVar n
   | cons _ h => h
+
+inductive LCtx.Fresh {ν κ α} (l : κ) : LCtx ν κ α → Prop
+  | nil : LCtx.Fresh l []
+  | cons : ℓ.Fresh l → Fresh l L → Fresh l (ℓ::L)
+
+theorem LCtx.Fresh.head {ν κ α} {l : κ} {ℓ : Label ν κ α} {L : LCtx ν κ α}
+  : Fresh l (ℓ::L) → ℓ.Fresh l
+  | cons hxn _ => hxn
+
+theorem LCtx.Fresh.tail {ν κ α} {l : κ} {ℓ : Label ν κ α} {L : LCtx ν κ α}
+  : Fresh l (ℓ::L) → L.Fresh l
+  | cons _ h => h
+
+theorem LCtx.Fresh.not_mem {ν κ α} {l : κ} {L : LCtx ν κ α}
+  (h : L.Fresh l) : l ∉ L.labels := by induction h with
+  | nil => exact List.not_mem_nil _
+  | cons hℓ _ I =>
+    apply List.not_mem_cons_of_ne_of_not_mem
+    exact hℓ.symm
+    apply I
+
+theorem LCtx.Fresh.of_not_mem {ν κ α} {l : κ} {L : LCtx ν κ α}
+  (h : l ∉ L.labels) : L.Fresh l
+  := by induction L with
+  | nil => exact Fresh.nil
+  | cons ℓ L I =>
+    apply Fresh.cons
+    apply Ne.symm
+    apply List.ne_of_not_mem_cons
+    exact h
+    apply I
+    apply List.not_mem_of_not_mem_cons
+    exact h
 
 inductive LCtx.Wk {ν κ α} : LCtx ν κ α → LCtx ν κ α → Type _
   | nil : Wk [] []
   | cons {ℓ ℓ' : Label ν κ α} : ℓ.Wk ℓ' → Wk L K → Wk (ℓ::L) (ℓ'::K)
-  | skip {ℓ : Label ν κ α} : ℓ.name ∉ L.labels → Wk L K → Wk L (ℓ::K)
+  | skip {ℓ : Label ν κ α} : L.Fresh ℓ.name → Wk L K → Wk L (ℓ::K)
+
+def LCtx.Wk.refl {ν κ α} : (L : LCtx ν κ α) → L.Wk L
+  | [] => nil
+  | ℓ::L => cons (Label.Wk.refl ℓ) (refl L)
+
+theorem LCtx.Fresh.wk {ν κ α} {L K: LCtx ν κ α} {l: κ}
+  (w : L.Wk K) (h : K.Fresh l) : L.Fresh l
+  := by induction w with
+  | nil => exact h
+  | cons h _ I =>
+    cases h;
+    constructor
+    apply Label.Fresh.wk_entry
+    assumption
+    assumption
+    apply I
+    assumption
+  | skip _ _ I =>
+    apply I
+    cases h
+    assumption
+
+theorem LCtx.Wk.antisymm {ν κ α} {L K : LCtx ν κ α} (h : L.Wk K) (h' : K.Wk L)
+  : L = K
+  := by induction h with
+  | nil => cases h'; rfl
+  | cons hℓ _ I =>
+    cases h' with
+    | cons hℓ' h' =>
+      congr
+      apply Label.Wk.antisymm <;> assumption
+      exact I h'
+    | skip h' => exact (h'.head hℓ.name.symm).elim
+  | skip h => exact ((h.wk h').head rfl).elim
 
 theorem LCtx.Wk.allEq {ν κ α} {L K : LCtx ν κ α} (D D': L.Wk K): D = D'
   := by induction D with
@@ -437,9 +533,9 @@ theorem LCtx.Wk.allEq {ν κ α} {L K : LCtx ν κ α} (D D': L.Wk K): D = D'
       congr
       apply Label.Wk.allEq
       exact I _
-    | skip h => simp [labels, hℓ.name] at h
+    | skip h => exact (h.head hℓ.name).elim
   | skip h _ I => cases D' with
-    | cons hℓ _ => simp [labels, hℓ.name] at h
+    | cons hℓ _ => exact (h.head hℓ.name).elim
     | skip h' => congr; exact I _
 
 theorem LCtx.Wk.not_mem {ν κ α} {ℓ : Label ν κ α} {L K : LCtx ν κ α}
@@ -462,7 +558,7 @@ def LCtx.Wk.comp {L K M : LCtx ν κ α} : L.Wk K → K.Wk M → L.Wk M
   | Wk.nil, w => w
   | Wk.cons h w, Wk.cons h' w' => Wk.cons (h.comp h') (w.comp w')
   | Wk.skip hℓ w, Wk.cons hℓw w' => Wk.skip (hℓw.name ▸ hℓ) (w.comp w')
-  | w, Wk.skip hℓ w' => Wk.skip (w.not_mem hℓ) (w.comp w')
+  | w, Wk.skip hℓ w' => Wk.skip (hℓ.wk w) (w.comp w')
 
 def Ctx.Wk.to_lctx {ν α κ} {Γ Δ : Ctx ν α} (ℓ: κ) (A: α) (w: Γ.Wk Δ)
   : LCtx.Wk [⟨ℓ, A, Γ⟩] [⟨ℓ, A, Δ⟩]
@@ -511,6 +607,55 @@ theorem LCtx.Wk.Iso.comp {L K M : LCtx ν κ α} {L' K' M' : LCtx ν' κ' α'}
       constructor
       assumption
     assumption
+
+inductive LCtx.PWk {ν κ α} : LCtx ν κ α → LCtx ν κ α → Type _
+  | nil : PWk [] []
+  | cons {ℓ ℓ' : Label ν κ α} : ℓ.Wk ℓ' → PWk L K → PWk (ℓ::L) (ℓ'::K)
+
+theorem Ctx.PWk.allEq {ν κ α} {L K : LCtx ν κ α} (D D': L.PWk K): D = D'
+  := by induction D with
+  | nil => cases D'; rfl
+  | cons h _ I => cases D' with
+    | cons =>
+      congr
+      apply Label.Wk.allEq
+      exact I _
+
+theorem LCtx.PWk.comp {L K M : LCtx ν κ α} : L.PWk K → K.PWk M → L.PWk M
+  | nil, w => w
+  | cons h w, PWk.cons h' w' => PWk.cons (h.comp h') (w.comp w')
+
+theorem LCtx.PWk.refl : (L : LCtx ν κ α) → L.PWk L
+  | [] => nil
+  | ℓ::L => cons (Label.Wk.refl ℓ) (refl L)
+
+def LCtx.PWk.toWk {ν κ α} {L K : LCtx ν κ α} : L.PWk K → L.Wk K
+  | PWk.nil => Wk.nil
+  | PWk.cons h w => Wk.cons h (toWk w)
+
+inductive Ctx.LWk {ν κ α} : Ctx ν α → LCtx ν κ α → Type _
+  | nil Γ : LWk Γ []
+  | cons : Γ.Wk ℓ.live → LWk Γ L → LWk Γ (ℓ::L)
+
+theorem Ctx.LWk.allEq {ν κ α} {Γ : Ctx ν α} {L : LCtx ν κ α} (D D' : Γ.LWk L)
+  : D = D'
+  := by induction D with
+  | nil => cases D'; rfl
+  | cons h _ I => cases D' with
+    | cons =>
+      congr
+      apply Ctx.Wk.allEq
+      exact I _
+
+theorem Ctx.LWk.wk_entry {ν κ α} {Γ Δ : Ctx ν α} {L : LCtx ν κ α} (w : Γ.Wk Δ)
+  : Δ.LWk L → Γ.LWk L
+  | nil _ => nil Γ
+  | cons w' lw => cons (w.comp w') (lw.wk_entry w)
+
+theorem Ctx.LWk.wk_exit {ν κ α} {Γ : Ctx ν α} {L K : LCtx ν κ α}
+  : Γ.LWk L → L.PWk K → Γ.LWk K
+  | nil _, LCtx.PWk.nil => nil _
+  | cons w lw, LCtx.PWk.cons w' pw => cons (w.comp w'.live) (lw.wk_exit pw)
 
 def Var.rename {ν ν' α} (ρ : ν → ν') (v : Var ν α) : Var ν' α
   := ⟨ρ v.name, v.ty⟩
