@@ -14,6 +14,7 @@ open List.«term_<+_»
 structure Var (ν : Type u) (α : Type v) : Type (max u v) where
   name: ν
   ty: α
+  deriving DecidableEq
 
 def Ctx (ν : Type u) (α : Type v) : Type (max u v) := List (Var ν α)
 
@@ -272,14 +273,20 @@ def Ctx.Wk.join_join {ν α} {Ω Γ Γ' Δ Δ' : Ctx ν α}
 
 --TODO: join iso
 
--- def Ctx.Wk.meet {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
---   : Ctx ν α
---   := match Γ, w, w' with
---   | [], nil, nil => []
---   | v::_, cons _ w, cons _ w' => v::(meet w w')
---   | _::_, cons _ w, skip _ w' => meet w w'
---   | _::_, skip _ w, cons _ w' => meet w w'
---   | _::_, skip _ w, skip _ w' => meet w w'
+def Ctx.Wk.meet {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+  : Ctx ν α
+  := match Γ, w, w' with
+  | [], nil, nil => []
+  | v::_, cons _ w, cons _ w' => v::(meet w w')
+  | _::_, cons _ w, skip _ w' => meet w w'
+  | _::_, skip _ w, cons _ w' => meet w w'
+  | _::_, skip _ w, skip _ w' => meet w w'
+
+def Ctx.inter {ν α} [BEq (Var ν α)] (Γ Δ : Ctx ν α) : Ctx ν α
+  := Γ.bagInter Δ
+
+theorem Ctx.inter_nil {ν α} [DecidableEq (Var ν α)] (Γ : Ctx ν α) : Γ.inter [] = []
+  := by simp only [Ctx.inter, List.bagInter_nil]
 
 -- def Ctx.Wk.meet_left {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
 --   : Δ.Wk (w.meet w')
@@ -752,9 +759,123 @@ theorem LCtx.Wk.Iso.comp {L K M : LCtx ν κ α} {L' K' M' : LCtx ν' κ' α'}
       assumption
     assumption
 
---TODO: LCtx join/meet, properties, isos
+def Label.Wk.join {ℓ ℓ₁ ℓ₂ : Label ν κ α} (w : ℓ.Wk ℓ₁) (w' : ℓ.Wk ℓ₂) : Label ν κ α where
+  name := ℓ.name
+  param := ℓ.param
+  live := w.live.join w'.live
 
--- TODO: unique up to permutations?
+def Label.Wk.src {ℓ ℓ' : Label ν κ α} (_ : ℓ.Wk ℓ') : Label ν κ α := ℓ
+def Label.Wk.trg {ℓ ℓ' : Label ν κ α} (_ : ℓ.Wk ℓ') : Label ν κ α := ℓ'
+
+def LCtx.Wk.shared_entry {L K M : LCtx ν κ α} : L.Wk M → K.Wk M → LCtx ν κ α
+  | Wk.nil, _ => []
+  | Wk.cons h w, Wk.cons _ w' => h.trg::(shared_entry w w')
+  | Wk.skip _ w, Wk.cons h w' => h.trg::(shared_entry w w')
+  | Wk.cons h w, Wk.skip _ w' => h.trg::(shared_entry w w')
+  | Wk.skip _ w, Wk.skip _ w' => shared_entry w w'
+
+def LCtx.Wk.shared_entry_left {L K M : LCtx ν κ α}
+  : (w : L.Wk M) → (w' : K.Wk M) → L.Wk (w.shared_entry w')
+  | nil, nil => nil
+  | cons h w, cons h' w' => cons h (shared_entry_left w w')
+  | skip h w, cons h' w' => skip h (shared_entry_left w w')
+  | cons h w, skip _ w' => cons h (shared_entry_left w w')
+  | skip _ w, skip _ w' => shared_entry_left w w'
+
+def LCtx.Wk.shared_entry_right {L K M : LCtx ν κ α}
+  : (w : L.Wk M) → (w' : K.Wk M) → K.Wk (w.shared_entry w')
+  | nil, nil => nil
+  | cons _ w, cons h' w' => cons h' (shared_entry_right w w')
+  | skip _ w, cons h' w' => cons h' (shared_entry_right w w')
+  | cons _ w, skip h' w' => skip h' (shared_entry_right w w')
+  | skip _ w, skip _ w' => shared_entry_right w w'
+
+theorem LCtx.Wk.mem_labels_shared_entry_of_mem_labels_left {L K M : LCtx ν κ α}
+  (w : L.Wk M) (w' : K.Wk M) (hℓm : ℓ ∈ L.labels)
+  : ℓ ∈ (w.shared_entry w').labels
+  := match w, w' with
+  | nil, nil => by simp [labels] at hℓm
+  | cons hℓ w, cons hℓ' w' => by cases hℓm with
+    | head =>
+      simp only [labels, shared_entry, List.map, Label.Wk.trg]
+      rw [hℓ.name]
+      exact List.Mem.head _
+    | tail _ hℓm =>
+      exact List.mem_cons_of_mem _ (mem_labels_shared_entry_of_mem_labels_left w w' hℓm)
+  | skip _ w, cons _ w' =>
+    List.mem_cons_of_mem _ (mem_labels_shared_entry_of_mem_labels_left w w' hℓm)
+  | cons hℓ w, skip _ w' => by cases hℓm with
+    | head =>
+      simp only [labels, shared_entry, List.map, Label.Wk.trg]
+      rw [hℓ.name]
+      exact List.Mem.head _
+    | tail _ hℓm =>
+      exact List.mem_cons_of_mem _ (mem_labels_shared_entry_of_mem_labels_left w w' hℓm)
+  | skip _ w, skip _ w' => mem_labels_shared_entry_of_mem_labels_left w w' hℓm
+
+theorem LCtx.Wk.mem_labels_shared_entry_of_mem_labels_right {L K M : LCtx ν κ α}
+  (w : L.Wk M) (w' : K.Wk M) (hℓm : ℓ ∈ K.labels)
+  : ℓ ∈ (w.shared_entry w').labels
+  := match w, w' with
+  | nil, nil => by simp [labels] at hℓm
+  | cons _ w, cons hℓ' w' => by cases hℓm with
+    | head =>
+      simp only [labels, shared_entry, List.map, Label.Wk.trg]
+      rw [hℓ'.name]
+      exact List.Mem.head _
+    | tail _ hℓm =>
+      exact List.mem_cons_of_mem _ (mem_labels_shared_entry_of_mem_labels_right w w' hℓm)
+  | skip _ w, cons hℓ' w' => by cases hℓm with
+    | head =>
+      simp only [labels, shared_entry, List.map, Label.Wk.trg]
+      rw [hℓ'.name]
+      exact List.Mem.head _
+    | tail _ hℓm =>
+      exact List.mem_cons_of_mem _ (mem_labels_shared_entry_of_mem_labels_right w w' hℓm)
+  | cons _ w, skip hℓ' w' =>
+    List.mem_cons_of_mem _ (mem_labels_shared_entry_of_mem_labels_right w w' hℓm)
+  | skip _ w, skip _ w' => mem_labels_shared_entry_of_mem_labels_right w w' hℓm
+
+def LCtx.Wk.mem_shared_entry_labels_left_or_right {L K M : LCtx ν κ α}
+  (w : L.Wk M) (w' : K.Wk M) (hℓm : ℓ ∈ (w.shared_entry w').labels)
+  : ℓ ∈ L.labels ∨ ℓ ∈ K.labels
+  := match w, w' with
+  | nil, nil => by simp [labels, shared_entry] at hℓm
+  | cons hℓ w, cons hℓ' w' => by
+    cases hℓm with
+    | head => left; rw [labels, List.map, hℓ.name]; exact List.Mem.head _
+    | tail _ hℓm => cases mem_shared_entry_labels_left_or_right w w' hℓm with
+      | inl hℓm => left; exact List.mem_cons_of_mem _ hℓm
+      | inr hℓm => right; exact List.mem_cons_of_mem _ hℓm
+  | skip _ w, cons hℓ' w' => by
+    cases hℓm with
+    | head => right; rw [labels, List.map, hℓ'.name]; exact List.Mem.head _
+    | tail _ hℓm => cases mem_shared_entry_labels_left_or_right w w' hℓm with
+      | inl hℓm => left; exact hℓm
+      | inr hℓm => right; exact List.mem_cons_of_mem _ hℓm
+  | cons hℓ w, skip hℓ' w' => by
+    cases hℓm with
+    | head => left; rw [labels, List.map, hℓ.name]; exact List.Mem.head _
+    | tail _ hℓm => cases mem_shared_entry_labels_left_or_right w w' hℓm with
+      | inl hℓm => left; exact List.mem_cons_of_mem _ hℓm
+      | inr hℓm => right; exact hℓm
+  | skip _ w, skip _ w' => mem_shared_entry_labels_left_or_right w w' hℓm
+
+def LCtx.Wk.shared_entry_exit {L K M : LCtx ν κ α}
+  : (w : L.Wk M) → (w' : K.Wk M) → (w.shared_entry w').Wk M
+  | nil, nil => nil
+  | cons h w, cons h' w' => cons (Label.Wk.refl _) (shared_entry_exit w w')
+  | skip _ w, cons h' w' => cons (Label.Wk.refl _) (shared_entry_exit w w')
+  | cons h w, skip h' w' => cons (Label.Wk.refl _) (shared_entry_exit w w')
+  | skip h w, skip h' w' => skip (by
+    apply Fresh.of_not_mem
+    intro hℓ
+    cases mem_shared_entry_labels_left_or_right w w' hℓ with
+    | inl hℓ => exact h.not_mem hℓ
+    | inr hℓ => exact h'.not_mem hℓ
+  ) (shared_entry_exit w w')
+
+--TODO: LCtx shared properties (e.g. comm...), isos
 
 inductive LCtx.PWk {ν κ α} : LCtx ν κ α → LCtx ν κ α → Type _
   | nil : PWk [] []
