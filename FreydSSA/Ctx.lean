@@ -275,12 +275,95 @@ def Ctx.Wk.join_join {ν α} {Ω Γ Γ' Δ Δ' : Ctx ν α}
 
 def Ctx.Wk.meet {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
   : Ctx ν α
-  := match Γ, w, w' with
-  | [], nil, nil => []
-  | v::_, cons _ w, cons _ w' => v::(meet w w')
-  | _::_, cons _ w, skip _ w' => meet w w'
-  | _::_, skip _ w, cons _ w' => meet w w'
-  | _::_, skip _ w, skip _ w' => meet w w'
+  := match w, w' with
+  | nil, nil => []
+  | cons v w, cons _ w' => v::(meet w w')
+  | cons _ w, skip _ w' => meet w w'
+  | skip _ w, cons _ w' => meet w w'
+  | skip _ w, skip _ w' => meet w w'
+
+theorem Ctx.Wk.meet_comm {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+  : w.meet w' = w'.meet w
+  := by induction w generalizing Δ' <;> cases w' <;> simp [meet, *]
+
+theorem Ctx.Wk.mem_left_of_mem_meet {ν α} {Γ Δ Δ' : Ctx ν α} {x}
+  : (w : Γ.Wk Δ) → (w' : Γ.Wk Δ') → x ∈ (w.meet w').names → x ∈ Δ.names
+  | nil, nil => λh => by cases h
+  | cons _ w, cons _ w' => λh => by
+    simp only [names, List.map_cons, List.mem_cons, List.map] at *
+    match h with
+    | Or.inl h => exact Or.inl h
+    | Or.inr h => exact Or.inr (mem_left_of_mem_meet w w' h)
+  | cons _ w, skip _ w' => λh => List.mem_cons_of_mem _ (mem_left_of_mem_meet w w' h)
+  | skip _ w, cons _ w' => mem_left_of_mem_meet w w'
+  | skip _ w, skip _ w' => mem_left_of_mem_meet w w'
+
+theorem Ctx.Wk.mem_right_of_mem_meet {ν α} {Γ Δ Δ' : Ctx ν α} {x}
+  : (w : Γ.Wk Δ) → (w' : Γ.Wk Δ') → x ∈ (w.meet w').names → x ∈ Δ'.names
+  | nil, nil => λh => by cases h
+  | cons _ w, cons _ w' => λh => by
+    simp only [names, List.map_cons, List.mem_cons, List.map] at *
+    match h with
+    | Or.inl h => exact Or.inl h
+    | Or.inr h => exact Or.inr (mem_right_of_mem_meet w w' h)
+  | cons _ w, skip _ w' => mem_right_of_mem_meet w w'
+  | skip _ w, cons _ w' => λh => List.mem_cons_of_mem _ (mem_right_of_mem_meet w w' h)
+  | skip _ w, skip _ w' => mem_right_of_mem_meet w w'
+
+theorem Ctx.Fresh.meet_left {ν α} {Γ Δ Δ' : Ctx ν α} {x : ν} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+  : Δ.Fresh x → (w.meet w').Fresh x
+  := λf => of_not_mem_names (λh => f.not_mem_names (w.mem_left_of_mem_meet w' h))
+
+theorem Ctx.Fresh.meet_right {ν α} {Γ Δ Δ' : Ctx ν α} {x : ν} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+  : Δ'.Fresh x → (w.meet w').Fresh x
+  := λf => of_not_mem_names (λh => f.not_mem_names (w.mem_right_of_mem_meet w' h))
+
+def Ctx.Wk.meet_left {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+  : Δ.Wk (w.meet w')
+  := match w, w' with
+  | nil, nil => nil
+  | cons _ w, cons _ w' => cons _ (w.meet_left w')
+  | cons _ w, skip hx w' => skip (hx.meet_right w w') (w.meet_left w')
+  | skip _ w, cons _ w' => w.meet_left w'
+  | skip _ w, skip _ w' => w.meet_left w'
+
+def Ctx.Wk.meet_right {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+  : Δ'.Wk (w.meet w')
+  := match w, w' with
+  | nil, nil => nil
+  | cons _ w, cons _ w' => cons _ (w.meet_right w')
+  | cons _ w, skip _ w' => w.meet_right w'
+  | skip hx w, cons _ w' => skip (hx.meet_left w w') (w.meet_right w')
+  | skip _ w, skip _ w' => w.meet_right w'
+
+def Ctx.Wk.meet_entry {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
+  : Γ.Wk (w.meet w')
+  := w.comp (w.meet_left w')
+
+-- TODO: might need basepoint... think about this...
+--
+-- def Ctx.Wk.meet_meet {ν α} {Γ Δ Δ' Ξ : Ctx ν α}
+--   : (w : Γ.Wk Δ) → (w' : Γ.Wk Δ') → Δ.Wk Ξ → Δ'.Wk Ξ → (w.meet w').Wk Ξ
+--   | nil, nil, nil, nil => nil
+--   | cons _ w, cons _ w', cons _ l, cons _ r => cons _ (meet_meet w w' l r)
+--   | cons _ w, cons _ w', cons _ l, skip hx r => (hx.head rfl).elim
+--   | cons _ w, cons _ w', skip hx l, cons _ r => (hx.head rfl).elim
+--   | cons _ w, cons _ w', skip hx l, skip _ r => skip hx (meet_meet w w' l r)
+--   | cons _ w, skip hx w', cons _ l, cons _ r => (hx.head rfl).elim
+--   | cons v w, skip hx w', cons _ l, skip hx' r => by
+--     simp [meet]
+--     sorry
+--   | cons _ w, skip _ w', skip hx l, r => meet_meet w w' l r
+--   | skip _ w, cons _ w', cons _ l, cons _ r => sorry
+--   | skip _ w, cons _ w', skip _ l, cons _ r => sorry
+--   | skip _ w, cons _ w', l, skip hx r => meet_meet w w' l r
+--   | skip _ w, skip _ w', l, r => meet_meet w w' l r
+
+-- TODO: meet_{nil, idem, comm, assoc}
+
+-- TODO: meet iso
+
+-- TODO: unique up to permutations?
 
 def Ctx.inter {ν α} [BEq (Var ν α)] (Γ Δ : Ctx ν α) : Ctx ν α
   := Γ.bagInter Δ
@@ -288,34 +371,7 @@ def Ctx.inter {ν α} [BEq (Var ν α)] (Γ Δ : Ctx ν α) : Ctx ν α
 theorem Ctx.inter_nil {ν α} [DecidableEq (Var ν α)] (Γ : Ctx ν α) : Γ.inter [] = []
   := by simp only [Ctx.inter, List.bagInter_nil]
 
--- def Ctx.Wk.meet_left {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
---   : Δ.Wk (w.meet w')
---   := match Γ, w, w' with
---   | [], nil, nil => nil
---   | v::_, cons _ w, cons _ w' => cons _ (w.meet_left w')
---   | _::_, cons _ w, skip hx w' => skip sorry (w.meet_left w')
---   | _::_, skip _ w, cons _ w' => w.meet_left w'
---   | _::_, skip _ w, skip _ w' => w.meet_left w'
-
--- def Ctx.Wk.meet_right {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
---   : Δ'.Wk (w.join w')
---   := sorry
-
--- def Ctx.Wk.meet_entry {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
---   : Γ.Wk (w.meet w')
---   := w.comp (w.meet_left w')
-
--- TODO: Ctx.Fresh.meet
-
--- TODO: meet_{nil, idem, comm, assoc}
-
--- def Ctx.Wk.meet_meet {ν α} {Γ Δ Δ' Ξ : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
---   : Δ.Wk Ξ → Δ'.Wk Ξ → (w.meet w').Wk Ξ
---   := sorry
-
--- TODO: meet iso
-
--- TODO: unique up to permutations?
+--TODO: meet is inter?
 
 def Ctx.get_wk {ν α} (Γ : Ctx ν α) (i : Fin Γ.length)
   (hi : ∀ j, (Γ.get i).name = (Γ.get j).name -> i ≤ j) : Wk Γ [Γ.get i]
