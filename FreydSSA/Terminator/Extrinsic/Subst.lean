@@ -3,13 +3,221 @@ import FreydSSA.Term.Extrinsic.Subst
 
 variable {φ ν α} [Φ : InstSet φ (Ty α)] [Φc : CohInstSet φ (Ty α)]
 
+def InstSet.USubst.src {σ : ν → UTm φ ν} {Γ Δ : Ctx ν (Ty α)}  (_ : Φ.USubst σ Γ Δ)
+  : Ctx ν (Ty α) := Γ
+
+def InstSet.USubst.trg {σ : ν → UTm φ ν} {Γ Δ : Ctx ν (Ty α)}  (_ : Φ.USubst σ Γ Δ)
+  : Ctx ν (Ty α) := Δ
+
 inductive InstSet.USubstL [Φ : InstSet φ (Ty α)] (σ : ν → UTm φ ν)
   : LCtx ν κ (Ty α) → LCtx ν κ (Ty α) → Type _
   | nil : USubstL σ [] []
-  | cons : USubst σ Γ Δ → USubstL σ L K → USubstL σ (⟨n, A, Γ⟩ :: L) (⟨n, A, Δ⟩ :: K)
-  | skip : USubstL σ L K → ℓ.name ∉ L.labels →  USubstL σ L (ℓ :: K)
+  | cons (n A) : USubst σ Γ Δ → USubstL σ L K → USubstL σ (⟨n, A, Γ⟩ :: L) (⟨n, A, Δ⟩ :: K)
+  | skip : L.Fresh ℓ.name → USubstL σ L K → USubstL σ L (ℓ :: K)
 
--- def UTerminator.Wf.subst {Γ Δ Γ' : Ctx ν (Ty α)} {σ}
+def InstSet.USubstL.ofEmpty [Φ : InstSet φ (Ty α)]
+  (σ : ν → UTm φ ν)
+  {L : LCtx ν κ (Ty α)}
+  : (LCtx.Wk [] L) → USubstL σ [] L
+  | LCtx.Wk.nil => nil
+  | LCtx.Wk.skip hℓ w => skip hℓ (ofEmpty σ w)
+
+def InstSet.USubstL.ofVar [Φ : InstSet φ (Ty α)] {σ : ν → UTm φ ν}
+  {Γ Δ : Ctx ν (Ty α)}
+  {n A}
+  (hσ : USubst σ Γ Δ)
+  : {L : LCtx ν κ (Ty α)} → LCtx.Wk [⟨n, A, Δ⟩] L → USubstL σ [⟨n, A, Γ⟩] L
+  | ⟨_, _, _Δ'⟩::_, LCtx.Wk.cons ⟨rfl, rfl, wΔ⟩ w => cons _ _ (hσ.wk_exit wΔ) (ofEmpty σ w)
+  | _::_, LCtx.Wk.skip hℓ w => skip (LCtx.Fresh.of_not_mem hℓ.not_mem) (ofVar hσ w)
+
+def InstSet.USubstL.shared {σ : ν → UTm φ ν}
+  {L K M : LCtx ν κ (Ty α)}
+  : USubstL σ L M → USubstL σ K M → LCtx ν κ (Ty α)
+  | nil, nil => []
+  | cons n A hσ w, cons _ _ _ w'
+    => ⟨n, A, hσ.src⟩ :: shared w w'
+  | skip _ w, cons _ _ _ w' => shared w w'
+  | cons _ _ _ w, skip _ w' => shared w w'
+  | skip _ w, skip _ w' => shared w w'
+
+-- theorem LCtx.Fresh.shared_of_left {L K M : LCtx ν κ (Ty α)}
+--   (w : Φ.USubstL σ L M)
+--   (w' : Φ.USubstL σ K M)
+--   (f : L.Fresh ℓ) : (w.shared w').Fresh ℓ
+--   := by induction f with
+--   | nil => sorry
+--   | cons => sorry
+
+-- --TODO: why are these not defeq :(
+-- def InstSet.USubstL.sharedOfLeftRight {σ : ν → UTm φ ν}
+--   {L K M : LCtx ν κ (Ty α)} : (w : USubstL σ L M) → (w' : USubstL σ K M)
+--     → USubstL σ (shared w w') M
+--   | nil, nil => nil
+--   | cons _ _ hσ w, cons _ _ _ w'
+--     => by
+--       simp only [shared, USubst.src]
+--       exact cons _ _ hσ (sharedOfLeftRight w w')
+--   | skip _ w, cons _ _ _ w'
+--     => skip sorry (by simp only [shared]; exact sharedOfLeftRight w w')
+--   | cons _ _ _ w, skip _ w'
+--     => skip sorry (by simp only [shared]; exact sharedOfLeftRight w w')
+--   | skip hx w, skip hx' w'
+--     => skip sorry (by simp only [shared]; exact sharedOfLeftRight w w')
+
+def InstSet.USubstL.union {σ : ν → UTm φ ν}
+  {L K M : LCtx ν κ (Ty α)}
+  : USubstL σ L M → USubstL σ K M → LCtx ν κ (Ty α)
+  | nil, nil => []
+  | cons n A hσ w, cons _ _ _ w'
+    => ⟨n, A, hσ.src⟩ :: union w w'
+  | skip _ w, cons n A hσ w' => ⟨n, A, hσ.src⟩ :: union w w'
+  | cons n A hσ w, skip _ w' => ⟨n, A, hσ.src⟩ :: union w w'
+  | skip _ w, skip _ w' => union w w'
+
+theorem LCtx.Fresh.union_of_left_right {L K M : LCtx ν κ (Ty α)}
+  (w : Φ.USubstL σ L M)
+  (w' : Φ.USubstL σ K M)
+  (f : L.Fresh ℓ) (f' : K.Fresh ℓ) : (w.union w').Fresh ℓ
+  := match w, w' with
+  | InstSet.USubstL.nil, InstSet.USubstL.nil => nil
+  | InstSet.USubstL.cons _ _ hσ w, InstSet.USubstL.cons _ _ _ w' => by
+    simp only [InstSet.USubstL.union]
+    cases f; cases f';
+    constructor
+    assumption
+    apply union_of_left_right <;> assumption
+  | InstSet.USubstL.skip _ w, InstSet.USubstL.cons _ _ _ w' => by
+    simp only [InstSet.USubstL.union]
+    cases f'
+    constructor
+    assumption
+    apply union_of_left_right <;> assumption
+  | InstSet.USubstL.cons _ _ _ w, InstSet.USubstL.skip _ w' => by
+    simp only [InstSet.USubstL.union]
+    cases f
+    constructor
+    assumption
+    apply union_of_left_right <;> assumption
+  | InstSet.USubstL.skip _ w, InstSet.USubstL.skip _ w' => by
+    simp only [InstSet.USubstL.union]
+    apply union_of_left_right <;> assumption
+
+--TODO: buggy unused variables...
+theorem LCtx.Fresh.left_of_union {L K M : LCtx ν κ (Ty α)}
+  (w : Φ.USubstL σ L M)
+  (w' : Φ.USubstL σ K M)
+  (_f: (w.union w').Fresh ℓ) : L.Fresh ℓ
+  := match w, w' with
+  | InstSet.USubstL.nil, InstSet.USubstL.nil => nil
+  | InstSet.USubstL.cons _ _ hσ w, InstSet.USubstL.cons _ _ _ w' => by
+    simp only [InstSet.USubstL.union] at *
+    cases _f
+    constructor
+    assumption
+    apply left_of_union <;> assumption
+  | InstSet.USubstL.skip _ w, InstSet.USubstL.cons _ _ _ w' => by
+    simp only [InstSet.USubstL.union] at *
+    cases _f
+    apply left_of_union <;> assumption
+  | InstSet.USubstL.cons _ _ _ w, InstSet.USubstL.skip _ w' => by
+    simp only [InstSet.USubstL.union] at *
+    cases _f
+    constructor
+    assumption
+    apply left_of_union <;> assumption
+  | InstSet.USubstL.skip _ w, InstSet.USubstL.skip _ w' => by
+    simp only [InstSet.USubstL.union] at *
+    apply left_of_union <;> assumption
+
+--TODO: buggy unused variables...
+theorem LCtx.Fresh.right_of_union {L K M : LCtx ν κ (Ty α)}
+  (w : Φ.USubstL σ L M)
+  (w' : Φ.USubstL σ K M)
+  (_f: (w.union w').Fresh ℓ) : K.Fresh ℓ
+  := match w, w' with
+  | InstSet.USubstL.nil, InstSet.USubstL.nil => nil
+  | InstSet.USubstL.cons _ _ hσ w, InstSet.USubstL.cons _ _ _ w' => by
+    simp only [InstSet.USubstL.union] at *
+    cases _f
+    constructor
+    assumption
+    apply right_of_union <;> assumption
+  | InstSet.USubstL.skip _ w, InstSet.USubstL.cons _ _ _ w' => by
+    simp only [InstSet.USubstL.union] at *
+    cases _f
+    constructor
+    assumption
+    apply right_of_union <;> assumption
+  | InstSet.USubstL.cons _ _ _ w, InstSet.USubstL.skip _ w' => by
+    simp only [InstSet.USubstL.union] at *
+    cases _f
+    apply right_of_union <;> assumption
+  | InstSet.USubstL.skip _ w, InstSet.USubstL.skip _ w' => by
+    simp only [InstSet.USubstL.union] at *
+    apply right_of_union <;> assumption
+
+def InstSet.USubstL.unionOfLeftRight {σ : ν → UTm φ ν}
+  {L K M : LCtx ν κ (Ty α)} : (w : USubstL σ L M) → (w' : USubstL σ K M)
+    → USubstL σ (union w w') M
+  | nil, nil => nil
+  | cons _ _ hσ w, cons _ _ _ w' => by
+    simp only [union, USubst.src]
+    exact cons _ _ hσ (unionOfLeftRight w w')
+  | skip _ w, cons _ _ hσ w' => by
+    simp only [union, USubst.src]
+    exact cons _ _ hσ (unionOfLeftRight w w')
+  | cons _ _ hσ w, skip _ w' => by
+    simp only [union, USubst.src]
+    exact cons _ _ hσ (unionOfLeftRight w w')
+  | skip hx w, skip hx' w' => by
+    simp only [union, USubst.src]
+    exact skip (hx.union_of_left_right w w' hx') (unionOfLeftRight w w')
+
+def InstSet.USubstL.leftUnionWk {σ : ν → UTm φ ν}
+  {L K M : LCtx ν κ (Ty α)}
+  : (w : USubstL σ L M) → (w' : USubstL σ K M) → L.Wk (union w w')
+  | nil, nil => LCtx.Wk.nil
+  | cons _ _ hσ w, cons _ _ _ w' => by
+    simp only [union, USubst.src]
+    exact LCtx.Wk.cons (Label.Wk.refl _) (leftUnionWk w w')
+  | skip f w, cons _ _ hσ w' => by
+    simp only [union, USubst.src]
+    exact LCtx.Wk.skip f (leftUnionWk w w')
+  | cons _ _ hσ w, skip _ w' => by
+    simp only [union, USubst.src]
+    exact LCtx.Wk.cons (Label.Wk.refl _) (leftUnionWk w w')
+  | skip hx w, skip hx' w' => by
+    simp only [union, USubst.src]
+    exact leftUnionWk w w'
+
+-- def InstSet.USubstL.rightUnionWk {σ : ν → UTm φ ν}
+--   {L K M : LCtx ν κ (Ty α)}
+--   : (w : USubstL σ L M) → (w' : USubstL σ K M) → K.Wk (union w w')
+--   | nil, nil => LCtx.Wk.nil
+--   | cons _ _ _ w, cons _ _ _ w' => by
+--     simp only [union, USubst.src]
+--     --TODO: need term meeting...
+--     exact LCtx.Wk.cons ⟨rfl, rfl, sorry⟩ (rightUnionWk w w')
+--   | skip f w, cons _ _ hσ w' => by
+--     simp only [union, USubst.src]
+--     sorry --exact rightUnionWk w w'
+--   | cons _ _ hσ w, skip _ w' => by
+--     simp only [union, USubst.src]
+--     sorry --exact LCtx.Wk.cons (Label.Wk.refl _) (rightUnionWk w w')
+--   | skip hx w, skip hx' w' => by
+--     simp only [union, USubst.src]
+--     exact rightUnionWk w w'
+
+-- def UTerminator.Wf.subst
 --   {t : UTerminator φ ν κ}
---   (hσ : Φ.USubst σ Γ' Γ) : t.Wf Γ L → (t.rewrite σ).Wf Γ' L
---   := sorry
+--   (hσ : Φ.USubst σ Γ Δ)
+--   : t.Wf Δ K → (L : LCtx ν κ (Ty α)) ×' (t.rewrite σ).Wf Γ L × Φ.USubstL σ L K
+--   | br hℓ de => ⟨[⟨_, _, _⟩], br (LCtx.Wk.refl _) (de.subst hσ), InstSet.USubstL.ofVar hσ hℓ⟩
+--   | ite dc dt df =>
+--     let ⟨_, dt', hLt⟩ := subst hσ dt;
+--     let ⟨_, df', hLf⟩ := subst hσ df;
+--     ⟨hLt.union hLf,
+--       ite (dc.subst hσ)
+--         (dt'.wk_exit (hLt.leftUnionWk hLf))
+--         (df'.wk_exit (hLt.rightUnionWk hLf)),
+--       hLt.unionOfLeftRight hLf⟩

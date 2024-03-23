@@ -4,7 +4,7 @@ import FreydSSA.Ctx
 import FreydSSA.InstSet
 import FreydSSA.Untyped
 
-variable {φ ν α} [Φ : InstSet φ (Ty α)]
+variable {φ ν α} [Φ : InstSet φ (Ty α)] [Φc : CohInstSet φ (Ty α)]
 
 inductive UTm.Wf : Purity → Ctx ν (Ty α) → UTm φ ν → Ty α → Type _
   | var (p) : Γ.Wk [⟨x, A⟩] → Wf p Γ (var x) A
@@ -48,6 +48,19 @@ def UTm.Wf.wk {e : UTm φ ν} (w : Γ.Wk Δ) : e.Wf p Δ A → e.Wf p Γ A
   | pair p dl dr => pair p (dl.wk w) (dr.wk w)
   | unit p => unit p
   | bool p b => bool p b
+
+-- def UTm.Wf.wk_meet {e : UTm φ ν}
+--   (w : Γ.Wk Δ) (w' : Γ.Wk Δ') : e.Wf p Δ A → e.Wf p Δ' A → e.Wf p (w.meet w') A
+--   | var _ w, var _ w' => var p sorry --TODO: meet must actually _be_ a meet...
+--   | op hf de, op hf' de' => by
+--     cases (de.wk w).tyEq (de'.wk w')
+--     exact op hf (de.wk_meet w w' de')
+--   | pair _ dl dr, pair _ dl' dr' => by
+--     cases (dl.wk w).tyEq (dl'.wk w')
+--     cases (dr.wk w).tyEq (dr'.wk w')
+--     exact pair p (dl.wk_meet w w' dl') (dr.wk_meet w w' dr')
+--   | unit _, unit _ => unit p
+--   | bool _ _, bool _ b => bool p b
 
 inductive UTm.Wf.Iso {Γ' : Ctx ν' (Ty α)}
   : {e : UTm φ ν} → {e' : UTm φ ν'} → e.Wf p Γ A → e'.Wf p Γ' A → Prop
