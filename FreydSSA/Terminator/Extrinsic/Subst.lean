@@ -64,131 +64,132 @@ def InstSet.USubstL.shared {σ : ν → UTm φ ν}
 --   | skip hx w, skip hx' w'
 --     => skip sorry (by simp only [shared]; exact sharedOfLeftRight w w')
 
-def InstSet.USubstL.union {σ : ν → UTm φ ν}
-  {L K M : LCtx ν κ (Ty α)}
-  : USubstL σ L M → USubstL σ K M → LCtx ν κ (Ty α)
-  | nil, nil => []
-  | cons n A hσ w, cons _ _ _ w'
-    => ⟨n, A, hσ.src⟩ :: union w w'
-  | skip _ w, cons n A hσ w' => ⟨n, A, hσ.src⟩ :: union w w'
-  | cons n A hσ w, skip _ w' => ⟨n, A, hσ.src⟩ :: union w w'
-  | skip _ w, skip _ w' => union w w'
+-- def InstSet.USubstL.union {σ : ν → UTm φ ν}
+--   {L K Ω M : LCtx ν κ (Ty α)}
+--   : L.Wk Ω → K.Wk Ω → USubstL σ L M → USubstL σ K M → LCtx ν κ (Ty α)
+--   | _, _, nil, nil => []
+--   | LCtx.Wk.cons _ oL, LCtx.Wk.cons _ oK, cons n A hσ w, cons _ _ hσ' w'
+--     => ⟨n, A, hσ.src⟩ :: union oL oK w w'
+--   | LCtx.Wk.skip _ oL, LCtx.Wk.cons _ oK, skip _ w, cons n A hσ w'
+--     => ⟨n, A, hσ.src⟩ :: union oL oK w w'
+--   | _, _, cons n A hσ w, skip _ w' => ⟨n, A, hσ.src⟩ :: union w w'
+--   | _, _, skip _ w, skip _ w' => union w w'
 
-theorem LCtx.Fresh.union_of_left_right {L K M : LCtx ν κ (Ty α)}
-  (w : Φ.USubstL σ L M)
-  (w' : Φ.USubstL σ K M)
-  (f : L.Fresh ℓ) (f' : K.Fresh ℓ) : (w.union w').Fresh ℓ
-  := match w, w' with
-  | InstSet.USubstL.nil, InstSet.USubstL.nil => nil
-  | InstSet.USubstL.cons _ _ hσ w, InstSet.USubstL.cons _ _ _ w' => by
-    simp only [InstSet.USubstL.union]
-    cases f; cases f';
-    constructor
-    assumption
-    apply union_of_left_right <;> assumption
-  | InstSet.USubstL.skip _ w, InstSet.USubstL.cons _ _ _ w' => by
-    simp only [InstSet.USubstL.union]
-    cases f'
-    constructor
-    assumption
-    apply union_of_left_right <;> assumption
-  | InstSet.USubstL.cons _ _ _ w, InstSet.USubstL.skip _ w' => by
-    simp only [InstSet.USubstL.union]
-    cases f
-    constructor
-    assumption
-    apply union_of_left_right <;> assumption
-  | InstSet.USubstL.skip _ w, InstSet.USubstL.skip _ w' => by
-    simp only [InstSet.USubstL.union]
-    apply union_of_left_right <;> assumption
+-- theorem LCtx.Fresh.union_of_left_right {L K M : LCtx ν κ (Ty α)}
+--   (w : Φ.USubstL σ L M)
+--   (w' : Φ.USubstL σ K M)
+--   (f : L.Fresh ℓ) (f' : K.Fresh ℓ) : (w.union w').Fresh ℓ
+--   := match w, w' with
+--   | InstSet.USubstL.nil, InstSet.USubstL.nil => nil
+--   | InstSet.USubstL.cons _ _ hσ w, InstSet.USubstL.cons _ _ _ w' => by
+--     simp only [InstSet.USubstL.union]
+--     cases f; cases f';
+--     constructor
+--     assumption
+--     apply union_of_left_right <;> assumption
+--   | InstSet.USubstL.skip _ w, InstSet.USubstL.cons _ _ _ w' => by
+--     simp only [InstSet.USubstL.union]
+--     cases f'
+--     constructor
+--     assumption
+--     apply union_of_left_right <;> assumption
+--   | InstSet.USubstL.cons _ _ _ w, InstSet.USubstL.skip _ w' => by
+--     simp only [InstSet.USubstL.union]
+--     cases f
+--     constructor
+--     assumption
+--     apply union_of_left_right <;> assumption
+--   | InstSet.USubstL.skip _ w, InstSet.USubstL.skip _ w' => by
+--     simp only [InstSet.USubstL.union]
+--     apply union_of_left_right <;> assumption
 
---TODO: buggy unused variables...
-theorem LCtx.Fresh.left_of_union {L K M : LCtx ν κ (Ty α)}
-  (w : Φ.USubstL σ L M)
-  (w' : Φ.USubstL σ K M)
-  (_f: (w.union w').Fresh ℓ) : L.Fresh ℓ
-  := match w, w' with
-  | InstSet.USubstL.nil, InstSet.USubstL.nil => nil
-  | InstSet.USubstL.cons _ _ hσ w, InstSet.USubstL.cons _ _ _ w' => by
-    simp only [InstSet.USubstL.union] at *
-    cases _f
-    constructor
-    assumption
-    apply left_of_union <;> assumption
-  | InstSet.USubstL.skip _ w, InstSet.USubstL.cons _ _ _ w' => by
-    simp only [InstSet.USubstL.union] at *
-    cases _f
-    apply left_of_union <;> assumption
-  | InstSet.USubstL.cons _ _ _ w, InstSet.USubstL.skip _ w' => by
-    simp only [InstSet.USubstL.union] at *
-    cases _f
-    constructor
-    assumption
-    apply left_of_union <;> assumption
-  | InstSet.USubstL.skip _ w, InstSet.USubstL.skip _ w' => by
-    simp only [InstSet.USubstL.union] at *
-    apply left_of_union <;> assumption
+-- --TODO: buggy unused variables...
+-- theorem LCtx.Fresh.left_of_union {L K M : LCtx ν κ (Ty α)}
+--   (w : Φ.USubstL σ L M)
+--   (w' : Φ.USubstL σ K M)
+--   (_f: (w.union w').Fresh ℓ) : L.Fresh ℓ
+--   := match w, w' with
+--   | InstSet.USubstL.nil, InstSet.USubstL.nil => nil
+--   | InstSet.USubstL.cons _ _ hσ w, InstSet.USubstL.cons _ _ _ w' => by
+--     simp only [InstSet.USubstL.union] at *
+--     cases _f
+--     constructor
+--     assumption
+--     apply left_of_union <;> assumption
+--   | InstSet.USubstL.skip _ w, InstSet.USubstL.cons _ _ _ w' => by
+--     simp only [InstSet.USubstL.union] at *
+--     cases _f
+--     apply left_of_union <;> assumption
+--   | InstSet.USubstL.cons _ _ _ w, InstSet.USubstL.skip _ w' => by
+--     simp only [InstSet.USubstL.union] at *
+--     cases _f
+--     constructor
+--     assumption
+--     apply left_of_union <;> assumption
+--   | InstSet.USubstL.skip _ w, InstSet.USubstL.skip _ w' => by
+--     simp only [InstSet.USubstL.union] at *
+--     apply left_of_union <;> assumption
 
---TODO: buggy unused variables...
-theorem LCtx.Fresh.right_of_union {L K M : LCtx ν κ (Ty α)}
-  (w : Φ.USubstL σ L M)
-  (w' : Φ.USubstL σ K M)
-  (_f: (w.union w').Fresh ℓ) : K.Fresh ℓ
-  := match w, w' with
-  | InstSet.USubstL.nil, InstSet.USubstL.nil => nil
-  | InstSet.USubstL.cons _ _ hσ w, InstSet.USubstL.cons _ _ _ w' => by
-    simp only [InstSet.USubstL.union] at *
-    cases _f
-    constructor
-    assumption
-    apply right_of_union <;> assumption
-  | InstSet.USubstL.skip _ w, InstSet.USubstL.cons _ _ _ w' => by
-    simp only [InstSet.USubstL.union] at *
-    cases _f
-    constructor
-    assumption
-    apply right_of_union <;> assumption
-  | InstSet.USubstL.cons _ _ _ w, InstSet.USubstL.skip _ w' => by
-    simp only [InstSet.USubstL.union] at *
-    cases _f
-    apply right_of_union <;> assumption
-  | InstSet.USubstL.skip _ w, InstSet.USubstL.skip _ w' => by
-    simp only [InstSet.USubstL.union] at *
-    apply right_of_union <;> assumption
+-- --TODO: buggy unused variables...
+-- theorem LCtx.Fresh.right_of_union {L K M : LCtx ν κ (Ty α)}
+--   (w : Φ.USubstL σ L M)
+--   (w' : Φ.USubstL σ K M)
+--   (_f: (w.union w').Fresh ℓ) : K.Fresh ℓ
+--   := match w, w' with
+--   | InstSet.USubstL.nil, InstSet.USubstL.nil => nil
+--   | InstSet.USubstL.cons _ _ hσ w, InstSet.USubstL.cons _ _ _ w' => by
+--     simp only [InstSet.USubstL.union] at *
+--     cases _f
+--     constructor
+--     assumption
+--     apply right_of_union <;> assumption
+--   | InstSet.USubstL.skip _ w, InstSet.USubstL.cons _ _ _ w' => by
+--     simp only [InstSet.USubstL.union] at *
+--     cases _f
+--     constructor
+--     assumption
+--     apply right_of_union <;> assumption
+--   | InstSet.USubstL.cons _ _ _ w, InstSet.USubstL.skip _ w' => by
+--     simp only [InstSet.USubstL.union] at *
+--     cases _f
+--     apply right_of_union <;> assumption
+--   | InstSet.USubstL.skip _ w, InstSet.USubstL.skip _ w' => by
+--     simp only [InstSet.USubstL.union] at *
+--     apply right_of_union <;> assumption
 
-def InstSet.USubstL.unionOfLeftRight {σ : ν → UTm φ ν}
-  {L K M : LCtx ν κ (Ty α)} : (w : USubstL σ L M) → (w' : USubstL σ K M)
-    → USubstL σ (union w w') M
-  | nil, nil => nil
-  | cons _ _ hσ w, cons _ _ _ w' => by
-    simp only [union, USubst.src]
-    exact cons _ _ hσ (unionOfLeftRight w w')
-  | skip _ w, cons _ _ hσ w' => by
-    simp only [union, USubst.src]
-    exact cons _ _ hσ (unionOfLeftRight w w')
-  | cons _ _ hσ w, skip _ w' => by
-    simp only [union, USubst.src]
-    exact cons _ _ hσ (unionOfLeftRight w w')
-  | skip hx w, skip hx' w' => by
-    simp only [union, USubst.src]
-    exact skip (hx.union_of_left_right w w' hx') (unionOfLeftRight w w')
+-- def InstSet.USubstL.unionOfLeftRight {σ : ν → UTm φ ν}
+--   {L K M : LCtx ν κ (Ty α)} : (w : USubstL σ L M) → (w' : USubstL σ K M)
+--     → USubstL σ (union w w') M
+--   | nil, nil => nil
+--   | cons _ _ hσ w, cons _ _ _ w' => by
+--     simp only [union, USubst.src]
+--     exact cons _ _ hσ (unionOfLeftRight w w')
+--   | skip _ w, cons _ _ hσ w' => by
+--     simp only [union, USubst.src]
+--     exact cons _ _ hσ (unionOfLeftRight w w')
+--   | cons _ _ hσ w, skip _ w' => by
+--     simp only [union, USubst.src]
+--     exact cons _ _ hσ (unionOfLeftRight w w')
+--   | skip hx w, skip hx' w' => by
+--     simp only [union, USubst.src]
+--     exact skip (hx.union_of_left_right w w' hx') (unionOfLeftRight w w')
 
-def InstSet.USubstL.leftUnionWk {σ : ν → UTm φ ν}
-  {L K M : LCtx ν κ (Ty α)}
-  : (w : USubstL σ L M) → (w' : USubstL σ K M) → L.Wk (union w w')
-  | nil, nil => LCtx.Wk.nil
-  | cons _ _ hσ w, cons _ _ _ w' => by
-    simp only [union, USubst.src]
-    exact LCtx.Wk.cons (Label.Wk.refl _) (leftUnionWk w w')
-  | skip f w, cons _ _ hσ w' => by
-    simp only [union, USubst.src]
-    exact LCtx.Wk.skip f (leftUnionWk w w')
-  | cons _ _ hσ w, skip _ w' => by
-    simp only [union, USubst.src]
-    exact LCtx.Wk.cons (Label.Wk.refl _) (leftUnionWk w w')
-  | skip hx w, skip hx' w' => by
-    simp only [union, USubst.src]
-    exact leftUnionWk w w'
+-- def InstSet.USubstL.leftUnionWk {σ : ν → UTm φ ν}
+--   {L K M : LCtx ν κ (Ty α)}
+--   : (w : USubstL σ L M) → (w' : USubstL σ K M) → L.Wk (union w w')
+--   | nil, nil => LCtx.Wk.nil
+--   | cons _ _ hσ w, cons _ _ _ w' => by
+--     simp only [union, USubst.src]
+--     exact LCtx.Wk.cons (Label.Wk.refl _) (leftUnionWk w w')
+--   | skip f w, cons _ _ hσ w' => by
+--     simp only [union, USubst.src]
+--     exact LCtx.Wk.skip f (leftUnionWk w w')
+--   | cons _ _ hσ w, skip _ w' => by
+--     simp only [union, USubst.src]
+--     exact LCtx.Wk.cons (Label.Wk.refl _) (leftUnionWk w w')
+--   | skip hx w, skip hx' w' => by
+--     simp only [union, USubst.src]
+--     exact leftUnionWk w w'
 
 -- def InstSet.USubstL.rightUnionWk {σ : ν → UTm φ ν}
 --   {L K M : LCtx ν κ (Ty α)}
@@ -200,10 +201,10 @@ def InstSet.USubstL.leftUnionWk {σ : ν → UTm φ ν}
 --     exact LCtx.Wk.cons ⟨rfl, rfl, sorry⟩ (rightUnionWk w w')
 --   | skip f w, cons _ _ hσ w' => by
 --     simp only [union, USubst.src]
---     sorry --exact rightUnionWk w w'
---   | cons _ _ hσ w, skip _ w' => by
+--     exact LCtx.Wk.cons (Label.Wk.refl _) (rightUnionWk w w')
+--   | cons _ _ hσ w, skip hx w' => by
 --     simp only [union, USubst.src]
---     sorry --exact LCtx.Wk.cons (Label.Wk.refl _) (rightUnionWk w w')
+--     exact LCtx.Wk.skip hx (rightUnionWk w w')
 --   | skip hx w, skip hx' w' => by
 --     simp only [union, USubst.src]
 --     exact rightUnionWk w w'

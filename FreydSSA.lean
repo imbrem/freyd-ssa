@@ -44,3 +44,5 @@ import FreydSSA.GRegion.Intrinsic.Basic
 -- TODO: Initial model for Elgot: show quotient respects Elgot rules
   -- TODO: use dominator quotient?
 -- TODO: try contexts as (partial) functions?
+
+import FreydSSA.FCtx

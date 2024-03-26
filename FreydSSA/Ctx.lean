@@ -3,6 +3,7 @@ import Mathlib.Data.List.MinMax
 import Mathlib.Data.List.Nodup
 import Mathlib.Data.Set.Basic
 import Mathlib.Data.Set.Function
+import Mathlib.Data.Set.Finite
 import Mathlib.Data.Fin.Basic
 import Mathlib.Init.Classical
 import Mathlib.Order.SuccPred.Basic
@@ -339,6 +340,25 @@ def Ctx.Wk.meet_right {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk
 def Ctx.Wk.meet_entry {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
   : Γ.Wk (w.meet w')
   := w.comp (w.meet_left w')
+
+theorem Ctx.Fresh.var_name_ne {ν α} {x : ν} {Γ : Ctx ν α} {v : Var ν α}
+  : Γ.Fresh x → Γ.Wk [v] → v.name ≠ x
+  | Fresh.cons hx _, Wk.cons _ _ => hx
+  | Fresh.cons _ h, Wk.skip _ w => h.var_name_ne w
+
+def Ctx.Wk.meet_var {ν α} {Γ Δ Δ' : Ctx ν α} {v : Var ν α}
+  :  (w : Γ.Wk Δ) → (w' : Γ.Wk Δ') → Δ.Wk [v] → Δ'.Wk [v] → (w.meet w').Wk [v]
+  | cons _ _, cons _ w', cons _ _, cons _ _ => cons _ (drop _)
+  | cons _ _, cons _ _, cons _ _, skip hx _ => (hx.head rfl).elim
+  | cons _ _, cons _ _, skip hx _, cons _ _ => (hx.head rfl).elim
+  | cons _ w, cons _ w', skip hx i, skip _ i' => skip hx (w.meet_var w' i i')
+  | cons _ _, skip hx w', cons _ _, cons _ _ => (hx.head rfl).elim
+  | cons _ _, skip hx _, cons _ _, skip _ i' => (hx.tail.var_name_ne i' rfl).elim
+  | cons _ w, skip _ w', skip hx i, i' => w.meet_var w' i i'
+  | skip hx _, cons _ w', cons _ _, cons _ _ => (hx.head rfl).elim
+  | skip hx _, cons _ _, skip _ i, cons _ _ => (hx.tail.var_name_ne i rfl).elim
+  | skip _ w, cons _ w', i, skip _ i' => w.meet_var w' i i'
+  | skip _ w, skip _ w', i, i' => w.meet_var w' i i'
 
 -- TODO: might need basepoint... think about this...
 --
