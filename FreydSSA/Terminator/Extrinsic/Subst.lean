@@ -30,7 +30,7 @@ def InstSet.USubstL.ofVar [Φ : InstSet φ (Ty α)] {σ : ν → UTm φ ν}
   | ⟨_, _, _Δ'⟩::_, LCtx.Wk.cons ⟨rfl, rfl, wΔ⟩ w => cons _ _ (hσ.wk_exit wΔ) (ofEmpty σ w)
   | _::_, LCtx.Wk.skip hℓ w => skip (LCtx.Fresh.of_not_mem hℓ.not_mem) (ofVar hσ w)
 
-def InstSet.USubstL.shared {σ : ν → UTm φ ν}
+def InstSet.USubstL.shared  {σ : ν → UTm φ ν}
   {L K M : LCtx ν κ (Ty α)}
   : USubstL σ L M → USubstL σ K M → LCtx ν κ (Ty α)
   | nil, nil => []
@@ -39,6 +39,55 @@ def InstSet.USubstL.shared {σ : ν → UTm φ ν}
   | skip _ w, cons _ _ _ w' => shared w w'
   | cons _ _ _ w, skip _ w' => shared w w'
   | skip _ w, skip _ w' => shared w w'
+
+inductive InstSet.USubstLP [Φ : InstSet φ (Ty α)] (σ : ν → UTm φ ν)
+  : LCtx ν κ (Ty α) → LCtx ν κ (Ty α) → Type _
+  | nil : USubstLP σ [] []
+  | cons (n A) : USubst σ Γ Δ → USubstLP σ L K → USubstLP σ (⟨n, A, Γ⟩ :: L) (⟨n, A, Δ⟩ :: K)
+
+def LCtx.Fresh.substP {L K : LCtx ν κ (Ty α)}
+  : Φ.USubstLP σ L K → L.Fresh ℓ → K.Fresh ℓ
+  | InstSet.USubstLP.nil, nil => nil
+  | InstSet.USubstLP.cons _ _ _ hσL, cons h f => cons h (substP hσL f)
+
+def LCtx.Fresh.rsubstP {L K : LCtx ν κ (Ty α)}
+  : Φ.USubstLP σ L K → K.Fresh ℓ → L.Fresh ℓ
+  | InstSet.USubstLP.nil, nil => nil
+  | InstSet.USubstLP.cons _ _ _ hσL, cons h f => cons h (rsubstP hσL f)
+
+def InstSet.USubstLP.antiSJoin {σ : ν → UTm φ ν}
+  {Γ : Ctx ν (Ty α)} {L K M L' K' : LCtx ν κ (Ty α)}
+  : Φ.USubstLP σ L' L → Φ.USubstLP σ K' K → L.SJoin K M
+    → Γ.LEq L' → Γ.LEq K'
+    → (M' : LCtx ν κ (Ty α)) ×' L'.SJoin K' M' × Φ.USubstLP σ M' M
+  | nil, nil, LCtx.SJoin.nil => λ_ _ => ⟨[], LCtx.SJoin.nil, nil⟩
+  | cons n A hσ hσL, hσK, LCtx.SJoin.left h j => λhL hK =>
+    let j' := antiSJoin hσL hσK j hL.tail hK;
+    ⟨_, j'.2.1.left (h.rsubstP hσK), j'.2.2.cons _ _ hσ⟩
+  | hσL, cons n A hσ' hσK, LCtx.SJoin.right h j => λhL hK =>
+    let j' := antiSJoin hσL hσK j hL hK.tail;
+    ⟨_, j'.2.1.right (h.rsubstP hσL), j'.2.2.cons _ _ hσ'⟩
+  | cons n A _ hσL, cons _ _ hσ' hσK, LCtx.SJoin.both _ j => λhL hK  =>
+    let j' := antiSJoin hσL hσK j hL.tail hK.tail;
+    have hΓ := hL.head.symm.trans hK.head;
+    ⟨_, (by cases hΓ; exact j'.2.1.both _), j'.2.2.cons _ _ hσ'⟩
+
+def UTerminator.WfM.subst {t : UTerminator φ ν κ}
+  {σ : ν → UTm φ ν}
+  (hσ : Φ.USubst σ Γ Δ)
+  : t.WfM Δ K → (L : LCtx ν κ (Ty α)) ×' (t.rewrite σ).WfM Γ L × Φ.USubstLP σ L K
+  | br ℓ de => ⟨_, br ℓ (de.subst hσ), InstSet.USubstLP.nil.cons _ _ hσ⟩
+  | ite dc dt df j =>
+    let ⟨_, dt', hLt⟩ := subst hσ dt;
+    let ⟨_, df', hLf⟩ := subst hσ df;
+    let ⟨L, j', hL⟩ := hLt.antiSJoin hLf j dt'.lEq df'.lEq;
+    ⟨L, ite (dc.subst hσ) dt' df' j', hL⟩
+
+-- structure InstSet.USubstL' [Φ : InstSet φ (Ty α)]
+--   (σ : ν → UTm φ ν) (L K : LCtx ν κ (Ty α)) where
+--   mapped : LCtx ν κ (Ty α)
+--   uSubstLP : USubstLP σ L mapped
+--   wk : mapped.Wk K --TODO: ExtWk or smt...
 
 -- theorem LCtx.Fresh.shared_of_left {L K M : LCtx ν κ (Ty α)}
 --   (w : Φ.USubstL σ L M)
