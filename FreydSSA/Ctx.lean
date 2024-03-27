@@ -1002,6 +1002,88 @@ theorem Ctx.LWk.wk_exit {ν κ α} {Γ : Ctx ν α} {L K : LCtx ν κ α}
   | nil _, LCtx.PWk.nil => nil _
   | cons w lw, LCtx.PWk.cons w' pw => cons (w.comp w'.live) (lw.wk_exit pw)
 
+inductive LCtx.SJoin {ν κ α}
+  : LCtx ν κ α → LCtx ν κ α → LCtx ν κ α → Type _
+  | nil : SJoin [] [] []
+  | left : SJoin L K M → SJoin (ℓ::L) K (ℓ::M)
+  | right : SJoin L K M → SJoin L (ℓ::K) (ℓ::M)
+  | both : SJoin L K M → SJoin (ℓ::L) (ℓ::K) (ℓ::M)
+
+def LCtx.SJoin.comm {ν κ α} {L K M : LCtx ν κ α}
+  : L.SJoin K M → K.SJoin L M
+  | SJoin.nil => SJoin.nil
+  | SJoin.left j => SJoin.right j.comm
+  | SJoin.right j => SJoin.left j.comm
+  | SJoin.both j => SJoin.both j.comm
+
+inductive LCtx.Join {ν κ α}
+  : LCtx ν κ α → LCtx ν κ α → LCtx ν κ α → Type _
+  | nil : Join [] [] []
+  | left : ℓ.Wk ℓ' → Join L K M → Join (ℓ::L) K (ℓ'::M)
+  | right : ℓ.Wk ℓ' → Join L K M → Join L (ℓ::K) (ℓ'::M)
+  | both : ℓ₁.Wk ℓ → ℓ₂.Wk ℓ → Join L K M → Join (ℓ₁::L) (ℓ₂::K) (ℓ::M)
+
+def LCtx.Join.wk_exit {ν κ α} {L K M N : LCtx ν κ α}
+  : L.Join K M → M.PWk N → L.Join K N
+  | Join.nil, PWk.nil => Join.nil
+  | Join.left w lw, PWk.cons w' pw'
+    => Join.left (w.comp w') (wk_exit lw pw')
+  | Join.right w lw, PWk.cons w' pw'
+    => Join.right (w.comp w') (wk_exit lw pw')
+  | Join.both w₁ w₂ lw, PWk.cons w' pw'
+    => Join.both (w₁.comp w') (w₂.comp w') (wk_exit lw pw')
+
+def LCtx.Join.wk_left {ν κ α} {L' L K M : LCtx ν κ α}
+  : L'.PWk L → L.Join K M → L'.Join K M
+  | PWk.nil, Join.nil => Join.nil
+  | PWk.cons w pw, Join.left w' lw => Join.left (w.comp w') (wk_left pw lw)
+  | pw, Join.right w' lw => Join.right w' (wk_left pw lw)
+  | PWk.cons w pw, Join.both w₁ w₂ lw => Join.both (w.comp w₁) w₂ (wk_left pw lw)
+
+def LCtx.Join.wk_right {ν κ α} {K' K L M : LCtx ν κ α}
+  : K'.PWk K → L.Join K M → L.Join K' M
+  | PWk.nil, Join.nil => Join.nil
+  | pw, Join.left w' lw => Join.left w' (wk_right pw lw)
+  | PWk.cons w pw, Join.right w' lw => Join.right (w.comp w') (wk_right pw lw)
+  | PWk.cons w pw, Join.both w₁ w₂ lw => Join.both w₁ (w.comp w₂) (wk_right pw lw)
+
+def LCtx.Join.comm {ν κ α} {L K M : LCtx ν κ α}
+  : L.Join K M → K.Join L M
+  | Join.nil => Join.nil
+  | Join.left w lw => Join.right w lw.comm
+  | Join.right w lw => Join.left w lw.comm
+  | Join.both w₁ w₂ lw => Join.both w₂ w₁ lw.comm
+
+def LCtx.SJoin.toJoin {ν κ α} {L K M : LCtx ν κ α}
+  : L.SJoin K M → L.Join K M
+  | SJoin.nil => Join.nil
+  | SJoin.left j => Join.left (Label.Wk.refl _) (toJoin j)
+  | SJoin.right j => Join.right (Label.Wk.refl _) (toJoin j)
+  | SJoin.both j => Join.both (Label.Wk.refl _) (Label.Wk.refl _) (toJoin j)
+
+structure LCtx.Join' {ν κ α} (L K M : LCtx ν κ α) where
+  left : LCtx ν κ α
+  right : LCtx ν κ α
+  lPwk : L.PWk left
+  rPwk : K.PWk right
+  sJoin : left.SJoin right M
+
+--TODO: try hand at uniqueness resuls
+--TODO: assoc and friends
+
+def LCtx.Join.factor {ν κ α} {L K M : LCtx ν κ α}
+  : L.Join K M → L.Join' K M
+  | Join.nil => ⟨[], [], PWk.nil, PWk.nil, SJoin.nil⟩
+  | Join.left w lw => match factor lw with
+    | ⟨L', K', pw, pk, j⟩ => ⟨_::L', K', PWk.cons w pw, pk, SJoin.left j⟩
+  | Join.right w lw => match factor lw with
+    | ⟨L', K', pw, pk, j⟩ => ⟨L', _::K', pw, PWk.cons w pk, SJoin.right j⟩
+  | Join.both w₁ w₂ lw => match factor lw with
+    | ⟨L', K', pw, pk, j⟩ => ⟨_::L', _::K', PWk.cons w₁ pw, PWk.cons w₂ pk, SJoin.both j⟩
+
+def LCtx.Join'.toJoin {ν κ α} {L K M : LCtx ν κ α} (j : L.Join' K M) : L.Join K M
+  := (j.sJoin.toJoin.wk_left j.lPwk).wk_right j.rPwk
+
 def Var.rename {ν ν' α} (ρ : ν → ν') (v : Var ν α) : Var ν' α
   := ⟨ρ v.name, v.ty⟩
 
