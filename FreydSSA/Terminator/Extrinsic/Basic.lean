@@ -67,6 +67,11 @@ theorem UTerminator.WfM.allEq {Γ : Ctx ν (Ty α)} {t : UTerminator φ ν κ}
     cases j.allEq j'
     rfl
 
+theorem UTerminator.WfM.lEq {Γ : Ctx ν (Ty α)} {t : UTerminator φ ν κ}
+  : WfM Γ t L → Γ.LEq L
+  | br _ _ => by repeat constructor
+  | ite _ dt df j => j.lEq (dt.lEq) (df.lEq)
+
 structure UTerminator.Wf' (Γ : Ctx ν (Ty α)) (t : UTerminator φ ν κ) (L : LCtx ν κ (Ty α)) where
   base : LCtx ν κ (Ty α)
   wfM : WfM Γ t base
@@ -80,14 +85,18 @@ theorem UTerminator.Wf'.allEq {Γ : Ctx ν (Ty α)} {t : UTerminator φ ν κ}
     cases dtw.allEq dtw'
     rfl
 
--- def UTerminator.Wf.toMin {Γ : Ctx ν (Ty α)} {t : UTerminator φ ν κ}
---   : Wf Γ t L → (L': LCtx ν κ (Ty α)) × Wf Γ t L' × L'.Wk L
---   | br hℓ de => ⟨_, br (LCtx.Wk.refl _) de, hℓ⟩
---   | ite dc dt df =>
---     let ⟨Lt, dt', wt⟩ := dt.toMin
---     let ⟨Lf, df', wf⟩ := df.toMin
---     --TODO: lattice ops...
---     sorry
+def UTerminator.Wf'.toWf {Γ : Ctx ν (Ty α)} {t : UTerminator φ ν κ}
+  {L : LCtx ν κ (Ty α)} (dt : Wf' Γ t L) : Wf Γ t L
+  := dt.wfM.toWf.wk_exit dt.wk
+
+def UTerminator.Wf.factor {Γ : Ctx ν (Ty α)} {t : UTerminator φ ν κ}
+  {L : LCtx ν κ (Ty α)} : Wf Γ t L → Wf' Γ t L
+  | br hℓ e => ⟨_, WfM.br _ e, hℓ⟩
+  | ite dc dt df =>
+    let dt' := dt.factor
+    let df' := df.factor
+    let j := LCtx.SJoin.ofWk dt'.wk df'.wk dt'.wfM.lEq df'.wfM.lEq;
+    ⟨_, WfM.ite dc dt'.wfM df'.wfM j.2.1, j.2.2⟩
 
 --TODO: Wf.toUGRegion
 
