@@ -713,6 +713,10 @@ theorem LCtx.Fresh.of_not_mem {ν κ α} {l : κ} {L : LCtx ν κ α}
     apply List.not_mem_of_not_mem_cons
     exact h
 
+theorem LCtx.Fresh.not_mem_iff {ν κ α} {l : κ} {L : LCtx ν κ α}
+  : L.Fresh l ↔ l ∉ L.labels
+  := ⟨LCtx.Fresh.not_mem, LCtx.Fresh.of_not_mem⟩
+
 inductive LCtx.Wk {ν κ α} : LCtx ν κ α → LCtx ν κ α → Type _
   | nil : Wk [] []
   | cons {ℓ ℓ' : Label ν κ α} : ℓ.Wk ℓ' → Wk L K → Wk (ℓ::L) (ℓ'::K)
@@ -978,6 +982,26 @@ def LCtx.PWk.toWk {ν κ α} {L K : LCtx ν κ α} : L.PWk K → L.Wk K
   | PWk.nil => Wk.nil
   | PWk.cons h w => Wk.cons h (toWk w)
 
+theorem LCtx.PWk.labels {ν κ α} {L K : LCtx ν κ α} (w : L.PWk K) : L.labels = K.labels
+  := by induction w with
+  | nil => rfl
+  | cons h w I =>
+    simp only [LCtx.labels, List.map]
+    rw [h.name]
+    congr 1
+
+theorem LCtx.Fresh.pwk {ν κ α} {L K : LCtx ν κ α} {l : κ}
+  (w : L.PWk K) : K.Fresh l → L.Fresh l
+  := by
+    rw [not_mem_iff, not_mem_iff, w.labels]
+    exact λx => x
+
+theorem LCtx.Fresh.pwk_r {ν κ α} {L K : LCtx ν κ α} {l : κ}
+  (w : L.PWk K) : L.Fresh l → K.Fresh l
+  := by
+    rw [not_mem_iff, not_mem_iff, w.labels]
+    exact λx => x
+
 inductive Ctx.LWk {ν κ α} : Ctx ν α → LCtx ν κ α → Type _
   | nil Γ : LWk Γ []
   | cons : Γ.Wk ℓ.live → LWk Γ L → LWk Γ (ℓ::L)
@@ -1005,61 +1029,148 @@ theorem Ctx.LWk.wk_exit {ν κ α} {Γ : Ctx ν α} {L K : LCtx ν κ α}
 inductive LCtx.SJoin {ν κ α}
   : LCtx ν κ α → LCtx ν κ α → LCtx ν κ α → Type _
   | nil : SJoin [] [] []
-  | left : SJoin L K M → SJoin (ℓ::L) K (ℓ::M)
-  | right : SJoin L K M → SJoin L (ℓ::K) (ℓ::M)
-  | both : SJoin L K M → SJoin (ℓ::L) (ℓ::K) (ℓ::M)
+  | left : K.Fresh ℓ.name → SJoin L K M → SJoin (ℓ::L) K (ℓ::M)
+  | right : L.Fresh ℓ.name → SJoin L K M → SJoin L (ℓ::K) (ℓ::M)
+  | both ℓ : SJoin L K M → SJoin (ℓ::L) (ℓ::K) (ℓ::M)
 
 def LCtx.SJoin.comm {ν κ α} {L K M : LCtx ν κ α}
   : L.SJoin K M → K.SJoin L M
   | SJoin.nil => SJoin.nil
-  | SJoin.left j => SJoin.right j.comm
-  | SJoin.right j => SJoin.left j.comm
-  | SJoin.both j => SJoin.both j.comm
+  | SJoin.left h j => SJoin.right h j.comm
+  | SJoin.right h j => SJoin.left h j.comm
+  | SJoin.both _ j => SJoin.both _ j.comm
+
+def LCtx.SJoin.left_wk {ν κ α} {L K M : LCtx ν κ α}
+  : L.SJoin K M → L.Wk M
+  | SJoin.nil => Wk.nil
+  | SJoin.left _ j => Wk.cons (Label.Wk.refl _) (left_wk j)
+  | SJoin.right h j => Wk.skip h (left_wk j)
+  | SJoin.both _ j => Wk.cons (Label.Wk.refl _) (left_wk j)
+
+def LCtx.SJoin.right_wk {ν κ α} {L K M : LCtx ν κ α}
+  : L.SJoin K M → K.Wk M
+  | SJoin.nil => Wk.nil
+  | SJoin.left h j => Wk.skip h (right_wk j)
+  | SJoin.right _ j => Wk.cons (Label.Wk.refl _) (right_wk j)
+  | SJoin.both _ j => Wk.cons (Label.Wk.refl _) (right_wk j)
+
+theorem LCtx.SJoin.allEq {ν κ α} {L K M : LCtx ν κ α} (j j': L.SJoin K M): j = j'
+  := by induction j with
+  | nil => cases j'; rfl
+  | left h j I =>
+    cases j' with
+    | left h' j' => congr; apply I
+    | right h' j' => exact (h'.head rfl).elim
+    | both _ j' => exact (h.head rfl).elim
+  | right h j I =>
+    cases j' with
+    | left h' j' => exact (h'.head rfl).elim
+    | right h' j' => congr; apply I
+    | both _ j' => exact (h.head rfl).elim
+  | both _ j I =>
+    cases j' with
+    | left h' j' => exact (h'.head rfl).elim
+    | right h' j' => exact (h'.head rfl).elim
+    | both _ j' => congr; apply I
+
+structure LCtx.Comp {ν κ α} (L K : LCtx ν κ α) where
+  base : LCtx ν κ α
+  left : L.Wk base
+  right : K.Wk base
+
+def LCtx.Wk.uncons₂ {ν κ α}
+  {ℓ : Label ν κ α} {L K Ω : LCtx ν κ α}
+  : Wk (ℓ::L) Ω → Wk (ℓ::K) Ω → L.Comp K
+  | cons _ w, cons _ w' => ⟨_, w, w'⟩
+  | skip h w, cons h' w' => by
+    rw [Fresh.not_mem_iff, <-h'.name] at h
+    simp [labels] at h
+  | cons h _, skip h' w' => by
+    rw [Fresh.not_mem_iff, <-h.name] at h'
+    simp [labels] at h'
+  | skip _ w, skip _ w' => uncons₂ w w'
+
+def LCtx.Comp.uncons {ν κ α} {ℓ : Label ν κ α} {L K : LCtx ν κ α}
+  (c : Comp (ℓ::L) (ℓ::K)) : Comp L K
+  := c.left.uncons₂ c.right
+
+theorem LCtx.Comp.head {ν κ α} {ℓ ℓ' : Label ν κ α} {L K : LCtx ν κ α}
+  : Comp (ℓ::L) (ℓ'::K) → ℓ.name = ℓ'.name ∨ L.Fresh ℓ'.name ∨ K.Fresh ℓ.name
+  | ⟨_, Wk.cons lw _, Wk.cons lw' _⟩ => Or.inl (lw.name.trans lw'.name.symm)
+  | ⟨_, Wk.skip h _, Wk.cons lw' _⟩ => Or.inr (Or.inl (lw'.name ▸ h.tail))
+  | ⟨_, Wk.cons lw _, Wk.skip h' _⟩ => Or.inr (Or.inr (lw.name ▸ h'.tail))
+  | ⟨_, Wk.skip _ w, Wk.skip _ w'⟩ => head ⟨_, w, w'⟩
+
+theorem LCtx.SJoin.trgEq {ν κ α} {L K M M' : LCtx ν κ α}
+  (j : L.SJoin K M) (j' : L.SJoin K M') (oM : M.Comp M') : M = M' := by
+  induction j generalizing M' with
+  | nil => cases j'; rfl
+  | left h j I =>
+    cases j' with
+    | left h' j' => rw [I j' oM.uncons]
+    | right h' j' => match oM.head with
+      | Or.inl hn => exact (h'.head hn).elim
+      | Or.inr (Or.inl hn) => exact ((hn.wk j.right_wk).head rfl).elim
+      | Or.inr (Or.inr hn) => exact ((hn.wk j'.left_wk).head rfl).elim
+    | both _ j' => exact (h.head rfl).elim
+  | right h j I =>
+    cases j' with
+    | left h' j' => match oM.head with
+      | Or.inl hn => exact (h'.head hn).elim
+      | Or.inr (Or.inl hn) => exact ((hn.wk j.left_wk).head rfl).elim
+      | Or.inr (Or.inr hn) => exact ((hn.wk j'.right_wk).head rfl).elim
+    | right h' j' => rw [I j' oM.uncons]
+    | both _ j' => exact (h.head rfl).elim
+  | both _ _ I =>
+    cases j' with
+    | left h' j' => exact (h'.head rfl).elim
+    | right h' j' => exact (h'.head rfl).elim
+    | both _ j' => rw [I j' oM.uncons]
 
 inductive LCtx.Join {ν κ α}
   : LCtx ν κ α → LCtx ν κ α → LCtx ν κ α → Type _
   | nil : Join [] [] []
-  | left : ℓ.Wk ℓ' → Join L K M → Join (ℓ::L) K (ℓ'::M)
-  | right : ℓ.Wk ℓ' → Join L K M → Join L (ℓ::K) (ℓ'::M)
+  | left : ℓ.Wk ℓ' → K.Fresh ℓ.name → Join L K M → Join (ℓ::L) K (ℓ'::M)
+  | right : L.Fresh ℓ.name → ℓ.Wk ℓ' → Join L K M → Join L (ℓ::K) (ℓ'::M)
   | both : ℓ₁.Wk ℓ → ℓ₂.Wk ℓ → Join L K M → Join (ℓ₁::L) (ℓ₂::K) (ℓ::M)
 
 def LCtx.Join.wk_exit {ν κ α} {L K M N : LCtx ν κ α}
   : L.Join K M → M.PWk N → L.Join K N
   | Join.nil, PWk.nil => Join.nil
-  | Join.left w lw, PWk.cons w' pw'
-    => Join.left (w.comp w') (wk_exit lw pw')
-  | Join.right w lw, PWk.cons w' pw'
-    => Join.right (w.comp w') (wk_exit lw pw')
+  | Join.left w h lw, PWk.cons w' pw'
+    => Join.left (w.comp w') h (wk_exit lw pw')
+  | Join.right h w lw, PWk.cons w' pw'
+    => Join.right h (w.comp w') (wk_exit lw pw')
   | Join.both w₁ w₂ lw, PWk.cons w' pw'
     => Join.both (w₁.comp w') (w₂.comp w') (wk_exit lw pw')
 
 def LCtx.Join.wk_left {ν κ α} {L' L K M : LCtx ν κ α}
   : L'.PWk L → L.Join K M → L'.Join K M
   | PWk.nil, Join.nil => Join.nil
-  | PWk.cons w pw, Join.left w' lw => Join.left (w.comp w') (wk_left pw lw)
-  | pw, Join.right w' lw => Join.right w' (wk_left pw lw)
+  | PWk.cons w pw, Join.left w' h lw => Join.left (w.comp w') (w.name ▸ h) (wk_left pw lw)
+  | pw, Join.right h w' lw => Join.right (h.pwk pw) w' (wk_left pw lw)
   | PWk.cons w pw, Join.both w₁ w₂ lw => Join.both (w.comp w₁) w₂ (wk_left pw lw)
 
 def LCtx.Join.wk_right {ν κ α} {K' K L M : LCtx ν κ α}
   : K'.PWk K → L.Join K M → L.Join K' M
   | PWk.nil, Join.nil => Join.nil
-  | pw, Join.left w' lw => Join.left w' (wk_right pw lw)
-  | PWk.cons w pw, Join.right w' lw => Join.right (w.comp w') (wk_right pw lw)
+  | pw, Join.left w' h lw => Join.left w' (h.pwk pw) (wk_right pw lw)
+  | PWk.cons w pw, Join.right h w' lw => Join.right (w.name ▸ h) (w.comp w') (wk_right pw lw)
   | PWk.cons w pw, Join.both w₁ w₂ lw => Join.both w₁ (w.comp w₂) (wk_right pw lw)
 
 def LCtx.Join.comm {ν κ α} {L K M : LCtx ν κ α}
   : L.Join K M → K.Join L M
   | Join.nil => Join.nil
-  | Join.left w lw => Join.right w lw.comm
-  | Join.right w lw => Join.left w lw.comm
+  | Join.left w h lw => Join.right h w lw.comm
+  | Join.right h w lw => Join.left w h lw.comm
   | Join.both w₁ w₂ lw => Join.both w₂ w₁ lw.comm
 
 def LCtx.SJoin.toJoin {ν κ α} {L K M : LCtx ν κ α}
   : L.SJoin K M → L.Join K M
   | SJoin.nil => Join.nil
-  | SJoin.left j => Join.left (Label.Wk.refl _) (toJoin j)
-  | SJoin.right j => Join.right (Label.Wk.refl _) (toJoin j)
-  | SJoin.both j => Join.both (Label.Wk.refl _) (Label.Wk.refl _) (toJoin j)
+  | SJoin.left h j => Join.left (Label.Wk.refl _) h (toJoin j)
+  | SJoin.right h j => Join.right h (Label.Wk.refl _) (toJoin j)
+  | SJoin.both _ j => Join.both (Label.Wk.refl _) (Label.Wk.refl _) (toJoin j)
 
 structure LCtx.Join' {ν κ α} (L K M : LCtx ν κ α) where
   left : LCtx ν κ α
@@ -1074,12 +1185,14 @@ structure LCtx.Join' {ν κ α} (L K M : LCtx ν κ α) where
 def LCtx.Join.factor {ν κ α} {L K M : LCtx ν κ α}
   : L.Join K M → L.Join' K M
   | Join.nil => ⟨[], [], PWk.nil, PWk.nil, SJoin.nil⟩
-  | Join.left w lw => match factor lw with
-    | ⟨L', K', pw, pk, j⟩ => ⟨_::L', K', PWk.cons w pw, pk, SJoin.left j⟩
-  | Join.right w lw => match factor lw with
-    | ⟨L', K', pw, pk, j⟩ => ⟨L', _::K', pw, PWk.cons w pk, SJoin.right j⟩
+  | Join.left w h lw => match factor lw with
+    | ⟨L', K', pw, pk, j⟩
+      => ⟨_::L', K', PWk.cons w pw, pk, SJoin.left (w.name ▸ h.pwk_r pk) j⟩
+  | Join.right h w lw => match factor lw with
+    | ⟨L', K', pw, pk, j⟩
+      => ⟨L', _::K', pw, PWk.cons w pk, SJoin.right (w.name ▸ h.pwk_r pw) j⟩
   | Join.both w₁ w₂ lw => match factor lw with
-    | ⟨L', K', pw, pk, j⟩ => ⟨_::L', _::K', PWk.cons w₁ pw, PWk.cons w₂ pk, SJoin.both j⟩
+    | ⟨L', K', pw, pk, j⟩ => ⟨_::L', _::K', PWk.cons w₁ pw, PWk.cons w₂ pk, SJoin.both _ j⟩
 
 def LCtx.Join'.toJoin {ν κ α} {L K M : LCtx ν κ α} (j : L.Join' K M) : L.Join K M
   := (j.sJoin.toJoin.wk_left j.lPwk).wk_right j.rPwk
