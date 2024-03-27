@@ -60,11 +60,16 @@ theorem FCtx.mem_support_of_var {Γ : FCtx ν α} (x : ν) (a : α)
   rw [h] at h'
   contradiction
 
-theorem FCtx.not_mem_support_of_null {Γ : FCtx ν α} (x : ν)
+theorem FCtx.not_mem_support_of_eq_bot {Γ : FCtx ν α} (x : ν)
   (h : Γ x = ⊥) : x ∉ Γ.support := by
   rw [mem_support]
   intro h'
   contradiction
+
+theorem FCtx.eq_bot_of_not_mem_support {Γ : FCtx ν α} (x : ν)
+  (h : x ∉ Γ.support) : Γ x = ⊥ := by
+  simp [mem_support] at h
+  exact h
 
 def FCtx.map_ty (Γ : FCtx ν α) (f : α → β) : FCtx ν β where
   toFun x := (Γ.toFun x).map (f)
@@ -93,7 +98,7 @@ def FCtx.cons_inj {x : ν} {a a' : α} {Γ : FCtx ν α}
 def FCtx.Wk (Γ Δ : FCtx ν α) : Prop := ∀x, Δ x = ⊥ ∨ Δ x = Γ x
 
 theorem FCtx.Wk.refl (Γ : FCtx ν α) : FCtx.Wk Γ Γ := by simp [FCtx.Wk]
-theorem FCtx.Wk.trans {Γ Δ Θ : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Δ Θ)
+theorem FCtx.Wk.comp {Γ Δ Θ : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Δ Θ)
   : FCtx.Wk Γ Θ := by
   intro x
   cases w x <;> cases w' x <;> simp [*]
@@ -123,10 +128,10 @@ theorem FCtx.Wk.support_subset {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ)
   exact w.ne_bot x
 
 instance FCtx.instPartialOrder : PartialOrder (FCtx ν α) where
-  le := FCtx.Wk
+  le a b := FCtx.Wk b a
   le_refl := FCtx.Wk.refl
-  le_trans _ _ _ := FCtx.Wk.trans
-  le_antisymm _ _ := FCtx.Wk.antisymm
+  le_trans _ _ _ h h' := FCtx.Wk.comp h' h
+  le_antisymm _ _ h h' := FCtx.Wk.antisymm h' h
 
 def FCtx.linf (Δ Δ' : FCtx ν α)
   : FCtx ν α where
@@ -207,6 +212,18 @@ theorem FCtx.Wk.eq_on {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ)
   | inl h => rw [mem_support] at hx; exact (hx h).elim
   | inr h => exact h
 
+theorem FCtx.Wk.of_eq_on {Γ Δ : FCtx ν α}
+  : (∀x ∈ Δ.support, Δ x = Γ x) → FCtx.Wk Γ Δ := by
+  intro h
+  intro x
+  if h' : x ∈ Δ.support then
+    simp [h _ h']
+  else
+    simp [eq_bot_of_not_mem_support _ h']
+
+theorem FCtx.Wk.eq_on_iff {Γ Δ : FCtx ν α}
+  : FCtx.Wk Γ Δ ↔ (∀x ∈ Δ.support, Δ x = Γ x) := ⟨eq_on, of_eq_on⟩
+
 theorem FCtx.Wk.linf_eq_rinf {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
   : FCtx.linf Δ Δ' = FCtx.rinf Δ Δ' := by
   apply FCtx.ext
@@ -247,17 +264,11 @@ theorem FCtx.linf_eq_none_iff {Δ Δ' : FCtx ν α} (x : ν)
 theorem FCtx.linf_var_left {Δ Δ' : FCtx ν α} (x : ν) (a : α)
   : FCtx.linf Δ Δ' x = a → Δ x = a := by
   simp only [linf_app]
-  split
-  . intro h; cases h
-  . intro h; cases h
-  . intro h; rw [<-h]; assumption
+  split <;> intro h <;> cases h; assumption
 theorem FCtx.linf_var_right {Δ Δ' : FCtx ν α} (x : ν) (a : α)
   : FCtx.linf Δ Δ' x = a → ∃b : α, Δ' x = b := by
   simp only [linf_app]
-  split
-  . intro h; cases h
-  . intro h; cases h
-  . intro _; constructor; assumption
+  split <;> intro h <;> cases h; exact ⟨_, by assumption⟩
 
 theorem FCtx.linf_var_left_eq' {Δ Δ' : FCtx ν α} (x : ν) (a : α) (bb : WithBot α)
   (h : FCtx.linf Δ Δ' x = a) (h' : Δ x = bb) : a = bb := by
@@ -300,6 +311,131 @@ theorem FCtx.linf_right_support_eq_left {Δ Δ' : FCtx ν α} (x : ν)
   (h : x ∈ Δ'.support) : FCtx.linf Δ Δ' x = Δ x := by
   apply linf_right_some_eq_left _ ((mem_support_exists _).mp h)
   rfl
+theorem FCtx.linf_left_not_support {Δ Δ' : FCtx ν α} (x : ν)
+  (h : x ∉ Δ.support) : FCtx.linf Δ Δ' x = ⊥ := by
+  apply linf_eq_none_left
+  apply eq_bot_of_not_mem_support
+  exact h
+theorem FCtx.linf_right_not_support {Δ Δ' : FCtx ν α} (x : ν)
+  (h : x ∉ Δ'.support) : FCtx.linf Δ Δ' x = ⊥ := by
+  apply linf_eq_none_right
+  apply eq_bot_of_not_mem_support
+  exact h
+theorem FCtx.linf_eq_eq_left {Δ Δ' : FCtx ν α} (x : ν)
+  (h : Δ x = Δ' x) : FCtx.linf Δ Δ' x = Δ x := by
+  if h': x ∈ Δ'.support then
+    rw [linf_right_support_eq_left _ h']
+  else
+    rw [linf_right_not_support _ h']
+    rw [eq_bot_of_not_mem_support _ h'] at h
+    rw [h]
+theorem FCtx.linf_eq_eq_right {Δ Δ' : FCtx ν α} (x : ν)
+  (h : Δ x = Δ' x) : FCtx.linf Δ Δ' x = Δ' x := by
+  rw [linf_eq_eq_left _ h]
+  exact h
+
+theorem FCtx.Wk.linf_wk {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Δ Γ) (w' : FCtx.Wk Δ' Γ)
+  : FCtx.Wk (FCtx.linf Δ Δ') Γ := by
+  simp only [eq_on_iff] at *
+  intro x hx
+  rw [linf_eq_eq_left]
+  . rw [<-w _ hx]
+  . rw [<-w' _ hx]
+    rw [<-w _ hx]
+
+theorem FCtx.rinf_eq_none_left {Δ Δ' : FCtx ν α} (x : ν) (h : Δ x = ⊥)
+  : FCtx.rinf Δ Δ' x = ⊥ := by
+  simp only [rinf_app]
+  split <;> simp only [h] at *
+theorem FCtx.rinf_eq_none_right {Δ Δ' : FCtx ν α} (x : ν) (h : Δ' x = ⊥)
+  : FCtx.rinf Δ Δ' x = ⊥ := by
+  simp only [rinf_app] at *
+  split <;> simp only [h] at *
+theorem FCtx.rinf_eq_none_or {Δ Δ' : FCtx ν α} (x : ν) (h : FCtx.rinf Δ Δ' x = ⊥)
+  : Δ x = ⊥ ∨ Δ' x = ⊥ := by
+  simp only [rinf_app] at h
+  rw [<-h] -- hack until term-to-split is supported...
+  split <;> simp [*, Bot.bot]
+theorem FCtx.rinf_eq_none_iff {Δ Δ' : FCtx ν α} (x : ν)
+  : FCtx.rinf Δ Δ' x = ⊥ ↔ Δ x = ⊥ ∨ Δ' x = ⊥ :=
+  ⟨rinf_eq_none_or x, λh => h.elim (rinf_eq_none_left x) (rinf_eq_none_right x)⟩
+
+theorem FCtx.rinf_var_left {Δ Δ' : FCtx ν α} (x : ν) (a : α)
+  : FCtx.rinf Δ Δ' x = a → ∃b : α, Δ x = b := by
+  simp only [rinf_app]
+  split <;> intro h <;> cases h; exact ⟨_, by assumption⟩
+theorem FCtx.rinf_var_right {Δ Δ' : FCtx ν α} (x : ν) (a : α)
+  : FCtx.rinf Δ Δ' x = a → Δ' x = a := by
+  simp only [rinf_app]
+  split <;> intro h <;> cases h; assumption
+
+theorem FCtx.rinf_var_right_eq' {Δ Δ' : FCtx ν α} (x : ν) (a : α) (bb : WithBot α)
+  (h : FCtx.rinf Δ Δ' x = a) (h' : Δ' x = bb) : a = bb := by
+    rw [<-rinf_var_right x a h]; assumption
+theorem FCtx.rinf_var_right_eq {Δ Δ' : FCtx ν α} (x : ν) (a b : α)
+  (h : FCtx.rinf Δ Δ' x = a) (h' : Δ' x = b) : a = b := by
+    cases rinf_var_right_eq' x a b h h'; rfl
+
+theorem FCtx.rinf_support_eq_right {Δ Δ' : FCtx ν α} (x : ν)
+  (h : x ∈ (rinf Δ Δ').support) : FCtx.rinf Δ Δ' x = Δ' x := (rinf_wk Δ Δ').eq_on x h
+
+theorem FCtx.rinf_var_eq_right {Δ Δ' : FCtx ν α} (x : ν) (a : α)
+  (h : FCtx.rinf Δ Δ' x = a)
+  : FCtx.rinf Δ Δ' x = Δ' x := by
+    rw [h]
+    apply Eq.symm
+    apply rinf_var_right
+    exact h
+theorem FCtx.rinf_left_var_eq_right {Δ Δ' : FCtx ν α} (x : ν) (a : α)
+  (h : Δ x = a)
+  : FCtx.rinf Δ Δ' x = Δ' x := by
+    rw [rinf_app]
+    split
+    . rw [h] at *; contradiction
+    . simp [*, Bot.bot] at *
+    . simp [*]
+
+theorem FCtx.rinf_some_eq_right {Δ Δ' : FCtx ν α} (x : ν)
+: (∃a : α, FCtx.rinf Δ Δ' x = a) → FCtx.rinf Δ Δ' x = Δ' x := by
+  intro ⟨a, h⟩
+  rw [h]
+  apply Eq.symm
+  apply rinf_var_right
+  exact h
+theorem FCtx.rinf_left_some_eq_right {Δ Δ' : FCtx ν α} (x : ν)
+  : (∃a: α, Δ x = a) → FCtx.rinf Δ Δ' x = Δ' x := by
+  intro ⟨a, h⟩
+  apply rinf_left_var_eq_right _ _ h
+theorem FCtx.rinf_left_support_eq_right {Δ Δ' : FCtx ν α} (x : ν)
+  (h : x ∈ Δ.support) : FCtx.rinf Δ Δ' x = Δ' x := by
+  apply rinf_left_some_eq_right _ ((mem_support_exists _).mp h)
+  rfl
+theorem FCtx.rinf_right_not_support {Δ Δ' : FCtx ν α} (x : ν)
+  (h : x ∉ Δ.support) : FCtx.rinf Δ Δ' x = ⊥ := by
+  apply rinf_eq_none_left
+  apply eq_bot_of_not_mem_support
+  exact h
+theorem FCtx.rinf_eq_eq_right {Δ Δ' : FCtx ν α} (x : ν)
+  (h : Δ x = Δ' x) : FCtx.rinf Δ Δ' x = Δ' x := by
+  if h': x ∈ Δ.support then
+    rw [rinf_left_support_eq_right _ h']
+  else
+    rw [rinf_right_not_support _ h']
+    rw [eq_bot_of_not_mem_support _ h'] at h
+    rw [h]
+theorem FCtx.rinf_eq_eq_left {Δ Δ' : FCtx ν α} (x : ν)
+  (h : Δ x = Δ' x) : FCtx.rinf Δ Δ' x = Δ x := by
+    rw [rinf_eq_eq_right _ h]
+    exact h.symm
+
+theorem FCtx.Wk.rinf_wk {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Δ Γ) (w' : FCtx.Wk Δ' Γ)
+  : FCtx.Wk (FCtx.rinf Δ Δ') Γ := by
+  simp only [eq_on_iff] at *
+  intro x hx
+  rw [rinf_eq_eq_left]
+  . rw [<-w _ hx]
+  . rw [<-w' _ hx]
+    rw [<-w _ hx]
 
 theorem FCtx.linf_assoc (Δ₁ Δ₂ Δ₃ : FCtx ν α)
   : FCtx.linf (FCtx.linf Δ₁ Δ₂) Δ₃ = FCtx.linf Δ₁ (FCtx.linf Δ₂ Δ₃) := by
@@ -318,6 +454,28 @@ theorem FCtx.linf_assoc (Δ₁ Δ₂ Δ₃ : FCtx ν α)
   . rename_i h
     rw [linf_right_some_eq_left _ (linf_var_right _ _ h)]
     rw [linf_right_var_eq_left _ _ (linf_var_left _ _ h)]
+    assumption
+
+theorem FCtx.rinf_assoc (Δ₁ Δ₂ Δ₃ : FCtx ν α)
+  : FCtx.rinf (FCtx.rinf Δ₁ Δ₂) Δ₃ = FCtx.rinf Δ₁ (FCtx.rinf Δ₂ Δ₃) := by
+  apply FCtx.ext
+  intro x
+  conv =>
+    rhs
+    rw [rinf_app]
+  split
+  . apply rinf_eq_none_left; apply rinf_eq_none_left; assumption
+  . simp only [rinf_eq_none_iff]
+    rw [or_assoc]
+    apply Or.inr
+    apply rinf_eq_none_or
+    assumption
+  . rename_i h
+    have ⟨b, hb⟩ := rinf_var_left _ _ h;
+    rw [rinf_left_var_eq_right _ b]
+    exact rinf_var_right _ _ h
+    rw [rinf_left_var_eq_right _ _]
+    exact hb
     assumption
 
 theorem FCtx.linf_comm (Δ Δ' : FCtx ν α)
@@ -344,8 +502,6 @@ theorem FCtx.rinf_comm (Δ Δ' : FCtx ν α)
   : FCtx.rinf Δ Δ' = FCtx.linf Δ' Δ := by
   rw [linf_comm]
 
---TODO: rinf_assoc, etc...
-
 def FCtx.lsup (Δ Δ' : FCtx ν α)
   : FCtx ν α where
   toFun x := match Δ x, Δ' x with
@@ -358,6 +514,15 @@ def FCtx.lsup (Δ Δ' : FCtx ν α)
     simp only [Finset.mem_union, mem_support]
     split <;> simp [Bot.bot, *]
 
+theorem FCtx.lsup_app (Δ Δ' : FCtx ν α) (x : ν)
+  : (FCtx.lsup Δ Δ') x = match Δ x, Δ' x with
+    | ⊥, _ => Δ' x
+    | _, ⊥ => Δ x
+    | some a, some _ => some a := by rfl
+
+theorem FCtx.lsup_support {Δ Δ' : FCtx ν α}
+  : (FCtx.lsup Δ Δ').support = Δ.support ∪ Δ'.support := rfl
+
 def FCtx.rsup (Δ Δ' : FCtx ν α)
   : FCtx ν α where
   toFun x := match Δ x, Δ' x with
@@ -369,6 +534,44 @@ def FCtx.rsup (Δ Δ' : FCtx ν α)
     intro x
     simp only [Finset.mem_union, mem_support]
     split <;> simp [Bot.bot, *]
+
+theorem FCtx.rsup_app (Δ Δ' : FCtx ν α) (x : ν)
+  : (FCtx.rsup Δ Δ') x = match Δ x, Δ' x with
+    | ⊥, _ => Δ' x
+    | _, ⊥ => Δ x
+    | some _, some a => some a := by rfl
+
+theorem FCtx.rsup_support {Δ Δ' : FCtx ν α}
+  : (FCtx.rsup Δ Δ').support = Δ.support ∪ Δ'.support := rfl
+
+theorem FCtx.lsup_wk (Δ Δ' : FCtx ν α) : FCtx.Wk (FCtx.lsup Δ Δ') Δ := by
+  intro x
+  simp [lsup_app]
+  split <;> simp [Bot.bot, *]
+
+theorem FCtx.rsup_wk (Δ Δ' : FCtx ν α) : FCtx.Wk (FCtx.rsup Δ Δ') Δ' := by
+  intro x
+  simp [rsup_app]
+  split <;> simp [Bot.bot, *]
+
+theorem FCtx.Wk.lsup_eq_rsup {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
+  : FCtx.lsup Δ Δ' = FCtx.rsup Δ Δ' := by
+  apply FCtx.ext
+  intro x
+  simp only [DFunLike.coe, lsup, rsup]
+  split
+  . rfl
+  . rfl
+  . apply var_eq₂' w w' <;> assumption
+
+theorem FCtx.Wk.lsup_wk_left {Γ Δ Δ' : FCtx ν α} (_ : FCtx.Wk Γ Δ) (_ : FCtx.Wk Γ Δ')
+  : FCtx.Wk (FCtx.lsup Δ Δ') Δ := lsup_wk Δ Δ'
+theorem FCtx.Wk.lsup_wk_right {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
+  : FCtx.Wk (FCtx.lsup Δ Δ') Δ' := lsup_eq_rsup w w' ▸ rsup_wk Δ Δ'
+theorem FCtx.Wk.rsup_wk_left {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
+  : FCtx.Wk (FCtx.rsup Δ Δ') Δ := lsup_eq_rsup w w' ▸ lsup_wk Δ Δ'
+theorem FCtx.Wk.rsup_wk_right {Γ Δ Δ' : FCtx ν α} (_ : FCtx.Wk Γ Δ) (_ : FCtx.Wk Γ Δ')
+  : FCtx.Wk (FCtx.rsup Δ Δ') Δ' := rsup_wk Δ Δ'
 
 --TODO: wk lemmas, assoc, etc...
 
