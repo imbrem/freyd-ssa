@@ -5,10 +5,10 @@ variable {φ ν α} [Φ : InstSet φ (Ty α)] [Φc : CohInstSet φ (Ty α)]
 
 def UBody.Wf.subst {Γ Δ Γ' : Ctx ν (Ty α)} {σ}
   {b : UBody φ ν}
-  (hσ : Φ.USubst σ Γ' Γ)
+  (hσ : Γ'.Subst σ Γ)
   (hσ' : ∀ x ∈  b.defs, σ x = UTm.var x)
   (hb : b.SSA Γ'.names) :
-  b.Wf p Γ Δ → (Δ' : Ctx ν (Ty α)) × (b.rewrite σ).Wf p Γ' Δ' × Φ.USubst σ Δ' Δ
+  b.Wf p Γ Δ → (Δ' : Ctx ν (Ty α)) × (b.rewrite σ).Wf p Γ' Δ' × Δ'.Subst σ Δ
   | nil p w => ⟨Γ', nil p (Ctx.Wk.refl _), hσ.wk_exit w⟩
   | let1 de db =>
     let ⟨Δ', db', hσ'⟩ := db.subst
@@ -31,7 +31,7 @@ def UBody.Wf.subst {Γ Δ Γ' : Ctx ν (Ty α)} {σ}
 
 def UBody.Wf.subst_wk {Γ Δ Γ' Δ' : Ctx ν (Ty α)} {σ}
   {b : UBody φ ν}
-  (hσ : Φ.USubst σ Γ' Γ)
+  (hσ : Γ'.Subst σ Γ)
   (hσ' : ∀ x ∈  b.defs, σ x = UTm.var x)
   (hb : b.SSA Γ'.names)
   (db: b.Wf p Γ Δ)
@@ -48,10 +48,10 @@ def UBody.Wf.subst_wk {Γ Δ Γ' Δ' : Ctx ν (Ty α)} {σ}
 
 def UBody.WfM.subst {Γ Δ Γ' : Ctx ν (Ty α)} {σ}
   {b : UBody φ ν}
-  (hσ : Φ.USubst σ Γ' Γ)
+  (hσ : Γ'.Subst σ Γ)
   (hσ' : ∀ x ∈  b.defs, σ x = UTm.var x)
   (hb : b.SSA Γ'.names) :
-  b.WfM p Γ Δ → (Δ' : Ctx ν (Ty α)) × (b.rewrite σ).WfM p Γ' Δ' × Φ.USubst σ Δ' Δ
+  b.WfM p Γ Δ → (Δ' : Ctx ν (Ty α)) × (b.rewrite σ).WfM p Γ' Δ' × Δ'.Subst σ Δ
   | nil p w => ⟨Γ', nil p _, hσ⟩
   | let1 de db =>
     let ⟨Δ', db', hσ'⟩ := db.subst
