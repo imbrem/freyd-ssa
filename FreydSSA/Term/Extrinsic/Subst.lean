@@ -10,6 +10,14 @@ inductive InstSet.USubst [Φ : InstSet φ (Ty α)] (σ : ν → UTm φ ν)
   Φ.USubst σ Γ Δ →
   Φ.USubst σ Γ (⟨x, A⟩::Δ)
 
+theorem InstSet.USubst.allEq {Γ Δ : Ctx ν (Ty α)} {σ}
+  : (hσ hσ' : Φ.USubst σ Γ Δ) → hσ = hσ'
+  | nil _, nil _ => rfl
+  | cons e hσ, cons e' hσ' => by
+    rw [InstSet.USubst.allEq hσ hσ']
+    congr
+    exact UTm.Wf.allEq e e'
+
 def InstSet.USubst.fromTuple {Γ Δ : Ctx ν (Ty α)}
   (f: (i : Fin Δ.length) → (σ (Δ.get i).name).Wf 1 Γ (Δ.get i).ty) : Φ.USubst σ Γ Δ
   := match Δ with

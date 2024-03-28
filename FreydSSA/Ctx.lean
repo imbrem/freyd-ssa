@@ -1348,6 +1348,53 @@ def LCtx.SJoin.ofWk {ν κ α} {Γ : Ctx ν α} {L K M : LCtx ν κ α}
 def LCtx.Join'.toJoin {ν κ α} {L K M : LCtx ν κ α} (j : L.Join' K M) : L.Join K M
   := (j.sJoin.toJoin.wk_left j.lPwk).wk_right j.rPwk
 
+inductive LCtx.EWk {ν κ α} : LCtx ν κ α → LCtx ν κ α → Type _
+  | nil : EWk [] []
+  | cons (ℓ) : EWk L K → EWk (ℓ::L) (ℓ::K)
+  | skip {ℓ} : L.Fresh ℓ.name → EWk L K → EWk L (ℓ::K)
+
+def LCtx.EWk.toWk {ν κ α} {L K : LCtx ν κ α} : L.EWk K → L.Wk K
+  | EWk.nil => Wk.nil
+  | EWk.cons _ w => Wk.cons (Label.Wk.refl _) (toWk w)
+  | EWk.skip h w => Wk.skip h (toWk w)
+
+def LCtx.EWk.comp {ν κ α} {L K M : LCtx ν κ α} : L.EWk K → K.EWk M → L.EWk M
+  | EWk.nil, w => w
+  | EWk.cons _ w, EWk.cons _ w' => EWk.cons _ (comp w w')
+  | EWk.skip h w, EWk.cons _ w' => EWk.skip h (comp w w')
+  | w, EWk.skip h w' => EWk.skip (h.wk w.toWk) (comp w w')
+
+def LCtx.EWk.refl {ν κ α} : (L : LCtx ν κ α) → L.EWk L
+  | [] => EWk.nil
+  | _::L => EWk.cons _ (refl L)
+
+theorem LCtx.EWk.antisymm {ν κ α} {L K : LCtx ν κ α} (w : L.EWk K) (w' : K.EWk L) : L = K
+  := w.toWk.antisymm w'.toWk
+
+theorem LCtx.EWk.allEq {ν κ α} {L K : LCtx ν κ α} : (w w' : L.EWk K) → w = w'
+  | EWk.nil, EWk.nil => rfl
+  | EWk.cons _ w, EWk.cons _ w' => congrArg _ (allEq w w')
+  | EWk.skip _ w, EWk.skip _ w' => congrArg _ (allEq w w')
+  | EWk.cons _ _, EWk.skip h _ => (h.head rfl).elim
+  | EWk.skip h _, EWk.cons _ _ => (h.head rfl).elim
+
+structure LCtx.Wk' {ν κ α} (L K : LCtx ν κ α) where
+  base : LCtx ν κ α
+  pWk : L.PWk base
+  eWk : base.EWk K
+
+def LCtx.Wk'.toWk {ν κ α} {L K : LCtx ν κ α} (w : L.Wk' K) : L.Wk K
+  := w.pWk.toWk.comp w.eWk.toWk
+
+def LCtx.Wk.factor {ν κ α} {L K : LCtx ν κ α} : L.Wk K → L.Wk' K
+  | Wk.nil => ⟨[], PWk.nil, EWk.nil⟩
+  | Wk.cons w lw =>
+    let lw' := factor lw
+    ⟨_, lw'.pWk.cons w, lw'.eWk.cons _⟩
+  | Wk.skip h lw =>
+    let lw' := factor lw
+    ⟨_, lw'.pWk, lw'.eWk.skip (h.pwk_r lw'.pWk)⟩
+
 def Var.rename {ν ν' α} (ρ : ν → ν') (v : Var ν α) : Var ν' α
   := ⟨ρ v.name, v.ty⟩
 

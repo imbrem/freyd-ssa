@@ -98,6 +98,12 @@ def UTerminator.Wf.factor {Γ : Ctx ν (Ty α)} {t : UTerminator φ ν κ}
     let j := LCtx.SJoin.ofWk dt'.wk df'.wk dt'.wfM.lEq df'.wfM.lEq;
     ⟨_, WfM.ite dc dt'.wfM df'.wfM j.2.1, j.2.2⟩
 
+def UTerminator.WfM.toWf' {Γ : Ctx ν (Ty α)} {t : UTerminator φ ν κ}
+  (w : WfM Γ t L) : Wf' Γ t L where
+  base := L
+  wfM := w
+  wk := LCtx.Wk.refl _
+
 --TODO: Wf.toUGRegion
 
 --TODO: WfTerminator.wk_entry
