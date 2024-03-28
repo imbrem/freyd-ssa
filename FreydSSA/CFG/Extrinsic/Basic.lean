@@ -27,5 +27,7 @@ inductive UCFG.WfIM : LCtx ν κ (Ty α) → UCFG φ (Ty α) ν κ → LCtx ν �
 structure UCFG.Wf (L : LCtx ν κ (Ty α)) (g : UCFG φ (Ty α) ν κ) (K : LCtx ν κ (Ty α)) : Type _ :=
   labels : LCtx ν κ (Ty α)
   wk : L.Wk labels
-  wfI : g.WfI labels K
-  -- Note: unqiueness failures here due to β input weakening... try exact-output?
+  wfI : g.WfIM labels K
+  -- Note: unqiueness failures here due to dead code, β-failures, etc.
+  -- Directly called code should be unique
+  -- Indirectly called code _might_ be unique
