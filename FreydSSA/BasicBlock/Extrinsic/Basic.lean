@@ -45,3 +45,9 @@ def UBody.Wf'.compBB {Γ Δ : Ctx ν (Ty α)} {b : UBody φ ν} {β : UBB φ ν 
 def UBody.Wf.compBB {Γ Δ : Ctx ν (Ty α)} {b : UBody φ ν} {β : UBB φ ν κ}
   (db : b.Wf p Γ Δ) (dβ : β.Wf p Δ L) : UBB.Wf p Γ (b.compBB β) L
   := db.toWf'.compBB dβ
+
+structure UBB.WfM (p : Purity) (Γ : Ctx ν (Ty α)) (β : UBB φ ν κ) (L : LCtx ν κ (Ty α))
+  : Type _ where
+  maxTrg : Ctx ν (Ty α)
+  body : β.body.WfM p Γ maxTrg
+  terminator : β.terminator.WfM maxTrg L
