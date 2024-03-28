@@ -152,9 +152,7 @@ def UTerminator.Wf'.subst
   let wk' := dt.wk.factor
   ⟨_, dt'.2.1.toWf', ⟨_, dt'.2.2.pwk_exit wk'.pWk, wk'.eWk⟩⟩
 
-def UTerminator.Wf.subst
-  {t : UTerminator φ ν κ}
-  (hσ : Γ.Subst σ Δ)
-  (dt : t.Wf Δ K) : (L : LCtx ν κ (Ty α)) ×' (t.rewrite σ).Wf Γ L × L.Subst σ K :=
+def UTerminator.Wf.subst {t : UTerminator φ ν κ} (hσ : Γ.Subst σ Δ) (dt : t.Wf Δ K)
+  : (L : LCtx ν κ (Ty α)) ×' (t.rewrite σ).Wf Γ L × L.Subst σ K :=
   let dt' := dt.factor.subst hσ;
   ⟨dt'.1, dt'.2.1.toWf, dt'.2.2.toSubst⟩
