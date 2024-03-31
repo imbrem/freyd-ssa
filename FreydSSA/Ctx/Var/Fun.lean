@@ -574,10 +574,3 @@ theorem FCtx.Wk.rsup_wk_right {Γ Δ Δ' : FCtx ν α} (_ : FCtx.Wk Γ Δ) (_ : 
   : FCtx.Wk (FCtx.rsup Δ Δ') Δ' := rsup_wk Δ Δ'
 
 --TODO: wk lemmas, assoc, etc...
-
-structure FLCtx (κ : Type _) (ν : Type _) (α : Type _) : Type _ where
-  toFun : κ → WithBot (FCtx ν α)
-  support : Finset κ
-  mem_support_toFun : ∀x, x ∈ support ↔ toFun x ≠ ⊥
-
---TODO: FLCtx.linf, rinf, lsup, rsup, and lemmata
