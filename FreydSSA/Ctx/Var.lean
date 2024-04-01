@@ -166,6 +166,11 @@ def Ctx.Wk.drop {ν α} : (Γ : Ctx ν α) → Γ.Wk []
 def Ctx.Wk.head {ν α} (v : Var ν α) (Γ : Ctx ν α) : Wk (v::Γ) [v]
   := cons v (drop Γ)
 
+def Ctx.Wk.tail {ν α} {v : Var ν α} {Γ Δ : Ctx ν α}
+  : Wk (v::Γ) (v::Δ) → Γ.Wk Δ
+  | cons _ h => h
+  | skip hx _ => (hx.head rfl).elim
+
 def Ctx.Wk.join {ν α} {Γ Δ Δ' : Ctx ν α} (w : Γ.Wk Δ) (w' : Γ.Wk Δ')
   : Ctx ν α
   := match Γ, w, w' with
@@ -608,3 +613,24 @@ theorem Ctx.EqOn.head {ρ₁ ρ₂ : ν → ν'} {v} {Γ : Ctx ν α} (h : Ctx.E
 theorem Ctx.EqOn.tail {ρ₁ ρ₂ : ν → ν'} {v} {Γ : Ctx ν α} (h : Ctx.EqOn ρ₁ ρ₂ (v::Γ))
   : Ctx.EqOn ρ₁ ρ₂ Γ
   := λ _ hx => h (hx.tail _)
+
+structure Ctx.Comp {ν α} (Γ Δ : Ctx ν α) where
+  base : Ctx ν α
+  left : base.Wk Γ
+  right : base.Wk Δ
+
+def Ctx.Comp.refl {ν α} (Γ : Ctx ν α) : Ctx.Comp Γ Γ := ⟨Γ, Wk.refl Γ, Wk.refl Γ⟩
+
+def Ctx.Comp.symm {ν α} {Γ Δ : Ctx ν α} (h : Ctx.Comp Γ Δ) : Ctx.Comp Δ Γ
+  := ⟨h.base, h.right, h.left⟩
+
+def Ctx.Wk.tail₂ {ν α} {v : Var ν α} {Γ Δ Ξ : Ctx ν α}
+  : Ξ.Wk (v::Γ) → Ξ.Wk (v::Δ) → Γ.Comp Δ
+  | Wk.cons _ w, Wk.cons _ w' => ⟨_, w, w'⟩
+  | Wk.cons _ _, Wk.skip hx _ => (hx.head rfl).elim
+  | Wk.skip hx _, Wk.cons _ _ => (hx.head rfl).elim
+  | Wk.skip _ w, Wk.skip _ w' => tail₂ w w'
+
+def Ctx.Comp.tail {ν α} {v : Var ν α} {Γ Δ : Ctx ν α} (h : Ctx.Comp (v::Γ) (v::Δ))
+  : Ctx.Comp Γ Δ
+  := h.left.tail₂ h.right

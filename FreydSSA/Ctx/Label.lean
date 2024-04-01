@@ -813,3 +813,58 @@ def LCtx.Wk.factor {ν κ α} {L K : LCtx ν κ α} : L.Wk K → L.Wk' K
   | Wk.skip h lw =>
     let lw' := factor lw
     ⟨_, lw'.pWk, lw'.eWk.skip (h.pwk_r lw'.pWk)⟩
+
+inductive LCtx.SSplit {ν κ α}
+  : LCtx ν κ α → LCtx ν κ α → LCtx ν κ α → Type _
+  | nil : SSplit [] [] []
+  | left {ℓ} : M.Fresh ℓ.name → SSplit L K M → SSplit (ℓ::L) (ℓ::K) M
+  | right {ℓ} : K.Fresh ℓ.name → SSplit L K M → SSplit (ℓ::L) K (ℓ::M)
+
+theorem LCtx.SSplit.allEq {ν κ α} {L K M : LCtx ν κ α} (s s' : L.SSplit K M): s = s'
+  := by induction s with
+  | nil => cases s'; rfl
+  | left h j I =>
+    cases s' with
+    | left h' j' => congr; apply I
+    | right h' j' => exact (h'.head rfl).elim
+  | right h j I =>
+    cases s' with
+    | left h' j' => exact (h'.head rfl).elim
+    | right h' j' => congr; apply I
+
+def LCtx.SSplit.comm {ν κ α} {L K M : LCtx ν κ α}
+  : L.SSplit K M → L.SSplit M K
+  | SSplit.nil => SSplit.nil
+  | SSplit.left h j => SSplit.right h j.comm
+  | SSplit.right h j => SSplit.left h j.comm
+
+def LCtx.SSplit.sJoin {ν κ α} {L K M : LCtx ν κ α}
+  : L.SSplit K M → K.SJoin M L
+  | SSplit.nil => SJoin.nil
+  | SSplit.left h j => SJoin.left h (sJoin j)
+  | SSplit.right h j => SJoin.right h (sJoin j)
+
+--TODO: SSplit weakening, dealing with fresh variables...
+
+inductive LCtx.LEq {ν κ α} : LCtx ν κ α → LCtx ν κ α → Prop
+  | nil : LEq [] []
+  | cons {ℓ ℓ' : Label ν κ α} : ℓ.name = ℓ'.name → ℓ.param = ℓ'.param → LEq L K → LEq (ℓ::L) (ℓ'::K)
+
+theorem LCtx.LEq.symm {ν κ α} {L K : LCtx ν κ α} : L.LEq K → K.LEq L
+  | nil => nil
+  | cons hn hp h => cons hn.symm hp.symm h.symm
+
+theorem LCtx.LEq.trans {ν κ α} {L K M : LCtx ν κ α} : L.LEq K → K.LEq M → L.LEq M
+  | nil, h => h
+  | cons hn hp h, cons hn' hp' h' => cons (hn.trans hn') (hp.trans hp') (h.trans h')
+
+theorem LCtx.LEq.refl {ν κ α} : (L : LCtx ν κ α) → L.LEq L
+  | [] => nil
+  | _::L => cons rfl rfl (refl L)
+
+theorem LCtx.PWk.toLEq {ν κ α} {L K : LCtx ν κ α} (w : L.PWk K) : L.LEq K
+  := match w with
+  | PWk.nil => LEq.nil
+  | PWk.cons h w => LEq.cons h.name h.param (toLEq w)
+
+--TODO: LWk et al...

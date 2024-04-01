@@ -51,3 +51,19 @@ structure UBB.WfM (p : Purity) (Γ : Ctx ν (Ty α)) (β : UBB φ ν κ) (L : LC
   maxTrg : Ctx ν (Ty α)
   body : β.body.WfM p Γ maxTrg
   terminator : β.terminator.WfM maxTrg L
+
+theorem UBB.WfM.allEq {Γ : Ctx ν (Ty α)} {β : UBB φ ν κ}
+  : (dβ dβ' : UBB.WfM p Γ β L) → dβ = dβ' := by
+    intro ⟨Γ, db, dt⟩ ⟨Γ', db', dt'⟩
+    cases db.trgEq db'
+    cases db.allEq db'
+    cases dt.allEq dt'
+    rfl
+
+theorem UBB.WfM.trgEq {Γ : Ctx ν (Ty α)} {L L' : LCtx ν κ (Ty α)} {β : UBB φ ν κ}
+  (hL: L.Comp L')
+  : WfM p Γ β L → WfM p Γ β L' → L = L' := by
+    intro ⟨Γ, db, dt⟩ ⟨Γ', db', dt'⟩
+    cases db.trgEq db'
+    cases dt.trgEq hL dt'
+    exact rfl

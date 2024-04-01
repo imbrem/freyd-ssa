@@ -8,10 +8,21 @@ inductive UCFG.Step : LCtx ν κ (Ty α) → UCFG φ (Ty α) ν κ → LCtx ν �
 
 inductive UCFG.StepM : LCtx ν κ (Ty α) → UCFG φ (Ty α) ν κ → LCtx ν κ (Ty α) → Type _
   | nil : StepM [] nil []
-  -- Note: we allow weakening here, to be stricter we could define a minimum join...
+  -- Note: we allow weakening here via the join, to be stricter we could define a minimum join...
   | cons (ℓ x A)
     : StepM L g K → β.WfM 0 (⟨x, A⟩::Γ) Kβ → K.Join Kβ K'
       → StepM (⟨ℓ, A, Γ⟩::L) (g.cons ℓ x A β) K'
+
+structure UCFG.WfRM (I : LCtx ν κ (Ty α)) (g : UCFG φ (Ty α) ν κ) (O : LCtx ν κ (Ty α)) : Type _ :=
+  labels : LCtx ν κ (Ty α)
+  recursiveLabels : LCtx ν κ (Ty α)
+  stepM : g.StepM I labels
+  wkRecursiveLabels : labels.EWk recursiveLabels
+  splitRecursiveLabels : recursiveLabels.SSplit O I
+
+-- theorem UCFG.WfRM.trgEq {I O O' : LCtx ν κ (Ty α)} {g : UCFG φ (Ty α) ν κ}
+--   (dg : UCFG.WfRM I g O) (dg' : UCFG.WfRM I g O') (hO : O.Comp O') : O = O' :=
+--   sorry
 
 inductive UCFG.WfI : LCtx ν κ (Ty α) → UCFG φ (Ty α) ν κ → LCtx ν κ (Ty α) → Type _
   | nil : L.Wk K → WfI L nil K
