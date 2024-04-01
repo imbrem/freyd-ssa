@@ -8,7 +8,7 @@ import Mathlib.Data.Fin.Basic
 import Mathlib.Init.Classical
 import Mathlib.Order.SuccPred.Basic
 
-variable {ν ν' α β} [DecidableEq ν] [DecidableEq ν']
+variable {ν ν' α β} [DecidableEq ν] [DecidableEq ν'] [DecidableEq α]
 
 structure FCtx (ν : Type u) (α : Type v) : Type (max u v) where
   toFun : ν → WithBot α
@@ -133,6 +133,29 @@ instance FCtx.instPartialOrder : PartialOrder (FCtx ν α) where
   le_trans _ _ _ h h' := FCtx.Wk.comp h' h
   le_antisymm _ _ h h' := FCtx.Wk.antisymm h' h
 
+def FCtx.Cmp (Δ Δ' : FCtx ν α) : Prop := ∀x, Δ x = Δ' x ∨ Δ x = ⊥ ∨ Δ' x = ⊥
+
+theorem FCtx.Cmp.refl (Γ : FCtx ν α) : FCtx.Cmp Γ Γ := by simp [FCtx.Cmp]
+
+theorem FCtx.Cmp.symm {Γ Δ : FCtx ν α} (c : FCtx.Cmp Γ Δ) : FCtx.Cmp Δ Γ := λx =>
+  match c x with
+  | Or.inl h => Or.inl h.symm
+  | Or.inr (Or.inl h) => Or.inr (Or.inr h)
+  | Or.inr (Or.inr h) => Or.inr (Or.inl h)
+
+theorem FCtx.Cmp.of_wk₂ {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
+  : FCtx.Cmp Δ Δ' := by
+  intro x
+  cases w x <;> cases w' x <;> simp [*]
+
+theorem FCtx.Cmp.of_wk {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ) : FCtx.Cmp Γ Δ := by
+  intro x
+  cases w x <;> simp [*]
+
+theorem FCtx.Wk.cmp₂ {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
+  : FCtx.Cmp Δ Δ' := FCtx.Cmp.of_wk₂ w w'
+theorem FCtx.Wk.cmp {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ) : FCtx.Cmp Γ Δ := FCtx.Cmp.of_wk w
+
 def FCtx.linf (Δ Δ' : FCtx ν α)
   : FCtx ν α where
   toFun x := match Δ x, Δ' x with
@@ -197,6 +220,17 @@ theorem FCtx.Wk.var {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ) (x : ν) (a : α)
   case inl hw => rw [hw] at h; cases h
   case inr hw => rw [hw] at h; exact h
 
+theorem FCtx.Cmp.var_eq' {Γ Δ : FCtx ν α} (c : FCtx.Cmp Γ Δ) (x : ν) (a b : α)
+  (h : Γ x = a) (h' : Δ x = b)
+  : (a : WithBot α) = (b : WithBot α) := match c x with
+  | Or.inl c => h.symm.trans (c.trans h')
+  | Or.inr (Or.inl c) => by cases h.symm.trans c
+  | Or.inr (Or.inr c) => by cases h'.symm.trans c
+
+theorem FCtx.Cmp.var_eq {Γ Δ : FCtx ν α} (c : FCtx.Cmp Γ Δ) (x : ν) (a b : α)
+  (h : Γ x = a) (h' : Δ x = b)
+  : a = b := by cases var_eq' c x a b h h'; rfl
+
 theorem FCtx.Wk.var_eq₂' {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
   (x : ν) (a b : α) (h : Δ x = a) (h' : Δ' x = b)
   : (a : WithBot α) = (b : WithBot α) := by rw [<-var w x a h, <-var w' x b h']
@@ -224,7 +258,7 @@ theorem FCtx.Wk.of_eq_on {Γ Δ : FCtx ν α}
 theorem FCtx.Wk.eq_on_iff {Γ Δ : FCtx ν α}
   : FCtx.Wk Γ Δ ↔ (∀x ∈ Δ.support, Δ x = Γ x) := ⟨eq_on, of_eq_on⟩
 
-theorem FCtx.Wk.linf_eq_rinf {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
+theorem FCtx.Cmp.linf_eq_rinf {Δ Δ' : FCtx ν α} (c : FCtx.Cmp Δ Δ')
   : FCtx.linf Δ Δ' = FCtx.rinf Δ Δ' := by
   apply FCtx.ext
   intro x
@@ -232,12 +266,25 @@ theorem FCtx.Wk.linf_eq_rinf {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : 
   split
   . rfl
   . rfl
-  . apply var_eq₂' w w' <;> assumption
+  . apply var_eq' c <;> assumption
+
+theorem FCtx.Wk.linf_eq_rinf {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
+  : FCtx.linf Δ Δ' = FCtx.rinf Δ Δ' := (w.cmp₂ w').linf_eq_rinf
+
+theorem FCtx.Cmp.linf_wk_left {Δ Δ' : FCtx ν α} (_ : FCtx.Cmp Δ Δ')
+  : FCtx.Wk Δ (FCtx.linf Δ Δ') := linf_wk Δ Δ'
+theorem FCtx.Cmp.linf_wk_right {Δ Δ' : FCtx ν α} (c : FCtx.Cmp Δ Δ')
+  : FCtx.Wk Δ' (FCtx.linf Δ Δ') := c.linf_eq_rinf ▸ rinf_wk Δ Δ'
 
 theorem FCtx.Wk.linf_wk_left {Γ Δ Δ' : FCtx ν α} (_ : FCtx.Wk Γ Δ) (_ : FCtx.Wk Γ Δ')
   : FCtx.Wk Δ (FCtx.linf Δ Δ') := linf_wk Δ Δ'
 theorem FCtx.Wk.linf_wk_right {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
   : FCtx.Wk Δ' (FCtx.linf Δ Δ') := linf_eq_rinf w w' ▸ rinf_wk Δ Δ'
+
+theorem FCtx.Cmp.rinf_wk_left {Δ Δ' : FCtx ν α} (c : FCtx.Cmp Δ Δ')
+  : FCtx.Wk Δ (FCtx.rinf Δ Δ') := c.linf_eq_rinf ▸ linf_wk Δ Δ'
+theorem FCtx.Cmp.rinf_wk_right {Δ Δ' : FCtx ν α} (_ : FCtx.Cmp Δ Δ')
+  : FCtx.Wk Δ' (FCtx.rinf Δ Δ') := rinf_wk Δ Δ'
 
 theorem FCtx.Wk.rinf_wk_left {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
   : FCtx.Wk Δ (FCtx.rinf Δ Δ') := linf_eq_rinf w w' ▸ linf_wk Δ Δ'
@@ -502,6 +549,21 @@ theorem FCtx.rinf_comm (Δ Δ' : FCtx ν α)
   : FCtx.rinf Δ Δ' = FCtx.linf Δ' Δ := by
   rw [linf_comm]
 
+theorem FCtx.linf_idem (Δ : FCtx ν α)
+  : FCtx.linf Δ Δ = Δ := by
+  apply FCtx.ext
+  intro x
+  simp only [linf_app]
+  split <;> simp [WithBot.bot, *]
+
+theorem FCtx.rinf_idem (Δ : FCtx ν α)
+  : FCtx.rinf Δ Δ = Δ := by
+  rw [<-(FCtx.Cmp.refl Δ).linf_eq_rinf, linf_idem]
+
+--TODO: linf_nil, nil_linf, rinf_nil, nil_rinf
+
+--TODO: inf eq iff wk
+
 def FCtx.lsup (Δ Δ' : FCtx ν α)
   : FCtx ν α where
   toFun x := match Δ x, Δ' x with
@@ -554,7 +616,7 @@ theorem FCtx.rsup_wk (Δ Δ' : FCtx ν α) : FCtx.Wk (FCtx.rsup Δ Δ') Δ' := b
   simp [rsup_app]
   split <;> simp [Bot.bot, *]
 
-theorem FCtx.Wk.lsup_eq_rsup {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
+theorem FCtx.Cmp.lsup_eq_rsup {Δ Δ' : FCtx ν α} (c : FCtx.Cmp Δ Δ')
   : FCtx.lsup Δ Δ' = FCtx.rsup Δ Δ' := by
   apply FCtx.ext
   intro x
@@ -562,15 +624,88 @@ theorem FCtx.Wk.lsup_eq_rsup {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : 
   split
   . rfl
   . rfl
-  . apply var_eq₂' w w' <;> assumption
+  . apply var_eq' c <;> assumption
+
+theorem FCtx.Wk.lsup_eq_rsup {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
+  : FCtx.lsup Δ Δ' = FCtx.rsup Δ Δ' := (w.cmp₂ w').lsup_eq_rsup
+
+theorem FCtx.Cmp.lsup_wk_left {Δ Δ' : FCtx ν α} (_ : FCtx.Cmp Δ Δ')
+  : FCtx.Wk (FCtx.lsup Δ Δ') Δ := lsup_wk Δ Δ'
+theorem FCtx.Cmp.lsup_wk_right {Δ Δ' : FCtx ν α} (c : FCtx.Cmp Δ Δ')
+  : FCtx.Wk (FCtx.lsup Δ Δ') Δ' := c.lsup_eq_rsup ▸ rsup_wk Δ Δ'
 
 theorem FCtx.Wk.lsup_wk_left {Γ Δ Δ' : FCtx ν α} (_ : FCtx.Wk Γ Δ) (_ : FCtx.Wk Γ Δ')
   : FCtx.Wk (FCtx.lsup Δ Δ') Δ := lsup_wk Δ Δ'
 theorem FCtx.Wk.lsup_wk_right {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
   : FCtx.Wk (FCtx.lsup Δ Δ') Δ' := lsup_eq_rsup w w' ▸ rsup_wk Δ Δ'
+
+theorem FCtx.Cmp.rsup_wk_left {Δ Δ' : FCtx ν α} (c : FCtx.Cmp Δ Δ')
+  : FCtx.Wk (FCtx.rsup Δ Δ') Δ := c.lsup_eq_rsup ▸ lsup_wk Δ Δ'
+theorem FCtx.Cmp.rsup_wk_right {Δ Δ' : FCtx ν α} (_ : FCtx.Cmp Δ Δ')
+  : FCtx.Wk (FCtx.rsup Δ Δ') Δ' := rsup_wk Δ Δ'
+
 theorem FCtx.Wk.rsup_wk_left {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
   : FCtx.Wk (FCtx.rsup Δ Δ') Δ := lsup_eq_rsup w w' ▸ lsup_wk Δ Δ'
 theorem FCtx.Wk.rsup_wk_right {Γ Δ Δ' : FCtx ν α} (_ : FCtx.Wk Γ Δ) (_ : FCtx.Wk Γ Δ')
   : FCtx.Wk (FCtx.rsup Δ Δ') Δ' := rsup_wk Δ Δ'
 
---TODO: wk lemmas, assoc, etc...
+--TODO: wk lemmas, assoc, idem, nil, etc.
+
+theorem FCtx.Cmp.iff_exists_wk {Δ Δ' : FCtx ν α}
+  : FCtx.Cmp Δ Δ' ↔ ∃Γ : FCtx ν α, Γ.Wk Δ ∧ Γ.Wk Δ'
+  := ⟨λc => ⟨_, c.lsup_wk_left, c.lsup_wk_right⟩, λ⟨_, w, w'⟩ => w.cmp₂ w'⟩
+
+def FCtx.inf (Δ Δ' : FCtx ν α) : FCtx ν α where
+  toFun x := if Δ x = Δ' x then Δ x else ⊥
+  support := Δ.support.filter (λx => Δ x = Δ' x)
+  mem_support_toFun := by
+    intro x
+    simp [mem_support_toFun]
+    exact ⟨λh => ⟨h.2, h.1⟩, λh => ⟨h.2, h.1⟩⟩
+
+theorem FCtx.inf_support_left {Δ Δ' : FCtx ν α}
+  : (FCtx.inf Δ Δ').support = Δ.support.filter (λx => Δ x = Δ' x) := rfl
+
+theorem FCtx.inf_comm (Δ Δ' : FCtx ν α)
+  : FCtx.inf Δ Δ' = FCtx.inf Δ' Δ := by
+  apply FCtx.ext
+  intro x
+  simp only [DFunLike.coe, inf]
+  split
+  . simp [*]
+  . split
+    . simp [*] at *
+    . rfl
+
+--TODO: inf_assoc
+--TODO: inf_idem
+--TODO: inf_nil
+
+theorem FCtx.inf_support_right {Δ Δ' : FCtx ν α}
+  : (FCtx.inf Δ Δ').support = Δ'.support.filter (λx => Δ x = Δ' x) := by
+  rw [inf_comm, inf_support_left]
+  congr
+  funext x
+  apply propext; constructor <;> intro h <;> rw [h]
+
+theorem FCtx.Cmp.inf_eq_linf {Δ Δ' : FCtx ν α} (c : FCtx.Cmp Δ Δ')
+  : FCtx.inf Δ Δ' = FCtx.linf Δ Δ' := by
+  apply FCtx.ext
+  intro x
+  simp only [DFunLike.coe, inf, linf]
+  split
+  . rename_i h
+    simp [h]
+    split <;> assumption
+  . split
+    . rfl
+    . rfl
+    . rename_i hΔ hΔ'; match c x with
+      | Or.inl h => contradiction
+      | Or.inr (Or.inl h) => cases hΔ.symm.trans h
+      | Or.inr (Or.inr h) => cases hΔ'.symm.trans h
+
+theorem FCtx.Cmp.inf_eq_rinf {Δ Δ' : FCtx ν α} (c : FCtx.Cmp Δ Δ')
+  : FCtx.inf Δ Δ' = FCtx.rinf Δ Δ' := by rw [c.inf_eq_linf, c.linf_eq_rinf]
+
+--TODO: instantiate semilattice structure
