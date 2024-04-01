@@ -1,3 +1,5 @@
+-- Note that a lot of this is simply a reimplementation of Mathlib.Data.List.Sigma
+
 import Mathlib.Data.List.Basic
 import Mathlib.Data.List.MinMax
 import Mathlib.Data.List.Nodup

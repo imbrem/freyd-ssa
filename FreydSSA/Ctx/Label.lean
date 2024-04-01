@@ -1,3 +1,5 @@
+-- Note that a lot of this is simply a reimplementation of Mathlib.Data.List.Sigma
+
 import Mathlib.Data.List.Basic
 import Mathlib.Data.List.MinMax
 import Mathlib.Data.List.Nodup
@@ -71,6 +73,8 @@ def LCtx (ν κ α) := List (Label ν κ α)
 
 def LCtx.labels {ν κ α} (L : LCtx ν κ α): List κ
   := L.map Label.name
+
+def LCtx.Nodup {ν κ α} (L : LCtx ν κ α) : Prop := L.labels.Nodup
 
 inductive LCtx.FreshVar {ν κ α} (n : ν) : LCtx ν κ α → Prop
   | nil : LCtx.FreshVar n []
