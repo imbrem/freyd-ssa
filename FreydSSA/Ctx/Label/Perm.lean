@@ -40,20 +40,29 @@ theorem LCtx.Fresh.perm {L K : LCtx ν κ α} (h : L.Fresh ℓ) (h' : L.Perm K) 
    apply h.not_mem
    apply (h'.map Label.name).mem_iff.mpr c
 
--- In this case, we simply have _pointwise_ comparability, probably, or smt...
--- theorem LCtx.Comp.perm_eq {L K : LCtx ν κ α} (h : L.Comp K) (h' : L.Perm K) : L = K := by
---   cases h with | mk base wl wr =>
---   induction wl generalizing K with
---   | nil => cases wr; rfl
---   | cons hℓ _ I => cases wr with
---     | cons hℓ' wr =>
+structure Label.Comp (ℓ : Label ν κ α) (ℓ' : Label ν κ α) :=
+  name : ℓ.name = ℓ'.name
+  param : ℓ.param = ℓ'.param
+  live : ℓ.live.Comp ℓ'.live
 
---       cases I ((List.perm_cons _).mp sorry) wr
---       rfl
---     | skip hvr wr => exact ((hvr.perm h'.symm).head rfl).elim
---   | skip hvl _ I => cases wr with
---     | cons vr wr => exact ((hvl.perm h').head rfl).elim
---     | skip hvr wr => exact I h' wr
+structure Label.Comp' (ℓ : Label ν κ α) (ℓ' : Label ν κ α) :=
+  base : Label ν κ α
+  left : base.Wk ℓ
+  right : base.Wk ℓ'
+
+def Label.Comp.ofComp' {ℓ ℓ' : Label ν κ α} (h : ℓ.Comp' ℓ') : ℓ.Comp ℓ' where
+  name := h.left.name.symm.trans h.right.name
+  param := h.left.param.symm.trans h.right.param
+  live := ⟨h.base.live, h.left.live, h.right.live⟩
+
+def Label.Comp'.ofComp {ℓ ℓ' : Label ν κ α} (h : ℓ.Comp ℓ') : ℓ.Comp' ℓ' where
+  base := ⟨ℓ.name, ℓ.param, h.live.base⟩
+  left := ⟨rfl, rfl, h.live.left⟩
+  right := ⟨h.name, h.param, h.live.right⟩
+
+inductive LCtx.PComp : LCtx ν κ α → LCtx ν κ α → Type _
+  | nil : PComp [] []
+  | cons : ℓ.Comp ℓ' → PComp L K → PComp (ℓ::L) (ℓ'::K)
 
 structure Label.TPerm (ℓ : Label ν κ α) (ℓ' : Label ν κ α) :=
   name : ℓ.name = ℓ'.name
@@ -69,3 +78,65 @@ inductive LCtx.LTPerm : LCtx ν κ α → LCtx ν κ α → Prop
   | cons : ℓ.TPerm ℓ' → LTPerm L K → LTPerm (ℓ::L) (ℓ'::K)
   | swap (ℓ ℓ') (L) : ℓ.name ≠ ℓ'.name -> LTPerm (ℓ::ℓ'::L) (ℓ'::ℓ::L)
   | trans : LTPerm Γ Δ → LTPerm Δ Ξ → LTPerm Γ Ξ
+
+-- theorem LCtx.SJoin.perm {L K M M' : LCtx ν κ α}
+--   (h : L.SJoin K M) (h' : L.SJoin K M') : M.Perm M' := by
+--   induction h generalizing M' with
+--   | nil => cases h'; constructor
+--   | left hℓ j I => cases h' with
+--     | left hℓ' j' =>
+--       constructor
+--       apply I
+--       assumption
+--     | right hℓ' j' => sorry
+--     | both _ j' => exact (hℓ.head rfl).elim
+--   | right hℓ j I => cases h' with
+--     | left hℓ' j' =>
+--       sorry
+--     | right =>
+--       constructor
+--       apply I
+--       assumption
+--     | both _ j' => exact (hℓ.head rfl).elim
+--   | both _ j I => cases h' with
+--     | left hℓ' => exact (hℓ'.head rfl).elim
+--     | right hℓ' => exact (hℓ'.head rfl).elim
+--     | both =>
+--       constructor
+--       apply I
+--       assumption
+
+-- theorem LCtx.SJoin.perm_left {L L' K M M' : LCtx ν κ α}
+--   (hL : L.Perm L') (h : L.SJoin K M) (h' : L'.SJoin K M') : L.Perm M := by
+--   induction hL generalizing K M M' with
+--   | nil => sorry
+--   | cons => sorry
+--   | swap => sorry
+--   | trans hl hr Il Ir =>
+--     apply List.Perm.trans (Il h sorry) sorry
+
+-- theorem LCtx.SJoin.perm₂ {L K L' K' M M' : LCtx ν κ α}
+--   (h : L.SJoin K M) (h' : L'.SJoin K' M')
+--   (hL : L.Perm L') (hK : K.Perm K') : M.Perm M' := by
+--   induction h generalizing L' K' M' with
+--   | nil => cases h' <;> simp at *
+--   | @left _ _ _ ℓ hℓ j I => cases h' with
+--     | nil => simp at hL
+--     | @left _ _ _ ℓ' hℓ' j' =>
+--       if hℓe : ℓ = ℓ' then
+--         cases hℓe
+--         constructor
+--         apply I
+--         assumption
+--         apply (List.perm_cons _).mp hL
+--         exact hK
+--       else
+--         sorry
+--     | @right _ _ _ ℓ' hℓ' j' => sorry
+--     | both ℓ j => sorry
+--   | right hℓ j I => sorry
+--   | both ℓ j I => cases h' with
+--     | nil => simp at hL
+--     | left hℓ' j' => sorry
+--     | right hℓ' j' => sorry
+--     | both ℓ j => sorry

@@ -760,6 +760,44 @@ theorem LCtx.Fresh.sJoin {ν κ α} {L K M : LCtx ν κ α} {l : κ}
   : L.SJoin K M → L.Fresh l → K.Fresh l → M.Fresh l
   := λj => join j.toJoin
 
+-- TODO: clean, but good enough for now...
+theorem LCtx.SJoin.Nodup {ν κ α} {L K M : LCtx ν κ α}
+  (j : L.SJoin K M) (hL : L.Nodup) (hK : K.Nodup) : M.Nodup
+  := by induction j with
+  | nil => constructor
+  | left h j I =>
+    apply List.nodup_cons.mpr
+    constructor
+    apply Fresh.not_mem
+    apply Fresh.sJoin
+    exact j
+    apply Fresh.of_not_mem
+    exact (List.nodup_cons.mp hL).1
+    exact h
+    apply I
+    exact hL.tail
+    exact hK
+  | right h j I =>
+    apply List.nodup_cons.mpr
+    constructor
+    apply Fresh.not_mem
+    apply Fresh.sJoin
+    exact j
+    exact h
+    apply Fresh.of_not_mem
+    exact (List.nodup_cons.mp hK).1
+    apply I
+    exact hL
+    exact hK.tail
+  | both _ j I =>
+    apply List.nodup_cons.mpr
+    constructor
+    apply Fresh.not_mem
+    apply Fresh.sJoin j <;> apply Fresh.of_not_mem
+    apply (List.nodup_cons.mp hL).1
+    apply (List.nodup_cons.mp hK).1
+    apply I hL.tail hK.tail
+
 def LCtx.SJoin.ofWk {ν κ α} {Γ : Ctx ν α} {L K M : LCtx ν κ α}
   (wl : L.Wk M) (wr : K.Wk M) (eql : Γ.LEq L) (eqr : Γ.LEq K)
   : (M' : LCtx ν κ α) × L.SJoin K M' × M'.Wk M
