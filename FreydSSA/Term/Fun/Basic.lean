@@ -9,7 +9,7 @@ variable {φ ν α} [Φ : InstSet φ (Ty α)]
   [DecidableEq ν] [DecidableEq α]
 
 inductive UTm.FWf : Purity → FCtx ν (Ty α) → UTm φ ν → Ty α → Type _
-  | var (p) {A : Ty α} : Γ x = (A : WithBot _) → FWf p Γ (var x) A
+  | var {x} {A : Ty α} (p)  : Γ x = (A : WithBot _) → FWf p Γ (var x) A
   | op : Φ.Op f p A B → FWf 1 Γ e A → FWf p Γ (op f e) B
   | pair (p) : FWf 1 Γ l A → FWf 1 Γ r B → FWf p Γ (pair l r) (A.pair B)
   | unit (p) : FWf p Γ unit Ty.unit
@@ -76,5 +76,21 @@ def FCtx.Cmp.wfInf {e : UTm φ ν} (c : Γ.Cmp Δ) : e.FWf p Γ A → e.FWf p' �
   | UTm.FWf.pair p dl dr, UTm.FWf.pair _ dl' dr' => UTm.FWf.pair p (c.wfInf dl dl') (c.wfInf dr dr')
   | UTm.FWf.unit p, _ => UTm.FWf.unit p
   | UTm.FWf.bool p b, _ => UTm.FWf.bool p b
+
+def UTm.FWf.restrict {e : UTm φ ν} : e.FWf p Γ A → e.FWf p (Γ.restrict e.vars) A
+  | var p w => var p (by simp [vars, FCtx.restrict_app, w])
+  | op hf de => op hf de.restrict
+  | pair p dl dr => pair p
+    (dl.restrict.wk (FCtx.Wk.restrict_union_left _ _ _))
+    (dr.restrict.wk (FCtx.Wk.restrict_union_right _ _ _))
+  | unit p => unit p
+  | bool p b => bool p b
+
+def UTm.FWf.vars_sub_support {e : UTm φ ν} : e.FWf p Γ A → e.vars ⊆ Γ.support
+  | var p w => by simp [vars, FCtx.mem_support, w]
+  | op hf de => de.vars_sub_support
+  | pair p dl dr => Finset.union_subset dl.vars_sub_support dr.vars_sub_support
+  | unit p => by simp [vars]
+  | bool p b => by simp [vars]
 
 --TODO: cmp ==> inf = linf without alleq, rinf with

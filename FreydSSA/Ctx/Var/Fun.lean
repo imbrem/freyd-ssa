@@ -71,6 +71,9 @@ theorem FCtx.eq_bot_of_not_mem_support {Γ : FCtx ν α} (x : ν)
   simp [mem_support] at h
   exact h
 
+theorem FCtx.not_mem_support {Γ : FCtx ν α} (x : ν)
+  : x ∉ Γ.support ↔ Γ x = ⊥ := ⟨eq_bot_of_not_mem_support x, not_mem_support_of_eq_bot x⟩
+
 def FCtx.map_ty (Γ : FCtx ν α) (f : α → β) : FCtx ν β where
   toFun x := (Γ.toFun x).map (f)
   support := Γ.support
@@ -709,3 +712,122 @@ theorem FCtx.Cmp.inf_eq_rinf {Δ Δ' : FCtx ν α} (c : FCtx.Cmp Δ Δ')
   : FCtx.inf Δ Δ' = FCtx.rinf Δ Δ' := by rw [c.inf_eq_linf, c.linf_eq_rinf]
 
 --TODO: instantiate semilattice structure
+
+--TODO: compatible contexts with the same support are equal
+
+theorem FCtx.Cmp.eq_of_eq_support {Δ Δ' : FCtx ν α} (c : FCtx.Cmp Δ Δ')
+  (h : Δ.support = Δ'.support)
+  : Δ = Δ' := by
+  apply FCtx.ext
+  rw [Finset.ext_iff] at h
+  intro x
+  match c x with
+  | Or.inl h => exact h
+  | Or.inr (Or.inl hx) =>
+    rw [hx]
+    apply Eq.symm
+    apply eq_bot_of_not_mem_support
+    intro hx'
+    rw [<-h] at hx'
+    exact not_mem_support_of_eq_bot _ hx hx'
+  | Or.inr (Or.inr hx) =>
+    rw [hx]
+    apply eq_bot_of_not_mem_support
+    intro hx'
+    rw [h] at hx'
+    exact not_mem_support_of_eq_bot _ hx hx'
+
+def FCtx.restrict (Γ : FCtx ν α) (vars : Finset ν) : FCtx ν α where
+  toFun x := if x ∈ vars then Γ x else ⊥
+  support := Γ.support ∩ vars
+  mem_support_toFun := by simp [mem_support, And.comm]
+
+theorem FCtx.restrict_app (Γ : FCtx ν α) (vars : Finset ν) (x : ν)
+  : (FCtx.restrict Γ vars) x = if x ∈ vars then Γ x else ⊥
+  := rfl
+
+theorem FCtx.restrict_support (Γ : FCtx ν α) : Γ.restrict Γ.support = Γ
+  := ext (λx => by
+    simp only [restrict_app, mem_support, ne_eq, ite_not, ite_eq_right_iff];
+    intro h; rw [h])
+
+theorem FCtx.restrict_sub_support {Γ : FCtx ν α} {v : Finset ν} (hv : Γ.support ⊆ v)
+  : Γ.restrict v = Γ := by
+  --TODO: clean this up...
+  apply ext
+  intro x
+  simp only [restrict_app, ite_eq_left_iff]
+  intro hx
+  have hx := λc => hx (Finset.mem_of_subset hv c)
+  simp only [mem_support, ne_eq, imp_false, not_not] at hx
+  rw [hx]
+
+theorem FCtx.sub_support_of_restrict_eq {Γ : FCtx ν α} {v : Finset ν} (hv : Γ.restrict v = Γ)
+  : Γ.support ⊆ v := by
+  intro x hx
+  simp only [mem_support, Finset.mem_inter] at hx
+  rw [<-hv, restrict_app] at hx
+  simp only [ne_eq, ite_eq_right_iff, not_forall, exists_prop] at hx
+  exact hx.1
+
+theorem FCtx.restrict_sub_support_iff (Γ : FCtx ν α) (v : Finset ν)
+  : Γ.restrict v = Γ ↔ Γ.support ⊆ v := ⟨sub_support_of_restrict_eq, restrict_sub_support⟩
+
+theorem FCtx.restrict_inter (Γ : FCtx ν α) (v v' : Finset ν)
+  : Γ.restrict (v ∩ v') = (Γ.restrict v).restrict v' := by
+  apply FCtx.ext
+  intro x
+  apply Eq.symm
+  simp only [restrict_app, Finset.mem_inter]
+  split <;> simp [*]
+
+theorem FCtx.restrict_restrict (Γ : FCtx ν α) (v : Finset ν)
+  : (Γ.restrict v).restrict v = Γ.restrict v := by
+  apply FCtx.ext
+  intro x
+  apply Eq.symm
+  simp only [restrict_app, Finset.mem_inter]
+  split <;> simp [*]
+
+theorem FCtx.Wk.wk_restrict (Γ : FCtx ν α) (v : Finset ν)
+  : Γ.Wk (Γ.restrict v)
+  := of_eq_on (λx hx => by
+    simp only [restrict_app, ite_eq_left_iff]
+    intro hx'
+    exact (hx' (Finset.mem_of_mem_inter_right hx)).elim)
+
+theorem FCtx.Cmp.cmp_restrict (Γ : FCtx ν α) (v : Finset ν)
+  : FCtx.Cmp Γ (Γ.restrict v) := of_wk (Wk.wk_restrict Γ v)
+
+theorem FCtx.Wk.restrict_sub {v v' : Finset ν} (Γ : FCtx ν α) (hv : v' ⊆ v)
+  : (Γ.restrict v).Wk (Γ.restrict v')
+  := of_eq_on (λx hx =>
+    have hxv := Finset.mem_of_mem_inter_right hx
+    have hxv' := Finset.mem_of_subset hv hxv
+    by simp [restrict_app, *])
+
+theorem FCtx.Wk.restrict_union_left (Γ : FCtx ν α) (l r : Finset ν)
+  : (Γ.restrict (l ∪ r)).Wk (Γ.restrict l)
+  := restrict_sub Γ (Finset.subset_union_left l r)
+
+theorem FCtx.Wk.restrict_union_right (Γ : FCtx ν α) (l r : Finset ν)
+  : (Γ.restrict (l ∪ r)).Wk (Γ.restrict r)
+  := restrict_sub Γ (Finset.subset_union_right l r)
+
+theorem FCtx.Wk.restrict_inter_left (Γ : FCtx ν α) (l r : Finset ν)
+  : (Γ.restrict l).Wk (Γ.restrict (l ∩ r))
+  := restrict_sub Γ (Finset.inter_subset_left l r)
+
+theorem FCtx.Wk.restrict_inter_right (Γ : FCtx ν α) (l r : Finset ν)
+  : (Γ.restrict r).Wk (Γ.restrict (l ∩ r))
+  := restrict_sub Γ (Finset.inter_subset_right l r)
+
+theorem FCtx.Wk.restrict {Γ Δ : FCtx ν α} (w : Γ.Wk Δ) (v : Finset ν)
+  : (Γ.restrict v).Wk (Δ.restrict v)
+  := of_eq_on (λx hx =>
+    have hxv := Finset.mem_of_mem_inter_right hx
+    by simp only [restrict_app, ↓reduceIte, hxv]; exact w.eq_on _ (Finset.mem_of_mem_inter_left hx))
+
+-- TODO: FCtx.Cmp.restrict
+
+--TODO: in a coherent setting, any two contexts typing a term have equal restrictions

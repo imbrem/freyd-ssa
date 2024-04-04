@@ -14,6 +14,8 @@ import FreydSSA.Ctx
 import FreydSSA.InstSet
 import FreydSSA.Utils
 
+variable {ν} [DecidableEq ν]
+
 --TODO: map_inst
 
 inductive UTm (φ : Type _) (ν  : Type _)
@@ -74,6 +76,12 @@ theorem UTm.comp_assoc {ν ν' ν'' ν'''}
   (σ : ν → UTm φ ν') (σ' : ν' → UTm φ ν'') (σ'' : ν'' → UTm φ ν''')
   : comp (comp σ σ') σ'' = comp σ (comp σ' σ'')
   := by funext x; simp [comp, rewrite_comp]
+
+def UTm.vars : UTm φ ν → Finset ν
+  | var x => {x}
+  | op _ e => e.vars
+  | pair l r => l.vars ∪ r.vars
+  | _ => {}
 
 inductive UBody (φ : Type _) (ν  : Type _)
    : Type _ where
