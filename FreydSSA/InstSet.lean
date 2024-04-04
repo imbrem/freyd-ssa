@@ -3,6 +3,7 @@ inductive Ty (α: Type u): Type u where
   | pair (a b : Ty α)
   | unit
   | bool
+  deriving DecidableEq
 
 inductive Purity
   | pure
@@ -41,3 +42,10 @@ class CohInstSet (φ α) [InstSet φ α] : Type _ where
 def CohInstSet.coh_trg' [InstSet φ α] [CohInstSet φ α] {f : φ} {A B A' B' : α}
   (h : Op f p A B) (h' : Op f p' A' B') (h'' : A = A') : B = B'
   := CohInstSet.coh_trg h (h''.symm ▸ h')
+
+class InjInstSet (φ α) [InstSet φ α] : Type _ where
+  coh_src {f : φ} {A A' B : α} : Op f p A B → Op f p' A' B → A = A'
+
+def InjInstSet.coh_src' [InstSet φ α] [InjInstSet φ α] {f : φ} {A B A' B' : α}
+  (h : Op f p A B) (h' : Op f p' A' B') (h'' : B = B') : A = A'
+  := InjInstSet.coh_src h (h''.symm ▸ h')

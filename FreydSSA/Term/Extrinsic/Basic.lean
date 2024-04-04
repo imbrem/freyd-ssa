@@ -1,6 +1,6 @@
 import Mathlib.Logic.Lemmas
 
-import FreydSSA.Ctx
+import FreydSSA.Ctx.Var
 import FreydSSA.InstSet
 import FreydSSA.Untyped
 
