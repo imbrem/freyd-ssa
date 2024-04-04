@@ -65,7 +65,7 @@ structure FLCtx (κ : Type _) (ν : Type _) (α : Type _) : Type _ where
   support : Finset κ
   mem_support_toFun : ∀x, x ∈ support ↔ toFun x ≠ ⊤
 
-theorem FLCtx.toFun_inj_mp {L K : FLCtx κap ν α} (h : L.toFun = K.toFun)
+theorem FLCtx.toFun_inj_mp {L K : FLCtx κ ν α} (h : L.toFun = K.toFun)
   : L = K
   := match L, K with
   | ⟨fΓ, n, hm⟩, ⟨fΔ, n', hm'⟩ => by
