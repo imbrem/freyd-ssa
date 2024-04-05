@@ -42,6 +42,15 @@ theorem FCtx.ext {Γ Δ : FCtx ν α} (h : ∀x, Γ x = Δ x)
 theorem FCtx.mem_support {Γ : FCtx ν α} (x : ν)
   : x ∈ Γ.support ↔ Γ x ≠ ⊥ := Γ.mem_support_toFun x
 
+theorem FCtx.isSome_of_mem_support {Γ : FCtx ν α} {x : ν} (h : x ∈ Γ.support) : (Γ x).isSome := by
+  simp only [Option.isSome]
+  split
+  rfl
+  rw [mem_support] at h
+  exfalso
+  apply h
+  assumption
+
 theorem FCtx.mem_support_exists {Γ : FCtx ν α} (x : ν)
   : x ∈ Γ.support ↔ ∃a : α, Γ x = a := by
   rw [mem_support]
@@ -98,6 +107,26 @@ def FCtx.cons_inj {x : ν} {a a' : α} {Γ : FCtx ν α}
   have hr : Γ.cons x a' x = a' := by simp [FCtx.cons, DFunLike.coe]
   by rw [<-WithBot.coe_inj, <-hl, <-hr, h]
 
+def FCtx.get {Γ : FCtx ν α} {x : ν} (h : x ∈ Γ.support) : α :=
+  (Γ x).get (isSome_of_mem_support h)
+
+theorem FCtx.get_eq {Γ : FCtx ν α} {x : ν} (h : x ∈ Γ.support)
+  : Γ x = Γ.get h := by
+  simp [FCtx.get, Option.get]
+  split
+  rename_i h _
+  rw [h]
+  rfl
+
+theorem FCtx.get_var {Γ : FCtx ν α} {x : ν} {a : α} (h : Γ x = a)
+  : Γ.get (Γ.mem_support_of_var _ _ h) = a := by
+  simp [FCtx.get, Option.get]
+  split
+  rename_i h' _
+  rw [h] at h'
+  cases h'
+  rfl
+
 def FCtx.Wk (Γ Δ : FCtx ν α) : Prop := ∀x, Δ x = ⊥ ∨ Δ x = Γ x
 
 theorem FCtx.Wk.refl (Γ : FCtx ν α) : FCtx.Wk Γ Γ := by simp [FCtx.Wk]
@@ -129,6 +158,12 @@ theorem FCtx.Wk.support_subset {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ)
   intro x
   rw [Γ.mem_support_toFun, Δ.mem_support_toFun]
   exact w.ne_bot x
+
+-- theorem FCtx.Wk.mem_support {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ)
+--   : ∀{x}, x ∈ Δ.support → x ∈ Γ.support := by
+--   intro x
+--   rw [Γ.mem_support_toFun, Δ.mem_support_toFun]
+--   exact w.ne_bot x
 
 instance FCtx.instPartialOrder : PartialOrder (FCtx ν α) where
   le a b := FCtx.Wk b a
@@ -248,6 +283,13 @@ theorem FCtx.Wk.eq_on {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ)
   cases w x with
   | inl h => rw [mem_support] at hx; exact (hx h).elim
   | inr h => exact h
+
+theorem FCtx.Wk.get_eq {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ)
+  : ∀{x} (h : x ∈ Δ.support), Δ.get h = Γ.get (w.support_subset h) := by
+  intro x h
+  simp only [get]
+  congr 1
+  apply w.eq_on x h
 
 theorem FCtx.Wk.of_eq_on {Γ Δ : FCtx ν α}
   : (∀x ∈ Δ.support, Δ x = Γ x) → FCtx.Wk Γ Δ := by

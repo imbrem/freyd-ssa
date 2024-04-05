@@ -28,7 +28,7 @@ import FreydSSA.GRegion.Intrinsic.Basic
 -- import FreydSSA.GRegion.Intrinsic.Subst
 
 import FreydSSA.Term.Fun.Basic
--- import FreydSSA.Term.Fun.Subst
+import FreydSSA.Term.Fun.Subst
 -- import FreydSSA.Body.Fun.Basic
 -- import FreydSSA.Body.Fun.Subst
 -- import FreydSSA.Terminator.Fun.Basic
