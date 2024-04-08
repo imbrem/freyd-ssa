@@ -29,18 +29,18 @@ import FreydSSA.GRegion.Intrinsic.Basic
 
 import FreydSSA.Term.Fun.Basic
 import FreydSSA.Term.Fun.Subst
--- import FreydSSA.Body.Fun.Basic
--- import FreydSSA.Body.Fun.Subst
--- import FreydSSA.Terminator.Fun.Basic
--- import FreydSSA.Terminator.Fun.Subst
--- import FreydSSA.BasicBlock.Fun.Basic
--- import FreydSSA.BasicBlock.Fun.Subst
--- import FreydSSA.CFG.Fun.Basic
--- import FreydSSA.CFG.Fun.Subst
--- import FreydSSA.Region.Fun.Basic
--- import FreydSSA.Region.Fun.Subst
--- import FreydSSA.GRegion.Fun.Basic
--- import FreydSSA.GRegion.Fun.Subst
+import FreydSSA.Body.Fun.Basic
+import FreydSSA.Body.Fun.Subst
+import FreydSSA.Terminator.Fun.Basic
+import FreydSSA.Terminator.Fun.Subst
+import FreydSSA.BasicBlock.Fun.Basic
+import FreydSSA.BasicBlock.Fun.Subst
+import FreydSSA.CFG.Fun.Basic
+import FreydSSA.CFG.Fun.Subst
+import FreydSSA.Region.Fun.Basic
+import FreydSSA.Region.Fun.Subst
+import FreydSSA.GRegion.Fun.Basic
+import FreydSSA.GRegion.Fun.Subst
 
 -- TODO: Indexed intrinsic/extrinsic (dominator tree)
 -- TODO: Dominated intrinsic/extrinsic (dominator tree)
