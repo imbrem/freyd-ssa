@@ -14,7 +14,7 @@ import FreydSSA.Ctx
 import FreydSSA.InstSet
 import FreydSSA.Utils
 
-variable {ν} [DecidableEq ν]
+variable {φ ν ν' κ κ' α β} [DecidableEq ν]
 
 --TODO: map_inst
 
@@ -26,25 +26,23 @@ inductive UTm (φ : Type _) (ν  : Type _)
   | unit : UTm φ ν
   | bool : Bool → UTm φ ν
 
-def UTm.rename {ν ν'}
-  (σ : ν → ν') : UTm φ ν → UTm φ ν'
+def UTm.rename (σ : ν → ν') : UTm φ ν → UTm φ ν'
   | var x => var (σ x)
   | op f e => op f (e.rename σ)
   | pair l r => pair (l.rename σ) (r.rename σ)
   | unit => unit
   | bool b => bool b
 
-theorem UTm.rename_id {ν}
-  (e : UTm φ ν) : e.rename id = e
+theorem UTm.rename_id (e : UTm φ ν) : e.rename id = e
   := by induction e <;> simp [UTm.rename, *]
 
-theorem UTm.rename_comp {ν ν' ν''}
-  (σ : ν → ν') (σ' : ν' → ν'') (e : UTm φ ν)
+theorem UTm.rename_comp (σ : ν → ν') (σ' : ν' → ν'') (e : UTm φ ν)
   : e.rename (σ' ∘ σ) = (e.rename σ).rename σ'
   := by induction e <;> simp [UTm.rename, *]
 
-def UTm.rewrite {ν ν'}
-  (σ : ν → UTm φ ν') : UTm φ ν → UTm φ ν'
+def USubst (φ : Type _) (ν  : Type _) : Type _ := ν → UTm φ ν
+
+def UTm.rewrite (σ : ν → UTm φ ν') : UTm φ ν → UTm φ ν'
   | var x => σ x
   | op f e => op f (e.rewrite σ)
   | pair l r => pair (l.rewrite σ) (r.rewrite σ)
@@ -59,13 +57,15 @@ def UTm.comp
   (σ : ν₁ → UTm φ ν₂) (σ' : ν₂ → UTm φ ν₃) (x : ν₁) : UTm φ ν₃
   := (σ x).rewrite σ'
 
-theorem UTm.comp_var {ν ν'}
+theorem UTm.comp_var
   (σ : ν → UTm φ ν') : comp σ UTm.var = σ
   := by funext x; simp [comp, UTm.rewrite_var]
 
-theorem UTm.var_comp {ν ν'}
+theorem UTm.var_comp
   (σ : ν → UTm φ ν') : comp UTm.var σ = σ
   := rfl
+
+abbrev USubst.comp (σ : USubst φ ν) (τ : USubst φ ν) := UTm.comp σ τ
 
 theorem UTm.rewrite_comp {ν ν' ν''}
   (σ : ν → UTm φ ν') (σ' : ν' → UTm φ ν'') (e : UTm φ ν)
@@ -107,14 +107,46 @@ def UBody.rewrite {φ ν}
   | let1 x e b => let1 x (e.rewrite σ) (b.rewrite σ)
   | let2 x y e b => let2 x y (e.rewrite σ) (b.rewrite σ)
 
-theorem UBody.rewrite_var {φ ν}
+def UBody.subst
+  (σ : ν → UTm φ ν) : UBody φ ν → UBody φ ν
+  | nil => nil
+  | let1 x e b => let1 x (e.rewrite σ) (b.subst (Function.update σ x (UTm.var x)))
+  | let2 x y e b => let2 x y
+    (e.rewrite σ)
+    (b.subst (Function.update (Function.update σ x (UTm.var x)) y (UTm.var y)))
+
+theorem UBody.rewrite_var
   (b : UBody φ ν) : b.rewrite UTm.var = b
   := by induction b <;> simp [UBody.rewrite, UTm.rewrite_var, *]
 
-theorem UBody.rewrite_comp {φ ν}
+theorem UBody.subst_var
+  (b : UBody φ ν) : b.subst UTm.var = b
+  := by induction b <;> simp [UBody.subst, UTm.rewrite_var, *]
+
+theorem UBody.rewrite_comp
   (σ σ' : ν → UTm φ ν) (b : UBody φ ν)
   : b.rewrite (UTm.comp σ σ') = (b.rewrite σ).rewrite σ'
   := by induction b <;> simp [UBody.rewrite, UTm.rewrite_comp, *]
+
+-- TODO: think about this
+-- theorem UBody.subst_comp
+--   (σ σ' : ν → UTm φ ν) (b : UBody φ ν)
+--   : b.subst (UTm.comp σ σ') = (b.subst σ).subst σ'
+--   := by induction b generalizing σ σ' with
+--   | nil => rfl
+--   | let1 x _ _ I =>
+--     simp only [subst, UTm.rewrite_comp, let1.injEq, true_and]
+--     rw [<-I]
+--     congr
+--     funext y
+--     if h : y = x then
+--       cases h
+--       simp [UTm.comp, UTm.rewrite]
+--     else
+--       rw [Function.update_noteq h]
+--       simp only [UTm.comp]
+--       rw [Function.update_noteq h]
+--   | let2 => sorry
 
 def UBody.rewrite' {φ ν}
   (σ : ν → ν' ⊕ UTm φ ν') : UBody φ ν → UBody φ ν'
