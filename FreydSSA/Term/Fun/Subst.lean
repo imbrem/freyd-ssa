@@ -4,8 +4,13 @@ variable {φ ν α} [Φ : InstSet φ (Ty α)]
   [Φc : CohInstSet φ (Ty α)]
   [DecidableEq ν] [DecidableEq α]
 
+-- TODO: figure out how to bind this correctly...
 def FCtx.Subst (Γ : FCtx ν (Ty α)) (σ : ν → UTm φ ν) (Δ : FCtx ν (Ty α)) : Type _
   := ∀ {x}, (h : x ∈ Δ.support) -> (σ x).FWf 1 Γ (Δ.get h)
+
+theorem FCtx.Subst.allEq {Γ : FCtx ν (Ty α)} {σ : ν → UTm φ ν} {Δ : FCtx ν (Ty α)}
+  (hσ hσ' : FCtx.Subst Γ σ Δ) : @hσ = @hσ'
+  := by funext _ _; apply UTm.FWf.allEq
 
 def FCtx.Subst.refl (Γ : FCtx ν (Ty α)) : FCtx.Subst Γ (@UTm.var φ ν) Γ
   := λ h => UTm.FWf.var 1 (by rw [Γ.get_eq h])
@@ -29,3 +34,7 @@ def UTm.FWf.subst {Γ Δ : FCtx ν (Ty α)} {σ : ν → UTm φ ν} {e : UTm φ 
   | pair p dl dr => pair p (dl.subst hσ) (dr.subst hσ)
   | unit p => unit p
   | bool p b => bool p b
+
+def FCtx.Subst.comp {Γ Δ Ξ : FCtx ν (Ty α)} {σ : ν → UTm φ ν} {τ : ν → UTm φ ν}
+  (hσ : Γ.Subst σ Δ) (hτ : Δ.Subst τ Ξ) : Γ.Subst (UTm.comp τ σ) Ξ
+  := λ h => (hτ h).subst hσ
