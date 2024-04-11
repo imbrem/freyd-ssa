@@ -42,6 +42,56 @@ theorem UTm.rename_comp (σ : ν → ν') (σ' : ν' → ν'') (e : UTm φ ν)
 
 def USubst (φ : Type _) (ν  : Type _) : Type _ := ν → UTm φ ν
 
+def USubst.id (φ ν) : USubst φ ν := UTm.var
+
+def USubst.cons (x : ν) (σ : USubst φ ν) : USubst φ ν
+  := Function.update σ x (UTm.var x)
+
+theorem USubst.cons_comm (x y : ν) (σ : USubst φ ν) : USubst.cons x (USubst.cons y σ) = USubst.cons y (USubst.cons x σ) := by
+  funext z
+  simp only [cons, Function.update]
+  split <;> split <;> aesop
+
+theorem USubst.cons_id (x : ν) : (id φ ν).cons x = (id φ ν) := by
+  funext z
+  simp only [cons, Function.update, id]
+  split <;> simp [*]
+
+def USubst.cons_list (xs : List ν) (σ : USubst φ ν) : USubst φ ν
+  := xs.foldr (λx σ => σ.cons x) σ
+
+theorem USubst.nil_cons_list (σ : USubst φ ν) : USubst.cons_list [] σ = σ := rfl
+
+theorem USubst.cons_cons_list (x : ν) (xs : List ν) (σ : USubst φ ν)
+  : USubst.cons_list (x :: xs) σ = (USubst.cons_list xs σ).cons x := rfl
+
+theorem USubst.cons_list_split (xs : List ν) (σ : USubst φ ν)
+  : USubst.cons_list xs σ = λx => if x ∈ xs then UTm.var x else σ x := by
+  induction xs generalizing σ with
+  | nil => simp [cons_list]
+  | cons _ _ I =>
+    funext x
+    simp only [cons_cons_list, List.mem_cons, cons, Function.update, I]
+    split <;> simp [*]
+
+theorem USubst.cons_list_split_app (xs : List ν) (σ : USubst φ ν) (x : ν)
+  : USubst.cons_list xs σ x = if x ∈ xs then UTm.var x else σ x := by rw [cons_list_split]
+
+def USubst.cons_set (xs : Finset ν) (σ : USubst φ ν) : USubst φ ν
+  := λx => if x ∈ xs then UTm.var x else σ x
+
+theorem USubst.cons_set_split (xs : Finset ν) (σ : USubst φ ν)
+  : USubst.cons_set xs σ = λx => if x ∈ xs then UTm.var x else σ x := rfl
+
+theorem USubst.cons_set_split_app (xs : Finset ν) (σ : USubst φ ν) (x : ν)
+  : USubst.cons_set xs σ x = if x ∈ xs then UTm.var x else σ x := rfl
+
+def USubst.cons_list_eq_cons_set (xs : List ν) (σ : USubst φ ν) : USubst.cons_list xs σ = USubst.cons_set xs.toFinset σ := by
+  rw [cons_list_split, cons_set_split]
+  funext x
+  congr 1
+  simp
+
 def UTm.rewrite (σ : ν → UTm φ ν') : UTm φ ν → UTm φ ν'
   | var x => σ x
   | op f e => op f (e.rewrite σ)
@@ -108,12 +158,12 @@ def UBody.rewrite {φ ν}
   | let2 x y e b => let2 x y (e.rewrite σ) (b.rewrite σ)
 
 def UBody.subst
-  (σ : ν → UTm φ ν) : UBody φ ν → UBody φ ν
+  (σ : USubst φ ν) : UBody φ ν → UBody φ ν
   | nil => nil
-  | let1 x e b => let1 x (e.rewrite σ) (b.subst (Function.update σ x (UTm.var x)))
+  | let1 x e b => let1 x (e.rewrite σ) (b.subst (σ.cons x))
   | let2 x y e b => let2 x y
     (e.rewrite σ)
-    (b.subst (Function.update (Function.update σ x (UTm.var x)) y (UTm.var y)))
+    (b.subst ((σ.cons x).cons y))
 
 theorem UBody.rewrite_var
   (b : UBody φ ν) : b.rewrite UTm.var = b
@@ -121,7 +171,7 @@ theorem UBody.rewrite_var
 
 theorem UBody.subst_var
   (b : UBody φ ν) : b.subst UTm.var = b
-  := by induction b <;> simp [UBody.subst, UTm.rewrite_var, *]
+  := by induction b <;> simp [UBody.subst, USubst.cons, UTm.rewrite_var, *]
 
 theorem UBody.rewrite_comp
   (σ σ' : ν → UTm φ ν) (b : UBody φ ν)
