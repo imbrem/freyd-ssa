@@ -1,6 +1,18 @@
 import Mathlib.Data.List.MinMax
 import Mathlib.Data.List.Lattice
 
+import Mathlib.Data.List.Basic
+import Mathlib.Data.List.MinMax
+import Mathlib.Data.List.Nodup
+import Mathlib.Data.Set.Basic
+import Mathlib.Data.Set.Function
+import Mathlib.Data.Set.Finite
+import Mathlib.Data.Fin.Basic
+import Mathlib.Init.Classical
+import Mathlib.Order.SuccPred.Basic
+
+import Mathlib.Order.WithBot
+
 theorem List.argmax_map [Preorder β] [DecidableRel λ l r : β => l < r] (Γ : List α) (f : α → β)
   : (Γ.argmax f).map f = (Γ.map f).maximum := by
   simp only [map_cons, maximum, argmax, foldl]
@@ -38,3 +50,24 @@ theorem List.Disjoint.iff_reverse_left {Γ Δ : List α}
 theorem List.Disjoint.iff_reverse_right {Γ Δ : List α}
   : Disjoint Γ Δ.reverse ↔ Disjoint Γ Δ
   := ⟨List.Disjoint.of_reverse_right, List.Disjoint.to_reverse_right⟩
+
+inductive Option.Subset : Option α → Option α → Prop
+  | none (a) : Subset none a
+  | some (a : α) : Subset (some a) (some a)
+
+instance Option.instHasSubsetOption : HasSubset (Option α) := ⟨Option.Subset⟩
+
+instance WithBot.instHasSubsetWithBot : HasSubset (WithBot α) := ⟨Option.Subset⟩
+
+inductive WithBot.Cmp : (a b : WithBot α) → Prop
+  | bot : Cmp ⊥ ⊥
+  | left (a : α) : Cmp (some a) ⊥
+  | right (a : α) : Cmp ⊥ (some a)
+  | both (a : α) : Cmp (some a) (some a)
+
+theorem WithBot.Cmp.symm {a b : WithBot α} (h : WithBot.Cmp a b) : WithBot.Cmp b a := by
+  cases h
+  case bot => exact WithBot.Cmp.bot
+  case left a => exact WithBot.Cmp.right a
+  case right a => exact WithBot.Cmp.left a
+  case both a => exact WithBot.Cmp.both a

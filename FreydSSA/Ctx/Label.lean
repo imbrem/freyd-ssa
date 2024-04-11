@@ -13,6 +13,8 @@ import Mathlib.Order.SuccPred.Basic
 import FreydSSA.Utils
 import FreydSSA.Ctx.Var
 
+variable {κ ν α} [DecidableEq κ] [DecidableEq ν] [DecidableEq α]
+
 structure Label (ν κ : Type u) (α : Type v) where
   name : κ
   param : α

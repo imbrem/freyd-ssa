@@ -8,6 +8,8 @@ variable {φ ν α} [Φ : InstSet φ (Ty α)]
   [Φc : CohInstSet φ (Ty α)]
   [DecidableEq ν] [DecidableEq α]
 
+--TODO: since this is quotiented, should this be a Prop? Can then do decidability and everything, and indexed contexts for the rest...
+
 inductive UTm.FWf : Purity → FCtx ν (Ty α) → UTm φ ν → Ty α → Type _
   | var {x} {A : Ty α} (p)  : Γ x = (A : WithBot _) → FWf p Γ (var x) A
   | op : Φ.Op f p A B → FWf 1 Γ e A → FWf p Γ (op f e) B

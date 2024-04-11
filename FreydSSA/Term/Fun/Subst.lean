@@ -5,6 +5,7 @@ variable {φ ν α} [Φ : InstSet φ (Ty α)]
   [DecidableEq ν] [DecidableEq α]
 
 -- TODO: figure out how to bind this correctly...
+-- TODO: make into structure or smt?
 def FCtx.Subst (Γ : FCtx ν (Ty α)) (σ : USubst φ ν) (Δ : FCtx ν (Ty α)) : Type _
   := ∀ {x}, (h : x ∈ Δ.support) -> (σ x).FWf 1 Γ (Δ.get h)
 
@@ -12,16 +13,24 @@ theorem FCtx.Subst.allEq {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCtx �
   (hσ hσ' : FCtx.Subst Γ σ Δ) : @hσ = @hσ'
   := by funext _ _; apply UTm.FWf.allEq
 
-def FCtx.Subst.refl (Γ : FCtx ν (Ty α)) : FCtx.Subst Γ (@UTm.var φ ν) Γ
+def FCtx.Subst.refl (Γ : FCtx ν (Ty α)) : FCtx.Subst Γ (USubst.id φ ν) Γ
   := λ h => UTm.FWf.var 1 (by rw [Γ.get_eq h])
 
-def FCtx.Subst.wk_entry {Γ' Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
+def FCtx.Subst.wkEntry {Γ' Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
   (w : Γ'.Wk Γ) (hσ : FCtx.Subst Γ σ Δ) : Γ'.Subst σ Δ
   := λ h => (hσ h).wk w
 
-def FCtx.Subst.wk_exit {Γ Δ Δ' : FCtx ν (Ty α)} {σ : USubst φ ν}
+def FCtx.Subst.wkExit {Γ Δ Δ' : FCtx ν (Ty α)} {σ : USubst φ ν}
   (hσ : FCtx.Subst Γ σ Δ) (w : Δ.Wk Δ') : Γ.Subst σ Δ'
   := λ h => w.get_eq h ▸ hσ (w.support_subset h)
+
+def FCtx.Subst.ofWk {Γ Δ : FCtx ν (Ty α)}
+  (w : Γ.Wk Δ) : FCtx.Subst Γ (USubst.id φ ν) Δ
+  := wkExit (refl Γ) w
+
+def FCtx.Subst.refl_wk {Γ Δ : FCtx ν (Ty α)}
+  (hσ : FCtx.Subst Γ (USubst.id φ ν) Δ) : Γ.Wk Δ
+  := Wk.of_eq_on (λ x h => by cases hσ h with | var _ h' => rw [h', Δ.get_eq h])
 
 def FCtx.Subst.to_ty_eq {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} (hσ : FCtx.Subst Γ σ Δ)
 : ∀ {x}, ∀ {a : (Ty α)}, Δ x = a -> (σ x).FWf 1 Γ a
