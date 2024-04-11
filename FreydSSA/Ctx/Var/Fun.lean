@@ -101,6 +101,18 @@ def FCtx.cons (x : ν) (a : α) (Γ : FCtx ν α) : FCtx ν α where
     simp only [Finset.mem_union, Function.update]
     split <;> simp [*, mem_support_toFun]
 
+theorem FCtx.cons_eq (x : ν) (y : ν) (a : α) (Γ : FCtx ν α)
+  (h : x = y) : (Γ.cons x a) y = a := by
+  simp [FCtx.cons, Function.update, DFunLike.coe, h]
+
+theorem FCtx.cons_app (x : ν) (a : α) (Γ : FCtx ν α) (y : ν)
+  : (Γ.cons x a) y = if y = x then ↑a else Γ y := by
+  simp [FCtx.cons, Function.update, DFunLike.coe]
+
+theorem FCtx.cons_mem_support_ne (x : ν) (a : α) (Γ : FCtx ν α)
+  (hx : y ≠ x) : y ∈ (Γ.cons x a).support → y ∈ Γ.support
+  := by simp [cons, hx]
+
 def FCtx.cons_inj {x : ν} {a a' : α} {Γ : FCtx ν α}
   (h : Γ.cons x a = Γ.cons x a') : a = a' :=
   have hl : Γ.cons x a x = a := by simp [FCtx.cons, DFunLike.coe]
@@ -126,6 +138,13 @@ theorem FCtx.get_var {Γ : FCtx ν α} {x : ν} {a : α} (h : Γ x = a)
   rw [h] at h'
   cases h'
   rfl
+
+theorem FCtx.get_eq_of {Γ Δ : FCtx ν α} {x y : ν} (hΓ : x ∈ Γ.support) (hΔ : y ∈ Δ.support) (h : Γ x = Δ y)
+  : Γ.get hΓ = Δ.get hΔ := Option.some_injective _ $ ((Γ.get_eq hΓ).symm.trans h).trans (Δ.get_eq hΔ)
+
+theorem FCtx.cons_get_ne (x : ν) (a : α) (Γ : FCtx ν α) (hx : y ≠ x) (hy: y ∈ (Γ.cons x a).support)
+   : (Γ.cons x a).get hy = Γ.get (cons_mem_support_ne x a Γ hx hy)
+  := FCtx.get_eq_of hy (cons_mem_support_ne _ _ _ hx hy) (by simp [cons_app, hx])
 
 def FCtx.Wk (Γ Δ : FCtx ν α) : Prop := ∀x, Δ x = ⊥ ∨ Δ x = Γ x
 
@@ -310,6 +329,12 @@ theorem FCtx.Wk.cons {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ) (x : ν) (a : α)
   split
   simp
   exact w y
+
+theorem FCtx.Wk.cons_not_mem (x : ν) (a : α) (Γ : FCtx ν α) (hx : x ∉ Γ.support)
+  : FCtx.Wk (Γ.cons x a) Γ := by
+  intro y
+  simp only [cons_app]
+  split <;> simp [<-not_mem_support, *]
 
 theorem FCtx.Cmp.linf_eq_rinf {Δ Δ' : FCtx ν α} (c : FCtx.Cmp Δ Δ')
   : FCtx.linf Δ Δ' = FCtx.rinf Δ Δ' := by

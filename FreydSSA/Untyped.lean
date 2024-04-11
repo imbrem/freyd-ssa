@@ -47,6 +47,20 @@ def USubst.id (φ ν) : USubst φ ν := UTm.var
 def USubst.cons (x : ν) (σ : USubst φ ν) : USubst φ ν
   := Function.update σ x (UTm.var x)
 
+theorem USubst.cons_eq (x : ν) (σ : USubst φ ν) : (σ.cons x) x = UTm.var x := by
+  simp [cons, Function.update]
+theorem USubst.cons_eq_left {x y} (σ : USubst φ ν) (p : x = y)
+  : (σ.cons x) y = UTm.var x := by
+  simp [p, cons, Function.update]
+theorem USubst.cons_eq_right {x y} (σ : USubst φ ν) (p : x = y)
+  : (σ.cons x) y = UTm.var y := by
+  simp [p, cons, Function.update]
+theorem USubst.cons_ne {x y} (σ : USubst φ ν) (p : x ≠ y)
+  : (σ.cons x) y = σ y := by
+  simp only [cons, Function.update, eq_rec_constant, dite_eq_ite, ite_eq_right_iff]
+  intro h
+  exact (p (h.symm)).elim
+
 theorem USubst.cons_comm (x y : ν) (σ : USubst φ ν) : USubst.cons x (USubst.cons y σ) = USubst.cons y (USubst.cons x σ) := by
   funext z
   simp only [cons, Function.update]
