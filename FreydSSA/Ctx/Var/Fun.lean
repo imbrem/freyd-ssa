@@ -303,6 +303,14 @@ theorem FCtx.Wk.of_eq_on {Γ Δ : FCtx ν α}
 theorem FCtx.Wk.eq_on_iff {Γ Δ : FCtx ν α}
   : FCtx.Wk Γ Δ ↔ (∀x ∈ Δ.support, Δ x = Γ x) := ⟨eq_on, of_eq_on⟩
 
+theorem FCtx.Wk.cons {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ) (x : ν) (a : α)
+  : FCtx.Wk (Γ.cons x a) (Δ.cons x a) := by
+  intro y
+  simp only [FCtx.cons, DFunLike.coe, Function.update]
+  split
+  simp
+  exact w y
+
 theorem FCtx.Cmp.linf_eq_rinf {Δ Δ' : FCtx ν α} (c : FCtx.Cmp Δ Δ')
   : FCtx.linf Δ Δ' = FCtx.rinf Δ Δ' := by
   apply FCtx.ext
