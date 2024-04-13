@@ -48,11 +48,10 @@ def FCtx.Subst.comp {Γ Δ Ξ : FCtx ν (Ty α)} {σ : USubst φ ν} {τ : USubs
   (hσ : Γ.Subst σ Δ) (hτ : Δ.Subst τ Ξ) : Γ.Subst (τ.comp σ) Ξ
   := λ h => (hτ h).subst hσ
 
--- def FCtx.Subst.cons {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
---   (x : ν) (A : Ty α) (hσ : Γ.Subst σ Δ) (hx : x ∉ Γ.support) : (Γ.cons x A).Subst (σ.cons x) (Δ.cons x A)
---   := λ{y} h => if p: x = y then
---     σ.cons_eq_left p ▸ UTm.FWf.var 1 (by cases p; rw [Γ.cons_eq _ _ _ rfl, <-get_eq,  Δ.cons_eq _ _ _ rfl])
---   else
---     -- (FCtx.cons_get_ne _ _ _ p _).symm ▸
---       σ.cons_ne p ▸
---         (hσ (cons_mem_support_ne _ _ _ (Ne.symm p) h)).wk (Wk.cons_not_mem _ _ _ hx)
+def FCtx.Subst.cons {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
+  (x : ν) (A : Ty α) (hσ : Γ.Subst σ Δ) (hx : x ∉ Γ.support) : (Γ.cons x A).Subst (σ.cons x) (Δ.cons x A)
+  := λ{y} h => if p: x = y then
+    σ.cons_eq_left p ▸ UTm.FWf.var 1 (by cases p; rw [Γ.cons_eq _ _ _ rfl, <-get_eq,  Δ.cons_eq _ _ _ rfl])
+  else by
+    rw [FCtx.cons_get_ne _ _ _ (Ne.symm p) _, σ.cons_ne p]
+    exact (hσ (cons_mem_support_ne _ _ _ (Ne.symm p) h)).wk (Wk.cons_not_mem _ _ _ hx)
