@@ -62,6 +62,14 @@ def FCtx.Subst.cons {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
 def FCtx.SubstCons (Γ : FCtx ν (Ty α)) (σ : USubst φ ν) (Δ : FCtx ν (Ty α)) (N : Finset ν) : Type _
   := ∀ {x}, (h : x ∈ Δ.support) -> (σ x).FWf 1 (Γ.sdiff_except N x) (Δ.get h)
 
+def FCtx.SubstCons.wkEntry {Γ' Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
+  (w : Γ'.Wk Γ) (hσ : FCtx.SubstCons Γ σ Δ N) : Γ'.SubstCons σ Δ N
+  := λ h => (hσ h).wk (w.sdiff _)
+
+def FCtx.SubstCons.wkExit {Γ Δ Δ' : FCtx ν (Ty α)} {σ : USubst φ ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) (w : Δ.Wk Δ') : Γ.SubstCons σ Δ' N
+  := λ h => w.get_eq h ▸ hσ (w.support_subset h)
+
 theorem FCtx.SubstCons.allEq {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCtx ν (Ty α)} {N : Finset ν}
   (hσ hσ' : FCtx.SubstCons Γ σ Δ N) : @hσ = @hσ'
   := by funext _ _; apply UTm.FWf.allEq

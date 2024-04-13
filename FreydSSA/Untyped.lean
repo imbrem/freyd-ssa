@@ -74,10 +74,43 @@ theorem USubst.cons_id (x : ν) : (id φ ν).cons x = (id φ ν) := by
 def USubst.cons_list (xs : List ν) (σ : USubst φ ν) : USubst φ ν
   := xs.foldr (λx σ => σ.cons x) σ
 
+def USubst.cons_list' (xs : List ν) (σ : USubst φ ν) : USubst φ ν
+  := xs.foldl (λσ x => σ.cons x) σ
+
 theorem USubst.nil_cons_list (σ : USubst φ ν) : USubst.cons_list [] σ = σ := rfl
 
 theorem USubst.cons_cons_list (x : ν) (xs : List ν) (σ : USubst φ ν)
   : USubst.cons_list (x :: xs) σ = (USubst.cons_list xs σ).cons x := rfl
+
+theorem USubst.nil_cons_list' (σ : USubst φ ν) : USubst.cons_list' [] σ = σ := rfl
+
+theorem USubst.cons_cons_list' (x : ν) (xs : List ν) (σ : USubst φ ν)
+  : USubst.cons_list' (x :: xs) σ = (σ.cons x).cons_list' xs := rfl
+
+theorem USubst.cons_list_cons_list'
+  : @USubst.cons_list = @USubst.cons_list' := by
+  funext _ _ _ xs σ
+  induction xs generalizing σ with
+  | nil => rfl
+  | cons x xs I =>
+    rw [cons_cons_list, cons_list', List.foldl_eq_of_comm', I]
+    rfl
+    intro τ x y
+    funext z
+    simp only [cons, Function.update]
+    split
+    . rename_i h
+      cases h
+      split
+      . rename_i h
+        cases h
+        rfl
+      . rfl
+    . rfl
+
+theorem USubst.cons_cons_list_rev (x : ν) (xs : List ν) (σ : USubst φ ν)
+  : USubst.cons_list (x :: xs) σ = USubst.cons_list xs (σ.cons x) := by
+    rw [cons_list_cons_list', cons_cons_list', <-cons_list_cons_list']
 
 theorem USubst.cons_list_split (xs : List ν) (σ : USubst φ ν)
   : USubst.cons_list xs σ = λx => if x ∈ xs then UTm.var x else σ x := by

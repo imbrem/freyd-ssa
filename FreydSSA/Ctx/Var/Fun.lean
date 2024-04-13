@@ -984,6 +984,13 @@ theorem FCtx.Wk.sdiff_subset (Γ : FCtx ν α) (N N' : Finset ν)  (hN : N ⊆ N
   simp only [sdiff, Finset.mem_sdiff] at hx
   simp only [sdiff_app, hx.2, (Finset.not_mem_mono hN hx.2), ↓reduceIte]
 
+theorem FCtx.Wk.sdiff {Γ Δ : FCtx ν α} (w : Γ.Wk Δ) (N : Finset ν)
+  : (Γ.sdiff N).Wk (Δ.sdiff N) := by
+  intro x
+  simp only [sdiff_app]
+  split <;> simp only [Bot.bot, or_self]
+  exact w x
+
 --TODO: sdiff_eq_erase for singleton, etc...
 
 def FCtx.sdiff_except (Γ : FCtx ν α) (N : Finset ν) (x : ν) : FCtx ν α
