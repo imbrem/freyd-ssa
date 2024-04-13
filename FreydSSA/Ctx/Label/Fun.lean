@@ -1,3 +1,5 @@
+-- NOTE: this _entire_ development has ⊤ and ⊥ mixed up, elas...
+
 import FreydSSA.Ctx.Var.Fun
 
 variable {ν ν' κ κ' α β}
@@ -7,24 +9,24 @@ variable {ν ν' κ κ' α β}
 
 structure FLabel (ν : Type _) (α : Type _) where
   -- TODO: Fun with parameter contexts? Parameter sets? Many options...
-  param : α
   live : FCtx ν α
+  param : α
 
-theorem FLabel.ext {L K : FLabel ν α} (h : L.param = K.param) (h' : L.live = K.live)
+theorem FLabel.ext {L K : FLabel ν α} (h : L.live = K.live) (h' : L.param = K.param)
   : L = K := by
   cases L; cases K
   cases h; cases h'
   rfl
 
 structure FLabel.Wk (L K : FLabel ν α) : Prop where
-  param : L.param = K.param
   live : L.live.Wk K.live
+  param : L.param = K.param
 
-theorem FLabel.Wk.refl (L : FLabel ν α) : FLabel.Wk L L := ⟨rfl, FCtx.Wk.refl _⟩
+theorem FLabel.Wk.refl (L : FLabel ν α) : FLabel.Wk L L := ⟨FCtx.Wk.refl _, rfl⟩
 theorem FLabel.Wk.comp {L K M : FLabel ν α} (h : FLabel.Wk L K) (h' : FLabel.Wk K M)
-  : FLabel.Wk L M := ⟨h.param ▸ h'.param, h.live.comp h'.live⟩
+  : FLabel.Wk L M := ⟨h.live.comp h'.live, h.param ▸ h'.param⟩
 theorem FLabel.Wk.antisymm {L K : FLabel ν α} (h : FLabel.Wk L K) (h' : FLabel.Wk K L)
-  : L = K := FLabel.ext h.param (h.live.antisymm h'.live)
+  : L = K := FLabel.ext (h.live.antisymm h'.live) h.param
 
 instance FLabel.instPartialOrder : PartialOrder (FLabel ν α) where
   le L K := FLabel.Wk K L
@@ -65,6 +67,16 @@ structure FLCtx (κ : Type _) (ν : Type _) (α : Type _) : Type _ where
   support : Finset κ
   mem_support_toFun : ∀x, x ∈ support ↔ toFun x ≠ ⊤
 
+def FLCtx.empty (κ : Type _) (ν : Type _) (α : Type _) : FLCtx κ ν α where
+  toFun _ := ⊤
+  support := ∅
+  mem_support_toFun x := by simp
+
+def FLCtx.singleton (x : κ) (L : FLabel ν α) : FLCtx κ ν α where
+  toFun y := if y = x then some L else ⊤
+  support := {x}
+  mem_support_toFun y := by simp
+
 theorem FLCtx.toFun_inj_mp {L K : FLCtx κ ν α} (h : L.toFun = K.toFun)
   : L = K
   := match L, K with
@@ -84,6 +96,9 @@ theorem FLCtx.toFun_inj {L K : FLCtx κ ν α}
 instance FLCtx.instFunLike : FunLike (FLCtx κ ν α) κ (WithTop (FLabel ν α)) where
   coe := FLCtx.toFun
   coe_injective' := by intro Γ Δ; apply FLCtx.toFun_inj_mp
+
+theorem FLCtx.mem_support {L : FLCtx κ ν α} (ℓ : κ)
+  : ℓ ∈ L.support ↔ L ℓ ≠ ⊤ := L.mem_support_toFun ℓ
 
 theorem FLCtx.ext {L K : FLCtx κ ν α} (h : ∀x, L x = K x)
   : L = K
@@ -184,15 +199,19 @@ def FLCtx.rsup_top : WithTop (FLabel ν α) → WithTop (FLabel ν α) → WithT
   | _, ⊤ => ⊤
   | some Γ, some Δ => some (FLabel.rsup Γ Δ)
 
--- def FLCtx.linf (L K : FLCtx κ ν α) : FLCtx κ ν α where
---   toFun x := linf_top (L x) (K x)
---   support := L.support ∩ K.support
---   mem_support_toFun x := sorry
+def FLCtx.linf (L K : FLCtx κ ν α) : FLCtx κ ν α where
+  toFun x := linf_top (L x) (K x)
+  support := L.support ∪ K.support
+  mem_support_toFun x := by
+    simp only [Finset.mem_union, linf_top, mem_support]
+    split <;> simp [*, Top.top]
 
--- def FLCtx.rinf (L K : FLCtx κ ν α) : FLCtx κ ν α where
---   toFun x := rinf_top (L x) (K x)
---   support := L.support ∩ K.support
---   mem_support_toFun x := sorry
+def FLCtx.rinf (L K : FLCtx κ ν α) : FLCtx κ ν α where
+  toFun x := rinf_top (L x) (K x)
+  support := L.support ∪ K.support
+  mem_support_toFun x := by
+    simp only [Finset.mem_union, rinf_top, mem_support]
+    split <;> simp [*, Top.top]
 
 -- def FLCtx.inf (L K : FLCtx κ ν α) : FLCtx κ ν α where
 --   toFun x := inf_top (L x) (K x)
@@ -201,12 +220,12 @@ def FLCtx.rsup_top : WithTop (FLabel ν α) → WithTop (FLabel ν α) → WithT
 
 -- def FLCtx.lsup (L K : FLCtx κ ν α) : FLCtx κ ν α where
 --   toFun x := lsup_top (L x) (K x)
---   support := L.support ∪ K.support
+--   support := L.support ∩ K.support
 --   mem_support_toFun x := sorry
 
 -- def FLCtx.rsup (L K : FLCtx κ ν α) : FLCtx κ ν α where
 --   toFun x := rsup_top (L x) (K x)
---   support := L.support ∪ K.support
+--   support := L.support ∩ K.support
 --   mem_support_toFun x := sorry
 
 --TODO: lattice lore
