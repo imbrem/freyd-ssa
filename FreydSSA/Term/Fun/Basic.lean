@@ -11,14 +11,14 @@ variable {φ ν α} [Φ : InstSet φ (Ty α)]
 --TODO: since this is quotiented, should this be a Prop? Can then do decidability and everything, and indexed contexts for the rest...
 
 inductive UTm.FWf : Purity → FCtx ν (Ty α) → UTm φ ν → Ty α → Type _
-  | var {x} {A : Ty α} (p)  : Γ x = (A : WithBot _) → FWf p Γ (var x) A
+  | var {x} {A : Ty α} (p)  : Γ x = (A : WithTop _) → FWf p Γ (var x) A
   | op : Φ.Op f p A B → FWf 1 Γ e A → FWf p Γ (op f e) B
   | pair (p) : FWf 1 Γ l A → FWf 1 Γ r B → FWf p Γ (pair l r) (A.pair B)
   | unit (p) : FWf p Γ unit Ty.unit
   | bool (p b) : FWf p Γ (bool b) Ty.bool
 
 inductive UTm.FWfP : Purity → FCtx ν (Ty α) → UTm φ ν → Ty α → Prop
-  | var {x} {A : Ty α} (p)  : Γ x = (A : WithBot _) → FWfP p Γ (var x) A
+  | var {x} {A : Ty α} (p)  : Γ x = (A : WithTop _) → FWfP p Γ (var x) A
   | op : Φ.Op f p A B → FWfP 1 Γ e A → FWfP p Γ (op f e) B
   | pair (p) : FWfP 1 Γ l A → FWfP 1 Γ r B → FWfP p Γ (pair l r) (A.pair B)
   | unit (p) : FWfP p Γ unit Ty.unit
@@ -73,25 +73,25 @@ def UTm.FWf.wk {e : UTm φ ν} (w : Γ.Wk Δ) : e.FWf p Δ A → e.FWf p Γ A
   | unit p => unit p
   | bool p b => bool p b
 
-def UTm.FWf.linf {e : UTm φ ν} : e.FWf p Γ A → e.FWf p' Δ A' → e.FWf p (Γ.linf Δ) A
-  | var p w, var _ w' => var p (by rw [FCtx.linf_right_var_eq_left _ _ w']; exact w)
-  | op hf de, op _ de' => op hf (de.linf de')
-  | pair p dl dr, pair _ dl' dr' => pair p (dl.linf dl') (dr.linf dr')
+def UTm.FWf.lsup {e : UTm φ ν} : e.FWf p Γ A → e.FWf p' Δ A' → e.FWf p (Γ.lsup Δ) A
+  | var p w, var _ w' => var p (by rw [FCtx.lsup_right_var_eq_left _ _ w']; exact w)
+  | op hf de, op _ de' => op hf (de.lsup de')
+  | pair p dl dr, pair _ dl' dr' => pair p (dl.lsup dl') (dr.lsup dr')
   | unit p, _ => unit p
   | bool p b, _ => bool p b
 
-def UTm.FWf.rinf {e : UTm φ ν} : e.FWf p Γ A → e.FWf p' Δ A' → e.FWf p' (Γ.rinf Δ) A'
-  | var _ w, var p' w' => var p' (by rw [FCtx.rinf_left_var_eq_right _ _ w]; exact w')
-  | op _ de, op hf' de' => op hf' (de.rinf de')
-  | pair _ dl dr, pair p' dl' dr' => pair p' (dl.rinf dl') (dr.rinf dr')
+def UTm.FWf.rsup {e : UTm φ ν} : e.FWf p Γ A → e.FWf p' Δ A' → e.FWf p' (Γ.rsup Δ) A'
+  | var _ w, var p' w' => var p' (by rw [FCtx.rsup_left_var_eq_right _ _ w]; exact w')
+  | op _ de, op hf' de' => op hf' (de.rsup de')
+  | pair _ dl dr, pair p' dl' dr' => pair p' (dl.rsup dl') (dr.rsup dr')
   | _, unit p' => unit p'
   | _, bool p' b => bool p' b
 
-def FCtx.Cmp.wfInf {e : UTm φ ν} (c : Γ.Cmp Δ) : e.FWf p Γ A → e.FWf p' Δ A' → e.FWf p (Γ.inf Δ) A
+def FCtx.Cmp.wfSup {e : UTm φ ν} (c : Γ.Cmp Δ) : e.FWf p Γ A → e.FWf p' Δ A' → e.FWf p (Γ.sup Δ) A
   | UTm.FWf.var p w, UTm.FWf.var _ w' => UTm.FWf.var p
-    (by rw [c.inf_eq_linf, linf_right_var_eq_left _ _ w']; exact w)
-  | UTm.FWf.op hf de, UTm.FWf.op _ de' => UTm.FWf.op hf (c.wfInf de de')
-  | UTm.FWf.pair p dl dr, UTm.FWf.pair _ dl' dr' => UTm.FWf.pair p (c.wfInf dl dl') (c.wfInf dr dr')
+    (by rw [c.sup_eq_lsup, lsup_right_var_eq_left _ _ w']; exact w)
+  | UTm.FWf.op hf de, UTm.FWf.op _ de' => UTm.FWf.op hf (c.wfSup de de')
+  | UTm.FWf.pair p dl dr, UTm.FWf.pair _ dl' dr' => UTm.FWf.pair p (c.wfSup dl dl') (c.wfSup dr dr')
   | UTm.FWf.unit p, _ => UTm.FWf.unit p
   | UTm.FWf.bool p b, _ => UTm.FWf.bool p b
 

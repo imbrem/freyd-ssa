@@ -11,7 +11,7 @@ inductive UTerminator.FWf : FCtx ν (Ty α) → UTerminator φ ν κ → FLCtx �
 
 inductive UTerminator.FWfM : FCtx ν (Ty α) → UTerminator φ ν κ → FLCtx κ ν (Ty α) → Type _
   | br ℓ : e.FWf p Γ A → (br ℓ e).FWfM Γ (FLCtx.singleton ℓ ⟨Γ, A⟩)
-  | ite : e.FWf p Γ Ty.bool → s.FWfM Γ L → t.FWfM Γ K → L.Cmp K → (ite e s t).FWfM Γ (L.linf K)
+  | ite : e.FWf p Γ Ty.bool → s.FWfM Γ L → t.FWfM Γ K → L.Cmp K → (ite e s t).FWfM Γ (L.lsup K)
 
 --TODO: FWf', factorization, etc...
 
