@@ -109,6 +109,11 @@ theorem FCtx.cons_app (x : ν) (a : α) (Γ : FCtx ν α) (y : ν)
   : (Γ.cons x a) y = if y = x then ↑a else Γ y := by
   simp [FCtx.cons, Function.update, DFunLike.coe]
 
+theorem FCtx.cons_ne (x : ν) (a : α) (Γ : FCtx ν α) (y : ν)
+  (h : y ≠ x)
+  : (Γ.cons x a) y = Γ y := by
+  simp [cons_app, h]
+
 theorem FCtx.cons_mem_support_ne (x : ν) (a : α) (Γ : FCtx ν α)
   (hx : y ≠ x) : y ∈ (Γ.cons x a).support → y ∈ Γ.support
   := by simp [cons, hx]

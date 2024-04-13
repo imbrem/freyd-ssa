@@ -78,4 +78,36 @@ def FCtx.SubstCons.subset {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCtx 
   (hσ : FCtx.SubstCons Γ σ Δ N) (hN : N' ⊆ N) : FCtx.SubstCons Γ σ Δ N'
   := λh => (hσ h).wk (FCtx.Wk.sdiff_subset _ _ _ (Finset.erase_subset_erase _ hN))
 
--- TODO: SubstCons cons
+def FCtx.SubstCons.cons {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (x : ν) (A : Ty α) (hσ : Γ.SubstCons σ Δ N) (hx : x ∈ N) : (Γ.cons x A).SubstCons (σ.cons x) (Δ.cons x A) N
+  := λ{y} h => if p: x = y then
+    σ.cons_eq_left p ▸ UTm.FWf.var 1 (by
+    cases p
+    simp [<-get_eq, cons_eq, sdiff_except, sdiff_app])
+  else by
+    rw [FCtx.cons_get_ne _ _ _ (Ne.symm p) _, σ.cons_ne p]
+    exact (hσ (cons_mem_support_ne _ _ _ (Ne.symm p) h)).wk (by
+      intro z
+      simp only [sdiff_except, sdiff_app, Finset.mem_erase]
+      split
+      . exact Or.inr rfl
+      . rename_i h'
+        simp only [Classical.not_and_iff_or_not_not, not_not] at h'
+        cases h' with
+        | inl h' =>
+          cases h'
+          apply Or.inr
+          rw [FCtx.cons_ne]
+          exact Ne.symm p
+        | inr h' =>
+          if hz : z ∈ Γ.support then
+            apply Or.inr
+            rw [FCtx.cons_ne]
+            intro hz
+            cases hz
+            exact h' hx
+          else
+            apply Or.inl
+            simp only [<-not_mem_support]
+            exact hz
+    )
