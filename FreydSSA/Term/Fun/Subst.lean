@@ -6,6 +6,7 @@ variable {φ ν α} [Φ : InstSet φ (Ty α)]
 
 -- TODO: figure out how to bind this correctly...
 -- TODO: make into structure or smt?
+-- TODO: should all this be a prop _for FCtx_?
 def FCtx.Subst (Γ : FCtx ν (Ty α)) (σ : USubst φ ν) (Δ : FCtx ν (Ty α)) : Type _
   := ∀ {x}, (h : x ∈ Δ.support) -> (σ x).FWf 1 Γ (Δ.get h)
 
@@ -55,3 +56,26 @@ def FCtx.Subst.cons {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
   else by
     rw [FCtx.cons_get_ne _ _ _ (Ne.symm p) _, σ.cons_ne p]
     exact (hσ (cons_mem_support_ne _ _ _ (Ne.symm p) h)).wk (Wk.cons_not_mem _ _ _ hx)
+
+-- TODO: can even do an ordered SubstCons, where you erase everything _over_ a given x, and have everything over bottom
+-- But that's pretty over-complicated...
+def FCtx.SubstCons (Γ : FCtx ν (Ty α)) (σ : USubst φ ν) (Δ : FCtx ν (Ty α)) (N : Finset ν) : Type _
+  := ∀ {x}, (h : x ∈ Δ.support) -> (σ x).FWf 1 (Γ.sdiff_except N x) (Δ.get h)
+
+theorem FCtx.SubstCons.allEq {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCtx ν (Ty α)} {N : Finset ν}
+  (hσ hσ' : FCtx.SubstCons Γ σ Δ N) : @hσ = @hσ'
+  := by funext _ _; apply UTm.FWf.allEq
+
+def FCtx.SubstCons.toSubst {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCtx ν (Ty α)} {N : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) : FCtx.Subst Γ σ Δ
+  := λh => (hσ h).wk (FCtx.Wk.sdiff_except Γ N _)
+
+def FCtx.SubstCons.ofSubst {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCtx ν (Ty α)} {N : Finset ν}
+  (hσ : FCtx.Subst Γ σ Δ) (hΓ : Disjoint Γ.support N) : FCtx.SubstCons Γ σ Δ N
+  := λh => (Γ.sdiff_except_eq_disjoint _ _ hΓ).symm ▸ hσ h
+
+def FCtx.SubstCons.subset {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCtx ν (Ty α)} {N N' : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) (hN : N' ⊆ N) : FCtx.SubstCons Γ σ Δ N'
+  := λh => (hσ h).wk (FCtx.Wk.sdiff_subset _ _ _ (Finset.erase_subset_erase _ hN))
+
+-- TODO: SubstCons cons

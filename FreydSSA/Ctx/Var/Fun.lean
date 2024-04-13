@@ -906,3 +906,89 @@ theorem FCtx.Wk.restrict {Γ Δ : FCtx ν α} (w : Γ.Wk Δ) (v : Finset ν)
 -- TODO: FCtx.Cmp.restrict
 
 --TODO: in a coherent setting, any two contexts typing a term have equal restrictions
+
+def FCtx.erase (Γ : FCtx ν α) (x : ν) : FCtx ν α where
+  toFun y := if y = x then ⊥ else Γ y
+  support := Γ.support.erase x
+  mem_support_toFun := by
+    intro y
+    simp only [mem_support, Finset.mem_erase]
+    split <;> simp [*]
+
+theorem FCtx.erase_app (Γ : FCtx ν α) (x y : ν)
+  : (FCtx.erase Γ x) y = if y = x then ⊥ else Γ y := rfl
+
+theorem FCtx.erase_eq (Γ : FCtx ν α) (x : ν) (hx : x ∉ Γ.support)
+  : FCtx.erase Γ x = Γ := by
+  apply FCtx.ext
+  intro y
+  simp only [erase_app, ite_eq_right_iff]
+  intro hy
+  cases hy
+  rw [eq_bot_of_not_mem_support _ hx]
+
+theorem FCtx.Wk.of_erase (Γ : FCtx ν α) (x : ν) : Γ.Wk (Γ.erase x) := by
+  intro y
+  simp only [erase_app]
+  split <;> simp [Bot.bot, *]
+
+def FCtx.sdiff (Γ : FCtx ν α) (N : Finset ν) : FCtx ν α where
+  toFun x := if x ∈ N then ⊥ else Γ x
+  support := Γ.support \ N
+  mem_support_toFun := by
+    intro x
+    simp only [mem_support, Finset.mem_sdiff]
+    split <;> simp [*]
+
+theorem FCtx.sdiff_app (Γ : FCtx ν α) (N : Finset ν) (x : ν)
+  : (FCtx.sdiff Γ N) x = if x ∈ N then ⊥ else Γ x := rfl
+
+theorem FCtx.sdiff_eq_restrict (Γ : FCtx ν α) (N : Finset ν)
+  : FCtx.sdiff Γ N = Γ.restrict (Γ.support \ N) := by
+  apply FCtx.ext
+  intro x
+  simp only [restrict_app, sdiff_app]
+  split
+  . simp only [Finset.mem_sdiff, not_true_eq_false, and_false, ↓reduceIte, *]
+  . simp only [Finset.mem_sdiff, not_false_eq_true, and_true, mem_support_toFun, DFunLike.coe, *]
+    split
+    rfl
+    simp only [ne_eq, not_not] at *; assumption
+
+theorem FCtx.sdiff_eq (Γ : FCtx ν α) (N : Finset ν) (hΓ : Disjoint Γ.support N)
+  : (FCtx.sdiff Γ N) = Γ := by
+  apply FCtx.ext
+  intro x
+  simp only [sdiff_app, erase_app]
+  split
+  . rename_i hx
+    apply Eq.symm
+    apply eq_bot_of_not_mem_support
+    intro hx'
+    apply Finset.disjoint_iff_ne.mp <;> first | assumption | rfl
+  . rfl
+
+theorem FCtx.Wk.of_sdiff (Γ : FCtx ν α) (N : Finset ν) : Γ.Wk (Γ.sdiff N) := by
+  intro x
+  simp only [sdiff_app]
+  split <;> simp [Bot.bot, *]
+
+theorem FCtx.Wk.sdiff_subset (Γ : FCtx ν α) (N N' : Finset ν)  (hN : N ⊆ N') : (Γ.sdiff N).Wk (Γ.sdiff N') := by
+  apply Wk.of_eq_on
+  intro x hx
+  simp only [sdiff, Finset.mem_sdiff] at hx
+  simp only [sdiff_app, hx.2, (Finset.not_mem_mono hN hx.2), ↓reduceIte]
+
+--TODO: sdiff_eq_erase for singleton, etc...
+
+def FCtx.sdiff_except (Γ : FCtx ν α) (N : Finset ν) (x : ν) : FCtx ν α
+  := Γ.sdiff (N.erase x)
+
+theorem FCtx.sdiff_except_eq_sdiff (Γ : FCtx ν α) (N : Finset ν) (x : ν) (hx : x ∉ N)
+  : Γ.sdiff_except N x = Γ.sdiff N := by simp [sdiff_except, *]
+
+theorem FCtx.sdiff_except_eq_disjoint (Γ : FCtx ν α) (N : Finset ν) (x : ν) (hΓ : Disjoint Γ.support N)
+  : Γ.sdiff_except N x = Γ := Γ.sdiff_eq (N.erase x) (Finset.disjoint_of_subset_right (Finset.erase_subset x N) hΓ)
+
+theorem FCtx.Wk.sdiff_except (Γ : FCtx ν α) (N : Finset ν) (x : ν)
+  : Γ.Wk (Γ.sdiff_except N x) := FCtx.Wk.of_sdiff Γ (N.erase x)

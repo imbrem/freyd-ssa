@@ -42,6 +42,7 @@ import FreydSSA.Region.Fun.Subst
 import FreydSSA.GRegion.Fun.Basic
 import FreydSSA.GRegion.Fun.Subst
 
+-- TODO: Untyped folder...
 -- TODO: Indexed intrinsic/extrinsic (dominator tree)
 -- TODO: Dominated intrinsic/extrinsic (dominator tree)
 -- TODO: capture-avoiding subst over extrinsic (which is just Γ ⊢ b ▷ Γ for blocks!)

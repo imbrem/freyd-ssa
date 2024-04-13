@@ -117,6 +117,10 @@ theorem UTm.rewrite_var {ν}
   (e : UTm φ ν) : e.rewrite UTm.var = e
   := by induction e <;> simp [UTm.rewrite, *]
 
+theorem UTm.rename_rewrite
+  (σ : ν → ν') (e : UTm φ ν) : e.rename σ = e.rewrite (UTm.var ∘ σ)
+  := by induction e <;> simp [UTm.rename, UTm.rewrite, *]
+
 def UTm.comp
   (σ : ν₁ → UTm φ ν₂) (σ' : ν₂ → UTm φ ν₃) (x : ν₁) : UTm φ ν₃
   := (σ x).rewrite σ'
@@ -164,7 +168,6 @@ theorem UBody.rename_comp {φ ν ν' ν''}
   : b.rename (σ' ∘ σ) = (b.rename σ).rename σ'
   := by induction b <;> simp [UBody.rename, UTm.rename_comp, *]
 
---TODO: define capture avoiding substitution?
 def UBody.rewrite {φ ν}
   (σ : ν → UTm φ ν) : UBody φ ν → UBody φ ν
   | nil => nil
@@ -178,6 +181,18 @@ def UBody.subst
   | let2 x y e b => let2 x y
     (e.rewrite σ)
     (b.subst ((σ.cons x).cons y))
+
+def UBody.capture_rename
+  (σ : ν → ν) : UBody φ ν → UBody φ ν
+  | nil => nil
+  | let1 x e b => let1 x (e.rename σ) (b.capture_rename (Function.update σ x x))
+  | let2 x y e b => let2 x y (e.rename σ) (b.capture_rename (Function.update (Function.update σ x x) y y))
+
+theorem UBody.capture_rename_subst
+  (σ : ν → ν) (b : UBody φ ν)
+  : b.capture_rename σ = b.subst (UTm.var ∘ σ)
+  := by induction b generalizing σ <;>
+    simp [capture_rename, UTm.rename_rewrite, subst, USubst.cons, Function.comp_update, *]
 
 theorem UBody.rewrite_var
   (b : UBody φ ν) : b.rewrite UTm.var = b

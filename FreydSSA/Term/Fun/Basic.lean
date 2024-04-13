@@ -17,6 +17,22 @@ inductive UTm.FWf : Purity → FCtx ν (Ty α) → UTm φ ν → Ty α → Type 
   | unit (p) : FWf p Γ unit Ty.unit
   | bool (p b) : FWf p Γ (bool b) Ty.bool
 
+inductive UTm.FWfP : Purity → FCtx ν (Ty α) → UTm φ ν → Ty α → Prop
+  | var {x} {A : Ty α} (p)  : Γ x = (A : WithBot _) → FWfP p Γ (var x) A
+  | op : Φ.Op f p A B → FWfP 1 Γ e A → FWfP p Γ (op f e) B
+  | pair (p) : FWfP 1 Γ l A → FWfP 1 Γ r B → FWfP p Γ (pair l r) (A.pair B)
+  | unit (p) : FWfP p Γ unit Ty.unit
+  | bool (p b) : FWfP p Γ (bool b) Ty.bool
+
+-- TODO: need that type inference... :(
+-- def UTm.FWfP.toFWf {Γ : FCtx ν (Ty α)} {e : UTm φ ν} (de : e.FWfP p Γ A) : e.FWf p Γ A
+--   := match e with
+--   | UTm.var x => FWf.var p (by cases de; assumption)
+--   | UTm.op f e => @FWf.op _ _ _ _ f p _ A Γ e sorry (toFWf (match de with | op hf de => de))
+--   | UTm.pair l r => pair p (dl.toFWf) (dr.toFWf)
+--   | UTm.unit => λh => unit p
+--   | UTm.bool b => λh => bool p b
+
 variable {Γ Δ : FCtx ν (Ty α)}
 
 def UTm.FWf.of_pure {e : UTm φ ν} : e.FWf 1 Γ A → e.FWf p Γ A

@@ -49,3 +49,10 @@ class InjInstSet (φ α) [InstSet φ α] : Type _ where
 def InjInstSet.coh_src' [InstSet φ α] [InjInstSet φ α] {f : φ} {A B A' B' : α}
   (h : Op f p A B) (h' : Op f p' A' B') (h'' : B = B') : A = A'
   := InjInstSet.coh_src h (h''.symm ▸ h')
+
+class DecInstSet (φ α) [InstSet φ α] : Type _ where
+  src : φ → α
+  trg : φ → α
+  purity : φ → Purity
+  pureValid : ∀ f, purity f = 1 → Op f 1 (src f) (trg f)
+  impureValid : ∀ f, Op f 0 (src f) (trg f)

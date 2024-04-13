@@ -41,4 +41,13 @@ theorem UBody.FWf.allEq {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} (dt : FWf p 
 
 --TODO: inf/sup lore
 
---TODO: min/max lore
+inductive UBody.FWfM : Purity → FCtx ν (Ty α) → UBody φ ν → FCtx ν (Ty α) → Type _
+  | nil (p Γ) : FWfM p Γ nil Γ
+  | let1 (x) : e.FWf p Γ A → FWfM p (Γ.cons x A) t Δ
+    → FWfM p Γ (let1 x e t) Δ
+  | let2 (x y) : e.FWf p Γ (Ty.pair A B) →
+    FWfM p ((Γ.cons x A).cons y B) t Δ → FWfM p Γ (let2 x y e t) Δ
+
+--TODO: min/max lore, e.g. FWf maxTrg and so on...
+
+--TODO: FWf'
