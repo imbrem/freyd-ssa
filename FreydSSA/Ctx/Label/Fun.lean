@@ -1,6 +1,6 @@
 import FreydSSA.Ctx.Var.Fun
 
-variable {ν ν' κ κ' α β}
+variable {ν : Type u₁} {ν' : Type u₂} {κ : Type u₃} {κ' : Type u₄} {α : Type u₅} {β : Type u₆}
   [DecidableEq ν] [DecidableEq ν']
   [DecidableEq κ] [DecidableEq κ']
   [DecidableEq α] [DecidableEq β]
@@ -39,6 +39,11 @@ structure FLabel.Cmp (L K : FLabel ν α) : Prop where
 theorem FLabel.Cmp.refl (L : FLabel ν α) : FLabel.Cmp L L := ⟨rfl, FCtx.Cmp.refl _⟩
 theorem FLabel.Cmp.symm {L K : FLabel ν α} (h : FLabel.Cmp L K) : FLabel.Cmp K L
   := ⟨h.param.symm, h.live.symm⟩
+
+theorem FLabel.Cmp.of_le {L K : FLabel ν α} (h : L ≤ K) : FLabel.Cmp L K
+  := ⟨h.param, FCtx.Cmp.of_wk h.live⟩
+theorem FLabel.Cmp.of_le₂ {L K M : FLabel ν α} (h : M ≤ L) (h' : M ≤ K) : FLabel.Cmp L K
+  := ⟨h.param.symm.trans h'.param, h.live.cmp₂ h'.live⟩
 
 def FLabel.lsup (L K : FLabel ν α) : FLabel ν α where
   param := L.param
@@ -160,27 +165,38 @@ theorem FLCtx.PWk.to_wk {L K : FLCtx κ ν α} (h : FLCtx.PWk L K) : FLCtx.Wk L 
 theorem FLCtx.PWk.antisymm {L K : FLCtx κ ν α} (h : FLCtx.PWk L K) (h' : FLCtx.PWk K L)
   : L = K := h.to_wk.antisymm h'.to_wk
 
-def FLCtx.CmpBot : WithBot (FLabel ν α) → WithBot (FLabel ν α) → Prop
-  | ⊥, _ => true
-  | _, ⊥ => true
-  | some Γ, some Δ => Γ.Cmp Δ
+inductive FLCtx.CmpBot : (Γ Δ : WithBot (FLabel ν α)) → Prop
+  | left (Γ : WithBot (FLabel ν α)) : CmpBot Γ ⊥
+  | right (Δ : WithBot (FLabel ν α)) : CmpBot ⊥ Δ
+  | both {Γ Δ : FLabel ν α} : Γ.Cmp Δ -> CmpBot Γ Δ
 
 theorem FLCtx.CmpBot.refl (Γ : WithBot (FLabel ν α)) : FLCtx.CmpBot Γ Γ
   := match Γ with
-  | ⊥ => by trivial
-  | some Γ => FLabel.Cmp.refl Γ
+  | ⊥ => left _
+  | some Γ => both (FLabel.Cmp.refl Γ)
 
-theorem FLCtx.CmpBot.symm {Γ Δ : WithBot (FLabel ν α)} (h : FLCtx.CmpBot Γ Δ)
-  : FLCtx.CmpBot Δ Γ := by
-  cases Γ <;> cases Δ
-  case some.some => exact FLabel.Cmp.symm h
-  all_goals exact h
+theorem FLCtx.CmpBot.symm {Γ Δ : WithBot (FLabel ν α)}
+  : FLCtx.CmpBot Γ Δ → FLCtx.CmpBot Δ Γ
+  | left _ => right _
+  | right _ => left _
+  | both h => both h.symm
+
+theorem FLCtx.CmpBot.of_le {Γ Δ : WithBot (FLabel ν α)} (h : Γ ≤ Δ) : FLCtx.CmpBot Γ Δ
+  := match Γ, Δ with
+  | ⊥, _ => right _
+  | _, ⊥ => left _
+  | some Γ, some Δ => both (FLabel.Cmp.of_le (by simp only [WithBot.some_le_some] at h; exact h))
 
 def FLCtx.Cmp (L K : FLCtx κ ν α) : Prop := ∀x, CmpBot (L x) (K x)
 
 theorem FLCtx.Cmp.refl (L : FLCtx κ ν α) : FLCtx.Cmp L L := λ_ => FLCtx.CmpBot.refl _
 theorem FLCtx.Cmp.symm {L K : FLCtx κ ν α} (h : FLCtx.Cmp L K) : FLCtx.Cmp K L
   := λx => FLCtx.CmpBot.symm (h x)
+
+theorem FLCtx.Cmp.of_le {L K : FLCtx κ ν α} (h : L ≤ K) : FLCtx.Cmp L K
+  := λx => FLCtx.CmpBot.of_le (h x)
+theorem FLCtx.Wk.cmp {L K : FLCtx κ ν α} (h : L.Wk K) : FLCtx.Cmp L K
+  := Cmp.of_le h
 
 def FLCtx.lsup_bot : WithBot (FLabel ν α) → WithBot (FLabel ν α) → WithBot (FLabel ν α)
   | ⊥, x => x
@@ -228,7 +244,12 @@ theorem FLCtx.rsup_bot_le {Γ Δ : WithBot (FLabel ν α)} : Δ ≤ rsup_bot Γ 
   | _, ⊥ => by simp
   | some Γ, some Δ => by simp [rsup_bot, FLabel.rsup_le Γ Δ]
 
--- TODO: Cmp ==> lsup == rsup
+theorem FLCtx.CmpBot.lsup_eq_rsup {Γ Δ : WithBot (FLabel ν α)} (h : FLCtx.CmpBot Γ Δ)
+  : lsup_bot Γ Δ = rsup_bot Γ Δ := by
+    simp only [lsup_bot]
+    split <;> simp only [rsup_bot]
+    cases h with
+    | both h => rw [h.lsup_eq_rsup]
 
 -- TODO: lattice lore
 
@@ -273,7 +294,44 @@ theorem FLCtx.rsup_app (L K : FLCtx κ ν α) (x : κ)
 theorem FLCtx.rsup_wk (L K : FLCtx κ ν α) : FLCtx.Wk K (FLCtx.rsup L K) := λx => by
   simp only [rsup_app, FLCtx.rsup_bot_le]
 
---TODO: Cmp ==> lsup == rsup
+theorem FLCtx.Cmp.lsup_eq_rsup {L K : FLCtx κ ν α} (h : FLCtx.Cmp L K)
+  : FLCtx.lsup L K = FLCtx.rsup L K := by
+  apply FLCtx.ext
+  intro x
+  simp only [FLCtx.lsup_app, FLCtx.rsup_app]
+  exact FLCtx.CmpBot.lsup_eq_rsup (h x)
+
+theorem FLCtx.Cmp.lsup_wk_left {L K : FLCtx κ ν α} (_ : FLCtx.Cmp L K)
+  : FLCtx.Wk L (FLCtx.lsup L K) := lsup_wk L K
+theorem FLCtx.Cmp.lsup_wk_right {L K : FLCtx κ ν α} (h : FLCtx.Cmp L K)
+  : FLCtx.Wk K (FLCtx.lsup L K) := h.lsup_eq_rsup ▸ rsup_wk L K
+theorem FLCtx.Cmp.rsup_wk_left {L K : FLCtx κ ν α} (h : FLCtx.Cmp L K)
+  : FLCtx.Wk L (FLCtx.rsup L K) := h.lsup_eq_rsup ▸ lsup_wk L K
+theorem FLCtx.Cmp.rsup_wk_right {L K : FLCtx κ ν α} (_ : FLCtx.Cmp L K)
+  : FLCtx.Wk K (FLCtx.rsup L K) := rsup_wk L K
+
+inductive FLCtx.PCmpBot : (Γ Δ : WithBot (FLabel ν α)) → Prop
+  | left (Γ : WithBot (FLabel ν α)) : PCmpBot Γ ⊥
+  | right (Δ : WithBot (FLabel ν α)) : PCmpBot ⊥ Δ
+  | both {Γ Δ : FLabel ν α} : Γ.param = Δ.param -> PCmpBot Γ Δ
+
+def FLCtx.PCmp (L K : FLCtx κ ν α) : Prop := ∀x, PCmpBot (L x) (K x)
+
+inductive FCtx.LEqBot (Γ : FCtx ν α) : (Δ : WithBot (FLabel ν α)) → Prop
+  | bot : LEqBot Γ ⊥
+  | refl (A) : LEqBot Γ (some ⟨Γ, A⟩)
+
+def FCtx.LEq (Γ : FCtx ν α) (L : FLCtx κ ν α) : Prop := ∀x, Γ.LEqBot (L x)
+
+-- TODO: LEq to cmp...
+
+inductive FCtx.LWkBot (Γ : FCtx ν α) : (Δ : WithBot (FLabel ν α)) → Prop
+  | bot : LWkBot Γ ⊥
+  | wk (A Δ) : Γ.Wk Δ → LWkBot Γ (some ⟨Δ, A⟩)
+
+def FCtx.LWk (Γ : FCtx ν α) (L : FLCtx κ ν α) : Prop := ∀x, Γ.LWkBot (L x)
+
+-- TODO: RWk, RWk to cmp...
 
 --TODO: lattice lore
 
