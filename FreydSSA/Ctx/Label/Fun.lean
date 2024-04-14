@@ -33,17 +33,17 @@ instance FLabel.instPartialOrder : PartialOrder (FLabel ν α) where
   le_antisymm _ _ h h' := Wk.antisymm h h'
 
 structure FLabel.Cmp (L K : FLabel ν α) : Prop where
-  param : L.param = K.param
   live : L.live.Cmp K.live
+  param : L.param = K.param
 
-theorem FLabel.Cmp.refl (L : FLabel ν α) : FLabel.Cmp L L := ⟨rfl, FCtx.Cmp.refl _⟩
+theorem FLabel.Cmp.refl (L : FLabel ν α) : FLabel.Cmp L L := ⟨FCtx.Cmp.refl _, rfl⟩
 theorem FLabel.Cmp.symm {L K : FLabel ν α} (h : FLabel.Cmp L K) : FLabel.Cmp K L
-  := ⟨h.param.symm, h.live.symm⟩
+  := ⟨h.live.symm, h.param.symm⟩
 
 theorem FLabel.Cmp.of_le {L K : FLabel ν α} (h : L ≤ K) : FLabel.Cmp L K
-  := ⟨h.param, FCtx.Cmp.of_wk h.live⟩
+  := ⟨FCtx.Cmp.of_wk h.live, h.param⟩
 theorem FLabel.Cmp.of_le₂ {L K M : FLabel ν α} (h : M ≤ L) (h' : M ≤ K) : FLabel.Cmp L K
-  := ⟨h.param.symm.trans h'.param, h.live.cmp₂ h'.live⟩
+  := ⟨h.live.cmp₂ h'.live, h.param.symm.trans h'.param⟩
 
 def FLabel.lsup (L K : FLabel ν α) : FLabel ν α where
   param := L.param
@@ -364,13 +364,62 @@ inductive FCtx.LEqBot (Γ : FCtx ν α) : (Δ : WithBot (FLabel ν α)) → Prop
 
 def FCtx.LEq (Γ : FCtx ν α) (L : FLCtx κ ν α) : Prop := ∀x, Γ.LEqBot (L x)
 
--- TODO: LEq to cmp...
+theorem FCtx.singletonLEq (x : κ) (Γ : FCtx ν α) (param : α) : Γ.LEq (Γ.toSingleton x param)
+  := λy => by
+    simp only [toSingleton, FLCtx.singleton_app]
+    split <;> constructor
+
+theorem FCtx.LEqBot.lsup {Γ : FCtx ν α} {Δ Ξ : WithBot (FLabel ν α)}
+  : Γ.LEqBot Δ → Γ.LEqBot Ξ → Γ.LEqBot (FLCtx.lsup_bot Δ Ξ)
+  | bot, _ => by simp [*]
+  | _, bot => by simp [*]
+  | refl A, refl A' => by
+    simp only [FLCtx.lsup_bot, FLabel.lsup, FCtx.lsup_idem]
+    exact refl A
+
+theorem FCtx.LEq.lsup {Γ : FCtx ν α} {L K : FLCtx κ ν α}
+  (hL : Γ.LEq L) (hK : Γ.LEq K) : Γ.LEq (L.lsup K)
+  := λx => (hL x).lsup (hK x)
 
 inductive FCtx.LWkBot (Γ : FCtx ν α) : (Δ : WithBot (FLabel ν α)) → Prop
   | bot : LWkBot Γ ⊥
-  | wk (A Δ) : Γ.Wk Δ → LWkBot Γ (some ⟨Δ, A⟩)
+  | wk (A) : Γ.Wk Δ → LWkBot Γ (some ⟨Δ, A⟩)
+
+theorem FCtx.LEqBot.toLWkBot {Γ : FCtx ν α} {Δ : WithBot (FLabel ν α)}
+  : Γ.LEqBot Δ → Γ.LWkBot Δ
+  | bot => LWkBot.bot
+  | refl A => LWkBot.wk A (Wk.refl _)
+
+--BUG: says hΔ' and hΞ' are unused, which is obviously not the case...
+theorem FCtx.LWkBot.cmp₂ {Γ : FCtx ν α} {Δ Ξ M : WithBot (FLabel ν α)}
+  (hΔ : Γ.LWkBot Δ) (hΞ : Γ.LWkBot Ξ) (_hΔ' : Δ ≤ M) (_hΞ' : Ξ ≤ M)
+  : FLCtx.CmpBot Δ Ξ
+  := match hΔ, hΞ with
+  | bot, _ => by constructor
+  | _, bot => by constructor
+  | wk A w, wk A' w' => by
+    constructor
+    cases M with
+    | none =>
+      --BUG: kernel says invalid projection if done that way, investigate
+      have ⟨_, h, _⟩ := (_hΔ' _ rfl)
+      cases h
+    | some M =>
+      cases M
+      simp only [WithBot.some_le_some] at *
+      cases _hΔ'.param
+      cases _hΞ'.param
+      exact ⟨w.cmp₂ w', rfl⟩
 
 def FCtx.LWk (Γ : FCtx ν α) (L : FLCtx κ ν α) : Prop := ∀x, Γ.LWkBot (L x)
+
+theorem FCtx.LWk.cmp₂ {L K M : FLCtx κ ν α} {Γ : FCtx ν α}
+  (hL : Γ.LWk L) (hK : Γ.LWk K) (hLM : L.Wk M) (hKM : K.Wk M)
+  : L.Cmp K
+  := λx => (hL x).cmp₂ (hK x) (hLM x) (hKM x)
+
+theorem FCtx.LEq.toLWk {Γ : FCtx ν α} {L : FLCtx κ ν α} (hΓ : Γ.LEq L) : Γ.LWk L
+  := λx => (hΓ x).toLWkBot
 
 -- TODO: RWk, RWk to cmp...
 

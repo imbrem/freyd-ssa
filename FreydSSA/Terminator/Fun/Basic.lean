@@ -30,9 +30,20 @@ theorem UTerminator.FWf.minTrg_wk {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν 
   | br w _ => w
   | ite _ ds dt => ds.minTrg_wk.lsup_wk dt.minTrg_wk
 
--- theorem UTerminator.FWf.toMinTrg {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : (dt : t.FWf Γ L) → t.FWf Γ dt.minTrg
---   | br _ _ => sorry
---   | ite de ds dt => ite de (ds.toMinTrg.wkExit sorry) (dt.toMinTrg.wkExit sorry)
+theorem UTerminator.FWf.minTrg_LEq {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : (dt : t.FWf Γ L) → Γ.LEq dt.minTrg
+  | br _ _ => Γ.singletonLEq _ _
+  | ite _ ds dt => ds.minTrg_LEq.lsup dt.minTrg_LEq
+
+theorem UTerminator.FWf.toMinTrg {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : (dt : t.FWf Γ L) → t.FWf Γ dt.minTrg
+  | br _ de => br (FLCtx.Wk.refl _) de
+  | ite de ds dt => ite de (ds.toMinTrg.wkExit (FLCtx.lsup_wk _ _)) (dt.toMinTrg.wkExit (
+    (ds.minTrg_LEq.toLWk.cmp₂ dt.minTrg_LEq.toLWk ds.minTrg_wk dt.minTrg_wk).lsup_wk_right
+  ))
+
+theorem UTerminator.FWf.minTrg_eq {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
+  : (dt : t.FWf Γ L) → (dt' : t.FWf Γ L') → dt.minTrg = dt'.minTrg
+  | br _ de, br _ de' => by cases de.tyEq de'; rfl
+  | ite _ ds dt, ite _ ds' dt' => by simp only [minTrg, ds.minTrg_eq ds', dt.minTrg_eq dt']
 
 -- TODO: lsup, rsup lore...
 
@@ -52,6 +63,22 @@ theorem UTerminator.FWfM.allEq {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
   | ite de ds dt h p, ite de' ds' dt' h' p' => by
     cases ds.trgEq ds'; cases dt.trgEq dt'; cases de.allEq de'; cases ds.allEq ds'; cases dt.allEq dt'; rfl
 
+theorem UTerminator.FWfM.trgLEq {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
+  : t.FWfM Γ L → Γ.LEq L
+  | br _ _ rfl => Γ.singletonLEq _ _
+  | ite _ ds dt _ rfl => ds.trgLEq.lsup dt.trgLEq
+
+def UTerminator.FWf.toFWfM {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : (dt : t.FWf Γ L) → t.FWfM Γ dt.minTrg
+  | br _ de => FWfM.br _ de rfl
+  | ite de ds dt => FWfM.ite de ds.toFWfM dt.toFWfM
+    (ds.minTrg_LEq.toLWk.cmp₂ dt.minTrg_LEq.toLWk ds.minTrg_wk dt.minTrg_wk) rfl
+
+def UTerminator.FWfM.toFWf {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : (dt : t.FWfM Γ L) → t.FWf Γ L
+  | br _ de p => FWf.br (p ▸ FLCtx.Wk.refl _) de
+  | ite de ds dt h p => FWf.ite de
+    (ds.toFWf.wkExit (p ▸ FLCtx.lsup_wk _ _))
+    (dt.toFWf.wkExit (p ▸ h.lsup_wk_right))
+
 -- TODO: FWf ==> FWfM mintrg
 
 structure UTerminator.FWf' (Γ : FCtx ν (Ty α)) (t : UTerminator φ ν κ) (L : FLCtx κ ν (Ty α)) where
@@ -59,6 +86,17 @@ structure UTerminator.FWf' (Γ : FCtx ν (Ty α)) (t : UTerminator φ ν κ) (L 
   FWfM : t.FWfM Γ base
   wk : base.Wk L
 
---TODO: FWf factorization, etc...
+def UTerminator.FWf'.toFWf {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} (dt : t.FWf' Γ L) : t.FWf Γ L
+  := dt.FWfM.toFWf.wkExit dt.wk
+
+def UTerminator.FWf'.allEq {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} (dt dt' : t.FWf' Γ L) : dt = dt'
+  := match dt, dt' with
+  | ⟨base, dt, w⟩, ⟨base', dt', w'⟩ => by cases dt.trgEq dt'; cases dt.allEq dt'; rfl
+
+def UTerminator.FWf.factor {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} (dt : t.FWf Γ L) : t.FWf' Γ L
+  where
+  base := dt.minTrg
+  FWfM := dt.toFWfM
+  wk := dt.minTrg_wk
 
 --TODO: FLCtx "Γ multiplication", and so on... might be useful for resources...
