@@ -35,6 +35,11 @@ theorem UBody.FWf.allEq {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} (dt : FWf p 
     cases de.allEq de'
     rw [I]
 
+def UBody.FWf.maxTrg {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} : FWf p Γ t Δ → FCtx ν (Ty α)
+  | @nil _ _ _ _ _ Γ _ _ _ => Γ
+  | let1 _ _ dt => dt.maxTrg
+  | let2 _ _ _ dt => dt.maxTrg
+
 --TODO: cmpTrg lore
 
 --TODO: FWf.comp

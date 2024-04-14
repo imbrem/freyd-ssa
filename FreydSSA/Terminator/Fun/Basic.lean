@@ -13,10 +13,22 @@ theorem UTerminator.FWf.allEq {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} 
   | br _ de, br _ de' => by cases de.tyEq de'; cases de.allEq de'; rfl
   | ite de ds dt, ite de' ds' dt' => by cases de.allEq de'; cases dt.allEq dt'; cases ds.allEq ds'; rfl
 
+def UTerminator.FWf.minTrg {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : t.FWf Γ L → FLCtx κ ν (Ty α)
+  | @br _ _ _ _ _ _ ℓ Γ A _ _ _ _ => FLCtx.singleton ℓ ⟨Γ, A⟩
+  | ite _ ds dt => ds.minTrg.lsup dt.minTrg
+
+-- theorem UTerminator.FWf.minTrg_wk {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : (dt : t.FWf Γ L) → dt.minTrg.Wk L
+--   | br w _ => w
+--   | ite _ ds dt => sorry -- FLCtx.Wk.lsup ds.minTrg_wk dt.minTrg_wk
+
+-- TODO: lsup, rsup lore...
+
 -- TODO: research automatic generalization of stuff like this...
 inductive UTerminator.FWfM : FCtx ν (Ty α) → UTerminator φ ν κ → FLCtx κ ν (Ty α) → Type _
   | br ℓ : e.FWf 1 Γ A → L' = FLCtx.singleton ℓ ⟨Γ, A⟩ → (br ℓ e).FWfM Γ L'
   | ite : e.FWf 1 Γ Ty.bool → s.FWfM Γ L → t.FWfM Γ K → L.Cmp K → S = L.lsup K → (ite e s t).FWfM Γ S
+
+-- TODO: FWfM ==> FWf
 
 theorem UTerminator.FWfM.trgEq {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : t.FWfM Γ L → t.FWfM Γ L' → L = L'
   | br ℓ de rfl, br _ de' rfl => by cases de.tyEq de'; rfl
@@ -27,11 +39,13 @@ theorem UTerminator.FWfM.allEq {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
   | ite de ds dt h p, ite de' ds' dt' h' p' => by
     cases ds.trgEq ds'; cases dt.trgEq dt'; cases de.allEq de'; cases ds.allEq ds'; cases dt.allEq dt'; rfl
 
+-- TODO: FWf ==> FWfM mintrg
+
 structure UTerminator.FWf' (Γ : FCtx ν (Ty α)) (t : UTerminator φ ν κ) (L : FLCtx κ ν (Ty α)) where
   base : FLCtx κ ν (Ty α)
   FWfM : t.FWfM Γ base
   wk : base.Wk L
 
---TODO: FWf', factorization, etc...
+--TODO: FWf factorization, etc...
 
---TODO: FLCtx "Γ multiplication"...
+--TODO: FLCtx "Γ multiplication", and so on... might be useful for resources...
