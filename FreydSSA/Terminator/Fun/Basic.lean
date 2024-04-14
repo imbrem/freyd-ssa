@@ -13,13 +13,26 @@ theorem UTerminator.FWf.allEq {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} 
   | br _ de, br _ de' => by cases de.tyEq de'; cases de.allEq de'; rfl
   | ite de ds dt, ite de' ds' dt' => by cases de.allEq de'; cases dt.allEq dt'; cases ds.allEq ds'; rfl
 
+def UTerminator.FWf.wkEntry {Γ Δ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} (hΓ : Γ.Wk Δ) : t.FWf Δ L → t.FWf Γ L
+  | br w de => br ((hΓ.toSingleton _ _).comp w) (de.wk hΓ)
+  | ite de ds dt => ite (de.wk hΓ) (ds.wkEntry hΓ) (dt.wkEntry hΓ)
+
+def UTerminator.FWf.wkExit {L K : FLCtx κ ν (Ty α)} {t : UTerminator φ ν κ} (dt : t.FWf Γ L) (hL : L.Wk K) : t.FWf Γ K
+  := match dt with
+  | br w de => br (w.comp hL) de
+  | ite de ds dt => ite de (ds.wkExit hL) (dt.wkExit hL)
+
 def UTerminator.FWf.minTrg {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : t.FWf Γ L → FLCtx κ ν (Ty α)
   | @br _ _ _ _ _ _ ℓ Γ A _ _ _ _ => FLCtx.singleton ℓ ⟨Γ, A⟩
   | ite _ ds dt => ds.minTrg.lsup dt.minTrg
 
--- theorem UTerminator.FWf.minTrg_wk {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : (dt : t.FWf Γ L) → dt.minTrg.Wk L
---   | br w _ => w
---   | ite _ ds dt => sorry -- FLCtx.Wk.lsup ds.minTrg_wk dt.minTrg_wk
+theorem UTerminator.FWf.minTrg_wk {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : (dt : t.FWf Γ L) → dt.minTrg.Wk L
+  | br w _ => w
+  | ite _ ds dt => ds.minTrg_wk.lsup_wk dt.minTrg_wk
+
+-- theorem UTerminator.FWf.toMinTrg {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : (dt : t.FWf Γ L) → t.FWf Γ dt.minTrg
+--   | br _ _ => sorry
+--   | ite de ds dt => ite de (ds.toMinTrg.wkExit sorry) (dt.toMinTrg.wkExit sorry)
 
 -- TODO: lsup, rsup lore...
 

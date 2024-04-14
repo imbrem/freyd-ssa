@@ -51,6 +51,9 @@ def FLabel.lsup (L K : FLabel ν α) : FLabel ν α where
 
 theorem FLabel.lsup_le (L K : FLabel ν α) : L ≤ lsup L K := ⟨FCtx.lsup_wk _ _, rfl⟩
 
+theorem FLabel.Wk.lsup_wk {L L' K : FLabel ν α} (hL : L.Wk K) (hL' : L'.Wk K) : (L.lsup L').Wk K
+  := ⟨hL.live.lsup_wk hL'.live, hL.param⟩
+
 def FLabel.rsup (L K : FLabel ν α) : FLabel ν α where
   param := K.param
   live := L.live.rsup K.live
@@ -86,7 +89,7 @@ def FLCtx.empty (κ : Type _) (ν : Type _) (α : Type _) : FLCtx κ ν α where
   mem_support_toFun x := by simp
 
 def FLCtx.singleton (x : κ) (L : FLabel ν α) : FLCtx κ ν α where
-  toFun y := if y = x then some L else ⊥
+  toFun y := if y = x then L else ⊥
   support := {x}
   mem_support_toFun y := by simp
 
@@ -109,6 +112,10 @@ theorem FLCtx.toFun_inj {L K : FLCtx κ ν α}
 instance FLCtx.instFunLike : FunLike (FLCtx κ ν α) κ (WithBot (FLabel ν α)) where
   coe := FLCtx.toFun
   coe_injective' := by intro Γ Δ; apply FLCtx.toFun_inj_mp
+
+theorem FLCtx.singleton_app (x : κ) (L : FLabel ν α) (y : κ)
+  : FLCtx.singleton x L y = (if y = x then ↑L else ⊥)
+  := rfl
 
 theorem FLCtx.mem_support {L : FLCtx κ ν α} (ℓ : κ)
   : ℓ ∈ L.support ↔ L ℓ ≠ ⊥ := L.mem_support_toFun ℓ
@@ -137,6 +144,29 @@ theorem FLCtx.Wk.ge {L K : FLCtx κ ν α} (h : FLCtx.Wk L K) : L ≤ K := h
 theorem FLCtx.Wk.le {L K : FLCtx κ ν α} (h : FLCtx.Wk L K) : K ≥ L := h
 theorem FLCtx.Wk.of_ge {L K : FLCtx κ ν α} (h : K ≥ L) : FLCtx.Wk L K := h
 theorem FLCtx.Wk.of_le {L K : FLCtx κ ν α} (h : L ≤ K) : FLCtx.Wk L K := h
+
+theorem FLabel.Wk.toSingleton {L K : FLabel ν α} (x : κ) (w : FLabel.Wk L K)
+  : FLCtx.Wk (FLCtx.singleton x L) (FLCtx.singleton x K)
+  := λy => by
+    simp only [FLCtx.singleton_app]
+    split
+    simp only [WithBot.coe_le_coe]
+    exact w
+    simp
+
+def FCtx.toLabel (Γ : FCtx ν α) (param : α) : FLabel ν α where
+  live := Γ
+  param := param
+
+theorem FCtx.Wk.toLabel {Γ Δ : FCtx ν α} (w : Γ.Wk Δ) (param : α)
+  : (Γ.toLabel param).Wk (Δ.toLabel param) := ⟨w, rfl⟩
+
+def FCtx.toSingleton (x : κ) (Γ : FCtx ν α) (param : α) : FLCtx κ ν α
+  := FLCtx.singleton x (Γ.toLabel param)
+
+theorem FCtx.Wk.toSingleton {Γ Δ : FCtx ν α} (x : κ) (w : Γ.Wk Δ) (param : α)
+  : (Γ.toSingleton x param).Wk (Δ.toSingleton x param)
+  := (w.toLabel param).toSingleton x
 
 def FLCtx.EWk (L K : FLCtx κ ν α) : Prop := ∀x, L x = K x ∨ L x = ⊥
 
@@ -251,6 +281,14 @@ theorem FLCtx.CmpBot.lsup_eq_rsup {Γ Δ : WithBot (FLabel ν α)} (h : FLCtx.Cm
     cases h with
     | both h => rw [h.lsup_eq_rsup]
 
+theorem FLCtx.le_lsup_bot {Γ Δ Ξ : WithBot (FLabel ν α)} (hΓ : Γ ≤ Ξ) (hΔ : Δ ≤ Ξ) : lsup_bot Γ Δ ≤ Ξ
+  := match Γ, Δ with
+  | ⊥, _ => by simp [hΔ]
+  | _, ⊥ => by simp [hΓ]
+  | some Γ, some Δ => match Ξ with
+    | ⊥ => by simp at hΓ
+    | some Ξ => by simp only [lsup_bot, WithBot.some_le_some] at *; exact hΓ.lsup_wk hΔ
+
 -- TODO: lattice lore
 
 def FLCtx.sup_bot : WithBot (FLabel ν α) → WithBot (FLabel ν α) → WithBot (FLabel ν α)
@@ -309,6 +347,9 @@ theorem FLCtx.Cmp.rsup_wk_left {L K : FLCtx κ ν α} (h : FLCtx.Cmp L K)
   : FLCtx.Wk L (FLCtx.rsup L K) := h.lsup_eq_rsup ▸ lsup_wk L K
 theorem FLCtx.Cmp.rsup_wk_right {L K : FLCtx κ ν α} (_ : FLCtx.Cmp L K)
   : FLCtx.Wk K (FLCtx.rsup L K) := rsup_wk L K
+
+theorem FLCtx.Wk.lsup_wk {L L' K : FLCtx κ ν α} (hL : L.Wk K) (hL' : L'.Wk K) : (L.lsup L').Wk K
+  := λx => le_lsup_bot (hL x) (hL' x)
 
 inductive FLCtx.PCmpBot : (Γ Δ : WithBot (FLabel ν α)) → Prop
   | left (Γ : WithBot (FLabel ν α)) : PCmpBot Γ ⊥
