@@ -44,13 +44,23 @@ def FLabel.lsup (L K : FLabel ν α) : FLabel ν α where
   param := L.param
   live := L.live.lsup K.live
 
+theorem FLabel.lsup_le (L K : FLabel ν α) : L ≤ lsup L K := ⟨FCtx.lsup_wk _ _, rfl⟩
+
 def FLabel.rsup (L K : FLabel ν α) : FLabel ν α where
   param := K.param
   live := L.live.rsup K.live
 
+theorem FLabel.rsup_le (L K : FLabel ν α) : K ≤ rsup L K := ⟨FCtx.rsup_wk _ _, rfl⟩
+
 def FLabel.sup (L K : FLabel ν α) : FLabel ν α where
   param := L.param
   live := L.live.sup K.live
+
+theorem FLabel.Cmp.lsup_eq_rsup {L K : FLabel ν α} (h : FLabel.Cmp L K)
+  : lsup L K = rsup L K := by
+  cases L; cases K
+  cases h.param
+  simp [lsup, rsup, FCtx.Cmp.lsup_eq_rsup h.live]
 
 def FLabel.linf (L K : FLabel ν α) : FLabel ν α where
   param := L.param
@@ -160,7 +170,7 @@ theorem FLCtx.CmpBot.refl (Γ : WithBot (FLabel ν α)) : FLCtx.CmpBot Γ Γ
   | ⊥ => by trivial
   | some Γ => FLabel.Cmp.refl Γ
 
-theorem FLCtx.CmpTop.symm {Γ Δ : WithBot (FLabel ν α)} (h : FLCtx.CmpBot Γ Δ)
+theorem FLCtx.CmpBot.symm {Γ Δ : WithBot (FLabel ν α)} (h : FLCtx.CmpBot Γ Δ)
   : FLCtx.CmpBot Δ Γ := by
   cases Γ <;> cases Δ
   case some.some => exact FLabel.Cmp.symm h
@@ -170,21 +180,61 @@ def FLCtx.Cmp (L K : FLCtx κ ν α) : Prop := ∀x, CmpBot (L x) (K x)
 
 theorem FLCtx.Cmp.refl (L : FLCtx κ ν α) : FLCtx.Cmp L L := λ_ => FLCtx.CmpBot.refl _
 theorem FLCtx.Cmp.symm {L K : FLCtx κ ν α} (h : FLCtx.Cmp L K) : FLCtx.Cmp K L
-  := λx => FLCtx.CmpTop.symm (h x)
+  := λx => FLCtx.CmpBot.symm (h x)
 
 def FLCtx.lsup_bot : WithBot (FLabel ν α) → WithBot (FLabel ν α) → WithBot (FLabel ν α)
   | ⊥, x => x
   | x, ⊥ => x
   | some Γ, some Δ => some (FLabel.lsup Γ Δ)
 
+@[simp]
+theorem FLCtx.bot_lsup_bot {Γ : WithBot (FLabel ν α)} : lsup_bot ⊥ Γ = Γ
+  := match Γ with
+  | ⊥ => rfl
+  | some Γ => by simp [lsup_bot]
+
+@[simp]
+theorem FLCtx.lsup_bot_bot {Γ : WithBot (FLabel ν α)} : lsup_bot Γ ⊥ = Γ
+  := match Γ with
+  | ⊥ => rfl
+  | some Γ => by simp [lsup_bot]
+
+theorem FLCtx.lsup_bot_le {Γ Δ : WithBot (FLabel ν α)} : Γ ≤ lsup_bot Γ Δ
+  := match Γ, Δ with
+  | ⊥, _ => by simp
+  | _, ⊥ => by simp
+  | some Γ, some Δ => by simp [lsup_bot, FLabel.lsup_le Γ Δ]
+
 def FLCtx.rsup_bot : WithBot (FLabel ν α) → WithBot (FLabel ν α) → WithBot (FLabel ν α)
   | ⊥, x => x
   | x, ⊥ => x
   | some Γ, some Δ => some (FLabel.rsup Γ Δ)
 
+@[simp]
+theorem FLCtx.bot_rsup_bot {Γ : WithBot (FLabel ν α)} : rsup_bot ⊥ Γ = Γ
+  := match Γ with
+  | ⊥ => rfl
+  | some Γ => by simp [rsup_bot]
+
+@[simp]
+theorem FLCtx.rsup_bot_bot {Γ : WithBot (FLabel ν α)} : rsup_bot Γ ⊥ = Γ
+  := match Γ with
+  | ⊥ => rfl
+  | some Γ => by simp [rsup_bot]
+
+theorem FLCtx.rsup_bot_le {Γ Δ : WithBot (FLabel ν α)} : Δ ≤ rsup_bot Γ Δ
+  := match Γ, Δ with
+  | ⊥, _ => by simp
+  | _, ⊥ => by simp
+  | some Γ, some Δ => by simp [rsup_bot, FLabel.rsup_le Γ Δ]
+
+-- TODO: Cmp ==> lsup == rsup
+
+-- TODO: lattice lore
+
 def FLCtx.sup_bot : WithBot (FLabel ν α) → WithBot (FLabel ν α) → WithBot (FLabel ν α)
-  | ⊥, _ => ⊥
-  | _, ⊥ => ⊥
+  | ⊥, x => x
+  | x, ⊥ => x
   | some Γ, some Δ => if Γ.param = Δ.param then some (FLabel.sup Γ Δ) else ⊥
 
 def FLCtx.linf_bot : WithBot (FLabel ν α) → WithBot (FLabel ν α) → WithBot (FLabel ν α)
@@ -204,6 +254,12 @@ def FLCtx.lsup (L K : FLCtx κ ν α) : FLCtx κ ν α where
     simp only [Finset.mem_union, lsup_bot, mem_support]
     split <;> simp [*, Bot.bot]
 
+theorem FLCtx.lsup_app (L K : FLCtx κ ν α) (x : κ)
+  : (FLCtx.lsup L K) x = lsup_bot (L x) (K x) := rfl
+
+theorem FLCtx.lsup_wk (L K : FLCtx κ ν α) : FLCtx.Wk L (FLCtx.lsup L K) := λx => by
+  simp only [lsup_app, FLCtx.lsup_bot_le]
+
 def FLCtx.rsup (L K : FLCtx κ ν α) : FLCtx κ ν α where
   toFun x := rsup_bot (L x) (K x)
   support := L.support ∪ K.support
@@ -211,8 +267,18 @@ def FLCtx.rsup (L K : FLCtx κ ν α) : FLCtx κ ν α where
     simp only [Finset.mem_union, rsup_bot, mem_support]
     split <;> simp [*, Bot.bot]
 
+theorem FLCtx.rsup_app (L K : FLCtx κ ν α) (x : κ)
+  : (FLCtx.rsup L K) x = rsup_bot (L x) (K x) := rfl
+
+theorem FLCtx.rsup_wk (L K : FLCtx κ ν α) : FLCtx.Wk K (FLCtx.rsup L K) := λx => by
+  simp only [rsup_app, FLCtx.rsup_bot_le]
+
+--TODO: Cmp ==> lsup == rsup
+
 --TODO: lattice lore
 
 --TODO: ECmp and PCmp
 
 --TODO: *strict* lattice lore; need a wrapper or smt...
+
+--TODO: tfw we just overloaded things :(
