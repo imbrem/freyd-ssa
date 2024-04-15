@@ -149,3 +149,21 @@ def FCtx.SubstCons.cons {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finse
             simp only [<-not_mem_support]
             exact hz
     )
+
+theorem FCtx.SubstCons.cmp {Γ Δ Γ' Δ' : FCtx ν (Ty α)} {σ : USubst φ ν}
+  (hσ : Γ.SubstCons σ Δ N) (hσ' : Γ'.SubstCons σ Δ' N') (hΓ : Γ.Cmp Γ') : Δ.Cmp Δ'
+  := hσ.toSubst.cmp hσ'.toSubst hΓ
+
+def FCtx.SubstCons.lsup {Γ Δ Γ' Δ' : FCtx ν (Ty α)} {σ : USubst φ ν}
+  (hσ : Γ.SubstCons σ Δ N) (hσ' : Γ'.SubstCons σ Δ' N) (hΓ : Γ.Cmp Γ') : (Γ.lsup Γ').SubstCons σ (Δ.lsup Δ') N
+  := λx h => by
+    let hΔ : x ∈ Δ.support := by simp only [lsup_support, Finset.mem_inter] at h; exact h.1
+    let hΔ' : x ∈ Δ'.support := by simp only [lsup_support, Finset.mem_inter] at h; exact h.2
+    have hΔc := hσ.toSubst.cmp hσ'.toSubst hΓ
+    let hxΓ := hσ x hΔ
+    let _hxΓ' := hσ' x hΔ' -- BUG: spurious unused variable warning
+    rw [<-hΔc.lsup_wk_left.get_eq h] at hxΓ
+    rw [<-hΔc.lsup_wk_right.get_eq h] at _hxΓ'
+    let hres := hxΓ.lsup _hxΓ'
+    rw [<-lsup_sdiff_except]
+    exact hres

@@ -1001,6 +1001,12 @@ theorem FCtx.Wk.sdiff {Γ Δ : FCtx ν α} (w : Γ.Wk Δ) (N : Finset ν)
   split <;> simp only [Top.top, or_self]
   exact w x
 
+theorem FCtx.lsup_sdiff (Γ Δ : FCtx ν α) (N : Finset ν) : (Γ.sdiff N).lsup (Δ.sdiff N) = (Γ.lsup Δ).sdiff N := by
+  apply FCtx.ext
+  intro x
+  simp only [sdiff_app]
+  split <;> simp [lsup_app, sdiff_app, *]
+
 --TODO: sdiff_eq_erase for singleton, etc...
 
 def FCtx.sdiff_except (Γ : FCtx ν α) (N : Finset ν) (x : ν) : FCtx ν α
@@ -1014,3 +1020,7 @@ theorem FCtx.sdiff_except_eq_disjoint (Γ : FCtx ν α) (N : Finset ν) (x : ν)
 
 theorem FCtx.Wk.sdiff_except (Γ : FCtx ν α) (N : Finset ν) (x : ν)
   : Γ.Wk (Γ.sdiff_except N x) := FCtx.Wk.of_sdiff Γ (N.erase x)
+
+theorem FCtx.lsup_sdiff_except (Γ Δ : FCtx ν α) (N : Finset ν) (x : ν)
+  : (Γ.sdiff_except N x).lsup (Δ.sdiff_except N x) = (Γ.lsup Δ).sdiff_except N x
+  := lsup_sdiff Γ Δ (N.erase x)
