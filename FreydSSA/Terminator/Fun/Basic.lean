@@ -79,8 +79,6 @@ def UTerminator.FWfM.toFWf {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : (
     (ds.toFWf.wkExit (p ▸ FLCtx.lsup_wk _ _))
     (dt.toFWf.wkExit (p ▸ h.lsup_wk_right))
 
--- TODO: FWf ==> FWfM mintrg
-
 structure UTerminator.FWf' (Γ : FCtx ν (Ty α)) (t : UTerminator φ ν κ) (L : FLCtx κ ν (Ty α)) where
   base : FLCtx κ ν (Ty α)
   FWfM : t.FWfM Γ base
