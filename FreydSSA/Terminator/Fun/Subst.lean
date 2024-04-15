@@ -1,6 +1,8 @@
 import FreydSSA.Terminator.Fun.Basic
 import FreydSSA.Term.Fun.Subst
 
+-- TODO: SubstCons variants? Friends?
+
 variable {φ : Type u₁} {ν : Type u₂} {κ : Type u₃} {α : Type u₄} [Φ : InstSet φ (Ty α)]
   [Φc : CohInstSet φ (Ty α)]
   [DecidableEq ν] [DecidableEq κ] [DecidableEq α]
@@ -152,16 +154,44 @@ def FCtx.Subst.toPSingleton {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCt
       simp only [toSingleton, h, FLCtx.singleton_app, ↓reduceIte]
       constructor
 
--- TODO: use LEq lore
+-- BUG: another spurious unused variable warning. Something something "is water part of the essence of bread" something something
+theorem FCtx.LWkBot.psubst_cmp₂ {Γ : FCtx ν (Ty α)} {Δ Ξ M M' : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν}
+  (hΔ : Γ.LWkBot Δ) (hΞ : Γ.LWkBot Ξ) (_hΔ' : FLCtx.PSubstBot Δ σ M) (_hΞ' : FLCtx.PSubstBot Ξ σ M')
+  (hM : FLCtx.CmpBot M M')
+  : FLCtx.CmpBot Δ Ξ
+  := match hΔ, hΞ with
+  | bot, _ => by constructor
+  | _, bot => by constructor
+  | wk A w, wk A' w' => by
+    constructor
+    cases M with
+    | none => cases _hΔ'
+    | some M =>
+      cases _hΔ'
+      cases _hΞ'
+      constructor
+      exact w.cmp₂ w'
+      cases hM
+      rename_i h
+      cases h
+      aesop
 
--- def UTerminator.FWfM.subst {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
---   (hσ : Γ.Subst σ Δ)
---   : t.FWfM Δ L → (L' : FLCtx κ ν (Ty α)) × (t.rewrite σ).FWfM Γ L' × (L'.PSubst σ L)
---   | br _ de rfl => ⟨_, br _ (de.subst hσ) rfl, hσ.toPSingleton _ _⟩
---   | ite de ds dt h rfl =>
---     let ⟨Ls', ds', σs'⟩ := ds.subst hσ;
---     let ⟨Lt', dt', σt'⟩ := dt.subst hσ;
---     ⟨_, ite (de.subst hσ) ds' dt' sorry rfl, σs'.lsup σt'⟩
+theorem FCtx.LWk.psubst_cmp₂ {L K M M' : FLCtx κ ν (Ty α)} {Γ : FCtx ν (Ty α)} {σ : USubst φ ν}
+  (hL : Γ.LWk L) (hK : Γ.LWk K) (hLM : L.PSubst σ M) (hKM : K.PSubst σ M') (hM : M.Cmp M')
+  : L.Cmp K
+  := λx => (hL x).psubst_cmp₂ (hK x) (hLM x) (hKM x) (hM x)
+
+def UTerminator.FWfM.subst {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
+  (hσ : Γ.Subst σ Δ)
+  : t.FWfM Δ L → (L' : FLCtx κ ν (Ty α)) × (t.rewrite σ).FWfM Γ L' × (L'.PSubst σ L)
+  | br _ de rfl => ⟨_, br _ (de.subst hσ) rfl, hσ.toPSingleton _ _⟩
+  | ite de ds dt h rfl =>
+    let ⟨_, ds', σs'⟩ := ds.subst hσ;
+    let ⟨_, dt', σt'⟩ := dt.subst hσ;
+    let ls' := ds'.trgLEq.toLWk;
+    let lt' := dt'.trgLEq.toLWk;
+    let hc := ls'.psubst_cmp₂ lt' σs' σt' h;
+    ⟨_, ite (de.subst hσ) ds' dt' hc rfl, σs'.lsup σt' hc⟩
 
 -- def UTerminator.FWf.subst {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
 --   (hσ : Γ.Subst σ Δ)
