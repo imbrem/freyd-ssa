@@ -40,6 +40,9 @@ def UBody.FWf.maxTrg {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} : FWf p Γ t Δ
   | let1 _ _ dt => dt.maxTrg
   | let2 _ _ _ dt => dt.maxTrg
 
+theorem UBody.FWf.maxTrg_wk {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} (dt : FWf p Γ t Δ)
+  : dt.maxTrg.Wk Δ := by induction dt <;> assumption
+
 --TODO: cmpTrg lore
 
 --TODO: FWf.comp
@@ -52,6 +55,30 @@ inductive UBody.FWfM : Purity → FCtx ν (Ty α) → UBody φ ν → FCtx ν (T
     → FWfM p Γ (let1 x e t) Δ
   | let2 (x y) : e.FWf p Γ (Ty.pair A B) →
     FWfM p ((Γ.cons x A).cons y B) t Δ → FWfM p Γ (let2 x y e t) Δ
+
+-- BUG: spurious unused variable warning
+set_option linter.unusedVariables false in
+def UBody.FWfM.toFWf {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} : FWfM p Γ t Δ → FWf p Γ t Δ
+  | nil _ _ => FWf.nil _ (FCtx.Wk.refl _)
+  | let1 x de dt => FWf.let1 x de dt.toFWf
+  | let2 x y de dt => FWf.let2 x y de dt.toFWf
+
+def UBody.FWf.toFWfM {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} : (dt : FWf p Γ t Δ) → FWfM p Γ t dt.maxTrg
+  | FWf.nil _ w => FWfM.nil _ _
+  | FWf.let1 x de dt => FWfM.let1 x de dt.toFWfM
+  | FWf.let2 x y de dt => FWfM.let2 x y de dt.toFWfM
+
+structure UBody.FWf' (p : Purity) (Γ : FCtx ν (Ty α)) (t : UBody φ ν) (Δ : FCtx ν (Ty α)) :=
+  (live : FCtx ν (Ty α))
+  (FWfM : FWfM p Γ t live)
+  (wk : live.Wk Δ)
+
+def UBody.FWf'.toFWf {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} (dt : UBody.FWf' p Γ t Δ) : FWf p Γ t Δ := dt.FWfM.toFWf.wkExit dt.wk
+
+def UBody.FWf.factor {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} (dt : FWf p Γ t Δ) : UBody.FWf' p Γ t Δ where
+  live := dt.maxTrg
+  FWfM := dt.toFWfM
+  wk := dt.maxTrg_wk
 
 --TODO: min/max lore, e.g. FWf maxTrg and so on...
 
