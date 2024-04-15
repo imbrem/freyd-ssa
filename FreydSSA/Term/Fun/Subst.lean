@@ -8,22 +8,22 @@ variable {φ ν α} [Φ : InstSet φ (Ty α)]
 -- TODO: make into structure or smt?
 -- TODO: should all this be a prop _for FCtx_?
 def FCtx.Subst (Γ : FCtx ν (Ty α)) (σ : USubst φ ν) (Δ : FCtx ν (Ty α)) : Type _
-  := ∀ {x}, (h : x ∈ Δ.support) -> (σ x).FWf 1 Γ (Δ.get h)
+  := ∀ x, (h : x ∈ Δ.support) -> (σ x).FWf 1 Γ (Δ.get x h)
 
 theorem FCtx.Subst.allEq {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCtx ν (Ty α)}
   (hσ hσ' : FCtx.Subst Γ σ Δ) : @hσ = @hσ'
   := by funext _ _; apply UTm.FWf.allEq
 
 def FCtx.Subst.refl (Γ : FCtx ν (Ty α)) : FCtx.Subst Γ (USubst.id φ ν) Γ
-  := λ h => UTm.FWf.var 1 (by rw [Γ.get_eq h])
+  := λ _ h => UTm.FWf.var 1 (by rw [Γ.get_eq h])
 
 def FCtx.Subst.wkEntry {Γ' Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
   (w : Γ'.Wk Γ) (hσ : FCtx.Subst Γ σ Δ) : Γ'.Subst σ Δ
-  := λ h => (hσ h).wk w
+  := λ _ h => (hσ _ h).wk w
 
 def FCtx.Subst.wkExit {Γ Δ Δ' : FCtx ν (Ty α)} {σ : USubst φ ν}
   (hσ : FCtx.Subst Γ σ Δ) (w : Δ.Wk Δ') : Γ.Subst σ Δ'
-  := λ h => w.get_eq h ▸ hσ (w.support_subset h)
+  := λ _ h => w.get_eq h ▸ hσ _ (w.support_subset h)
 
 def FCtx.Subst.ofWk {Γ Δ : FCtx ν (Ty α)}
   (w : Γ.Wk Δ) : FCtx.Subst Γ (USubst.id φ ν) Δ
@@ -31,15 +31,15 @@ def FCtx.Subst.ofWk {Γ Δ : FCtx ν (Ty α)}
 
 def FCtx.Subst.refl_wk {Γ Δ : FCtx ν (Ty α)}
   (hσ : FCtx.Subst Γ (USubst.id φ ν) Δ) : Γ.Wk Δ
-  := Wk.of_eq_on (λ x h => by cases hσ h with | var _ h' => rw [h', Δ.get_eq h])
+  := Wk.of_eq_on (λ x h => by cases hσ _ h with | var _ h' => rw [h', Δ.get_eq h])
 
 def FCtx.Subst.to_ty_eq {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} (hσ : FCtx.Subst Γ σ Δ)
-: ∀ {x}, ∀ {a : (Ty α)}, Δ x = a -> (σ x).FWf 1 Γ a
-:= λh => Δ.get_var h ▸ hσ (Δ.mem_support_of_var _ _ h)
+: ∀ x, ∀ a : (Ty α), Δ x = a -> (σ x).FWf 1 Γ a
+:= λ_ _ h => Δ.get_var _ _ h ▸ hσ _ (Δ.mem_support_of_var _ _ h)
 
 def UTm.FWf.subst {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {e : UTm φ ν} (hσ : Γ.Subst σ Δ)
   : e.FWf p Δ A -> (e.rewrite σ).FWf p Γ A
-  | var p w => (hσ.to_ty_eq w).of_pure
+  | var p w => (hσ.to_ty_eq _ _ w).of_pure
   | op hf de => op hf (de.subst hσ)
   | pair p dl dr => pair p (dl.subst hσ) (dr.subst hσ)
   | unit p => unit p
@@ -47,31 +47,58 @@ def UTm.FWf.subst {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {e : UTm φ ν} 
 
 def FCtx.Subst.comp {Γ Δ Ξ : FCtx ν (Ty α)} {σ : USubst φ ν} {τ : USubst φ ν}
   (hσ : Γ.Subst σ Δ) (hτ : Δ.Subst τ Ξ) : Γ.Subst (τ.comp σ) Ξ
-  := λ h => (hτ h).subst hσ
+  := λ _ h => (hτ _ h).subst hσ
+
+-- def FCtx.Subst.lsupExit {Γ Δ Ξ : FCtx ν (Ty α)} {σ : USubst φ ν}
+--   (hσ : Γ.Subst σ Δ) (hσ' : Γ.Subst σ Ξ) : Γ.Subst σ (Δ.lsup Ξ)
+--   := sorry
+
+theorem FCtx.Subst.cmp {Γ Δ Γ' Δ' : FCtx ν (Ty α)} {σ : USubst φ ν}
+  (hσ : Γ.Subst σ Δ) (hσ' : Γ'.Subst σ Δ') (hΓ : Γ.Cmp Γ') : Δ.Cmp Δ'
+  := λx => if hΔ : x ∈ Δ.support then
+    if hΔ' : x ∈ Δ'.support then by
+      apply Or.inl
+      have hΓl := (hσ _ hΔ).lsup (hσ' _ hΔ')
+      have hΓr := hΓ.lsup_eq_rsup.symm ▸ (hσ _ hΔ).rsup (hσ' _ hΔ')
+      rw [get_eq hΔ, get_eq hΔ', hΓl.tyEq hΓr]
+    else by simp [(not_mem_support _).mp hΔ']
+    else by simp [(not_mem_support _).mp hΔ]
+
+def FCtx.Subst.lsup {Γ Δ Γ' Δ' : FCtx ν (Ty α)} {σ : USubst φ ν}
+  (hσ : Γ.Subst σ Δ) (hσ' : Γ'.Subst σ Δ') (hΓ : Γ.Cmp Γ') : (Γ.lsup Γ').Subst σ (Δ.lsup Δ')
+  := λx h => by
+    let hΔ : x ∈ Δ.support := by simp only [lsup_support, Finset.mem_inter] at h; exact h.1
+    let hΔ' : x ∈ Δ'.support := by simp only [lsup_support, Finset.mem_inter] at h; exact h.2
+    have hΔc := hσ.cmp hσ' hΓ
+    let hxΓ := hσ x hΔ
+    let _hxΓ' := hσ' x hΔ' -- BUG: spurious unused variable warning
+    rw [<-hΔc.lsup_wk_left.get_eq h] at hxΓ
+    rw [<-hΔc.lsup_wk_right.get_eq h] at _hxΓ'
+    exact hxΓ.lsup _hxΓ'
 
 def FCtx.Subst.cons {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
   (x : ν) (A : Ty α) (hσ : Γ.Subst σ Δ) (hx : x ∉ Γ.support) : (Γ.cons x A).Subst (σ.cons x) (Δ.cons x A)
-  := λ{y} h => if p: x = y then
+  := λy h => if p: x = y then
     σ.cons_eq_left p ▸ UTm.FWf.var 1 (by cases p; rw [Γ.cons_eq _ _ _ rfl, <-get_eq,  Δ.cons_eq _ _ _ rfl])
   else by
     rw [FCtx.cons_get_ne _ _ _ (Ne.symm p) _, σ.cons_ne p]
-    exact (hσ (cons_mem_support_ne _ _ _ (Ne.symm p) h)).wk (Wk.cons_not_mem _ _ _ hx)
+    exact (hσ _ (cons_mem_support_ne _ _ _ (Ne.symm p) h)).wk (Wk.cons_not_mem _ _ _ hx)
 
 -- TODO: can even do an ordered SubstCons, where you erase everything _over_ a given x, and have everything over bottom
 -- But that's pretty over-complicated...
 def FCtx.SubstCons (Γ : FCtx ν (Ty α)) (σ : USubst φ ν) (Δ : FCtx ν (Ty α)) (N : Finset ν) : Type _
-  := ∀ {x}, (h : x ∈ Δ.support) -> (σ x).FWf 1 (Γ.sdiff_except N x) (Δ.get h)
+  := ∀ x, (h : x ∈ Δ.support) -> (σ x).FWf 1 (Γ.sdiff_except N x) (Δ.get _ h)
 
 def FCtx.SubstCons.refl (Γ : FCtx ν (Ty α)) (N : Finset ν) : FCtx.SubstCons Γ (USubst.id φ ν) Γ N
-  := λ h => UTm.FWf.var 1 (by simp [<-get_eq, sdiff_except, sdiff_app])
+  := λ_ h => UTm.FWf.var 1 (by simp [<-get_eq, sdiff_except, sdiff_app])
 
 def FCtx.SubstCons.wkEntry {Γ' Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
   (w : Γ'.Wk Γ) (hσ : FCtx.SubstCons Γ σ Δ N) : Γ'.SubstCons σ Δ N
-  := λ h => (hσ h).wk (w.sdiff _)
+  := λ_ h => (hσ _ h).wk (w.sdiff _)
 
 def FCtx.SubstCons.wkExit {Γ Δ Δ' : FCtx ν (Ty α)} {σ : USubst φ ν}
   (hσ : FCtx.SubstCons Γ σ Δ N) (w : Δ.Wk Δ') : Γ.SubstCons σ Δ' N
-  := λ h => w.get_eq h ▸ hσ (w.support_subset h)
+  := λ_ h => w.get_eq h ▸ hσ _ (w.support_subset h)
 
 theorem FCtx.SubstCons.allEq {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCtx ν (Ty α)} {N : Finset ν}
   (hσ hσ' : FCtx.SubstCons Γ σ Δ N) : @hσ = @hσ'
@@ -79,15 +106,15 @@ theorem FCtx.SubstCons.allEq {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FC
 
 def FCtx.SubstCons.toSubst {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCtx ν (Ty α)} {N : Finset ν}
   (hσ : FCtx.SubstCons Γ σ Δ N) : FCtx.Subst Γ σ Δ
-  := λh => (hσ h).wk (FCtx.Wk.sdiff_except Γ N _)
+  := λ_ h => (hσ _ h).wk (FCtx.Wk.sdiff_except Γ N _)
 
 def FCtx.SubstCons.ofSubst {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCtx ν (Ty α)} {N : Finset ν}
   (hσ : FCtx.Subst Γ σ Δ) (hΓ : Disjoint Γ.support N) : FCtx.SubstCons Γ σ Δ N
-  := λh => (Γ.sdiff_except_eq_disjoint _ _ hΓ).symm ▸ hσ h
+  := λ_ h => (Γ.sdiff_except_eq_disjoint _ _ hΓ).symm ▸ hσ _ h
 
 def FCtx.SubstCons.subset {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCtx ν (Ty α)} {N N' : Finset ν}
   (hσ : FCtx.SubstCons Γ σ Δ N) (hN : N' ⊆ N) : FCtx.SubstCons Γ σ Δ N'
-  := λh => (hσ h).wk (FCtx.Wk.sdiff_subset _ _ _ (Finset.erase_subset_erase _ hN))
+  := λ_ h => (hσ _ h).wk (FCtx.Wk.sdiff_subset _ _ _ (Finset.erase_subset_erase _ hN))
 
 def FCtx.SubstCons.cons {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
   (x : ν) (A : Ty α) (hσ : Γ.SubstCons σ Δ N) (hx : x ∈ N) : (Γ.cons x A).SubstCons (σ.cons x) (Δ.cons x A) N
@@ -97,7 +124,7 @@ def FCtx.SubstCons.cons {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finse
     simp [<-get_eq, cons_eq, sdiff_except, sdiff_app])
   else by
     rw [FCtx.cons_get_ne _ _ _ (Ne.symm p) _, σ.cons_ne p]
-    exact (hσ (cons_mem_support_ne _ _ _ (Ne.symm p) h)).wk (by
+    exact (hσ _ (cons_mem_support_ne _ _ _ (Ne.symm p) h)).wk (by
       intro z
       simp only [sdiff_except, sdiff_app, Finset.mem_erase]
       split

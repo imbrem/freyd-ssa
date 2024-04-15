@@ -124,19 +124,19 @@ def FCtx.cons_inj {x : ν} {a a' : α} {Γ : FCtx ν α}
   have hr : Γ.cons x a' x = a' := by simp [FCtx.cons, DFunLike.coe]
   by rw [<-WithTop.coe_inj, <-hl, <-hr, h]
 
-def FCtx.get {Γ : FCtx ν α} {x : ν} (h : x ∈ Γ.support) : α :=
+def FCtx.get {Γ : FCtx ν α} (x : ν) (h : x ∈ Γ.support) : α :=
   (Γ x).get (isSome_of_mem_support h)
 
 theorem FCtx.get_eq {Γ : FCtx ν α} {x : ν} (h : x ∈ Γ.support)
-  : Γ x = Γ.get h := by
+  : Γ x = Γ.get x h := by
   simp [FCtx.get, Option.get]
   split
   rename_i h _
   rw [h]
   rfl
 
-theorem FCtx.get_var {Γ : FCtx ν α} {x : ν} {a : α} (h : Γ x = a)
-  : Γ.get (Γ.mem_support_of_var _ _ h) = a := by
+theorem FCtx.get_var {Γ : FCtx ν α} (x : ν) (a : α) (h : Γ x = a)
+  : Γ.get x (Γ.mem_support_of_var _ _ h) = a := by
   simp [FCtx.get, Option.get]
   split
   rename_i h' _
@@ -145,10 +145,10 @@ theorem FCtx.get_var {Γ : FCtx ν α} {x : ν} {a : α} (h : Γ x = a)
   rfl
 
 theorem FCtx.get_eq_of {Γ Δ : FCtx ν α} {x y : ν} (hΓ : x ∈ Γ.support) (hΔ : y ∈ Δ.support) (h : Γ x = Δ y)
-  : Γ.get hΓ = Δ.get hΔ := Option.some_injective _ $ ((Γ.get_eq hΓ).symm.trans h).trans (Δ.get_eq hΔ)
+  : Γ.get x hΓ = Δ.get y hΔ := Option.some_injective _ $ ((Γ.get_eq hΓ).symm.trans h).trans (Δ.get_eq hΔ)
 
 theorem FCtx.cons_get_ne (x : ν) (a : α) (Γ : FCtx ν α) (hx : y ≠ x) (hy: y ∈ (Γ.cons x a).support)
-   : (Γ.cons x a).get hy = Γ.get (cons_mem_support_ne x a Γ hx hy)
+   : (Γ.cons x a).get y hy = Γ.get y (cons_mem_support_ne x a Γ hx hy)
   := FCtx.get_eq_of hy (cons_mem_support_ne _ _ _ hx hy) (by simp [cons_app, hx])
 
 def FCtx.Wk (Γ Δ : FCtx ν α) : Prop := ∀x, Δ x = ⊤ ∨ Δ x = Γ x
@@ -311,11 +311,19 @@ theorem FCtx.Wk.eq_on {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ)
   | inr h => exact h
 
 theorem FCtx.Wk.get_eq {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ)
-  : ∀{x} (h : x ∈ Δ.support), Δ.get h = Γ.get (w.support_subset h) := by
+  : ∀{x} (h : x ∈ Δ.support), Δ.get x h = Γ.get x (w.support_subset h) := by
   intro x h
   simp only [get]
   congr 1
   apply w.eq_on x h
+
+theorem FCtx.Cmp.get_eq {Γ Δ : FCtx ν α} {x : ν} (c : FCtx.Cmp Γ Δ) (h : x ∈ Γ.support) (h' : x ∈ Δ.support)
+  : Γ.get x h = Δ.get x h' := by
+  cases c x with
+  | inl hc => exact get_eq_of _ _ hc
+  | inr hc =>
+    simp only [<-not_mem_support] at hc
+    cases hc <;> contradiction
 
 theorem FCtx.Wk.of_eq_on {Γ Δ : FCtx ν α}
   : (∀x ∈ Δ.support, Δ x = Γ x) → FCtx.Wk Γ Δ := by
