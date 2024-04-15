@@ -44,6 +44,15 @@ theorem FLCtx.PSubstBot.param_eq {Γ : FLabel ν (Ty α)} {σ : USubst φ ν} {�
   (hσ : @PSubstBot _ ν α Φ (↑Γ) σ (↑Δ)) : Γ.param = Δ.param
   := by cases hσ; assumption
 
+def FLCtx.PSubstBot.wkExit {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ Δ' : WithBot (FLabel ν (Ty α))}
+  (hσ : PSubstBot Γ σ Δ) (w : Δ ≤ Δ') : SubstBot Γ σ Δ'
+  := match hσ, Δ' with
+  | bot _, _ => SubstBot.bot _ _
+  | subst hσ hparam, ⊥ => by simp at w
+  | subst hσ hparam, some Δ' =>
+    have w := FLabel.Wk.of_le_coe w;
+    SubstBot.subst (hσ.wkExit w.live) (hparam.trans w.param)
+
 def FLCtx.PSubstBot.toSubstBot
   {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))}
   : PSubstBot Γ σ Δ → SubstBot Γ σ Δ
@@ -193,7 +202,14 @@ def UTerminator.FWfM.subst {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
     let hc := ls'.psubst_cmp₂ lt' σs' σt' h;
     ⟨_, ite (de.subst hσ) ds' dt' hc rfl, σs'.lsup σt' hc⟩
 
--- def UTerminator.FWf.subst {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
---   (hσ : Γ.Subst σ Δ)
---   : t.FWf Δ L → (L' : FLCtx κ ν (Ty α)) × (t.rewrite σ).FWf Γ L' × (L'.Subst σ L)
---   := sorry
+def FLCtx.PSubst.wkExit {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  {K' : FLCtx κ ν (Ty α)} (hσ : L.PSubst σ K) (w : K.Wk K') : L.Subst σ K'
+  := λx => (hσ x).wkExit (w x)
+
+def UTerminator.FWf'.subst {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
+  (hσ : Γ.Subst σ Δ) (dt : t.FWf' Δ L) : (L' : FLCtx κ ν (Ty α)) × (t.rewrite σ).FWfM Γ L' × (L'.Subst σ L)
+  := let dt' := dt.FWfM.subst hσ; ⟨dt'.1, dt'.2.1, dt'.2.2.wkExit dt.wk⟩
+
+def UTerminator.FWf.subst {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
+  (hσ : Γ.Subst σ Δ) (dt : t.FWf Δ L) : (L' : FLCtx κ ν (Ty α)) × (t.rewrite σ).FWfM Γ L' × (L'.Subst σ L)
+  := dt.factor.subst hσ

@@ -154,6 +154,9 @@ theorem FLabel.Wk.toSingleton {L K : FLabel ν α} (x : κ) (w : FLabel.Wk L K)
     exact w
     simp
 
+def FLabel.Wk.of_le_coe {L K : FLabel ν α} (h : (L : WithBot (FLabel ν α)) ≤ (K : WithBot (FLabel ν α))) : L ≤ K
+  := by simp only [WithBot.coe_le_coe] at h; exact h
+
 def FCtx.toLabel (Γ : FCtx ν α) (param : α) : FLabel ν α where
   live := Γ
   param := param
