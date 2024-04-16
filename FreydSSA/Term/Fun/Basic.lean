@@ -2,7 +2,7 @@ import Mathlib.Logic.Lemmas
 
 import FreydSSA.Ctx.Var.Fun
 import FreydSSA.InstSet
-import FreydSSA.Untyped
+import FreydSSA.Untyped.Basic
 
 variable {φ ν α} [Φ : InstSet φ (Ty α)]
   [Φc : CohInstSet φ (Ty α)]
