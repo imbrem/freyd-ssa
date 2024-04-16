@@ -476,10 +476,15 @@ theorem UBB.renameLabel_comp {φ ν κ κ'}
   : β.renameLabel (σ' ∘ σ) = (β.renameLabel σ).renameLabel σ'
   := by simp [UBB.renameLabel, UTerminator.renameLabel_comp]
 
-def UBB.rewrite {φ ν κ}
-  (σ : ν → UTm φ ν) (β : UBB φ ν κ) : UBB φ ν κ where
+def UBB.rewrite
+  (σ : USubst φ ν) (β : UBB φ ν κ) : UBB φ ν κ where
   body := β.body.rewrite σ
   terminator := β.terminator.rewrite σ
+
+def UBB.subst
+  (σ : USubst φ ν) (β : UBB φ ν κ) : UBB φ ν κ where
+  body := β.body.subst σ
+  terminator := β.terminator.rewrite (σ.cons_list β.body.defs)
 
 theorem UBB.rewrite_var {φ ν κ}
   (β : UBB φ ν κ) : β.rewrite UTm.var = β
