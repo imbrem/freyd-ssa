@@ -126,6 +126,10 @@ theorem FLCtx.ext {L K : FLCtx κ ν α} (h : ∀x, L x = K x)
   : L = K
   := DFunLike.coe_injective' (by funext x; apply h)
 
+theorem FLCtx.eq_bot_of_not_mem_support {L : FLCtx κ ν α} (x : κ) (hx : x ∉ L.support) : L x = ⊥ := by
+  simp only [mem_support, ne_eq, not_not] at hx;
+  exact hx
+
 def FLCtx.cons (x : κ) (L : FLabel ν α) (K : FLCtx κ ν α) : FLCtx κ ν α where
   toFun := Function.update K.toFun x L
   support := insert x K.support
@@ -177,6 +181,12 @@ theorem FLCtx.Wk.cons {L K : FLCtx κ ν α} (x : κ) (w : FLabel.Wk Γ Δ) (w' 
 theorem FLCtx.Wk.cons_refl {L K : FLCtx κ ν α} (x : κ) (Γ : FLabel ν α) (w' : FLCtx.Wk L K)
   : FLCtx.Wk (FLCtx.cons x Γ L) (FLCtx.cons x Γ K)
   := cons x (FLabel.Wk.refl _) w'
+
+theorem FLCtx.Wk.of_cons {L : FLCtx κ ν α} (x : κ) (Γ : FLabel ν α) (hL : x ∉ L.support)
+  : FLCtx.Wk L (FLCtx.cons x Γ L)
+  := λy => if h: y = x
+  then by cases h; simp [cons_app, eq_bot_of_not_mem_support _ hL]
+  else by simp [cons_app, h]
 
 theorem FLabel.Wk.toSingleton {L K : FLabel ν α} (x : κ) (w : FLabel.Wk L K)
   : FLCtx.Wk (FLCtx.singleton x L) (FLCtx.singleton x K)
