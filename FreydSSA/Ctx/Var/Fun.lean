@@ -95,11 +95,12 @@ def FCtx.map_ty (Γ : FCtx ν α) (f : α → β) : FCtx ν β where
 
 def FCtx.cons (x : ν) (a : α) (Γ : FCtx ν α) : FCtx ν α where
   toFun := Function.update Γ.toFun x a
-  support := Γ.support ∪ {x}
-  mem_support_toFun := by
-    intro y
-    simp only [Finset.mem_union, Function.update]
+  support := insert x Γ.support
+  mem_support_toFun _ := by
+    simp only [Function.update]
     split <;> simp [*, mem_support_toFun]
+
+-- TODO: cons vs update
 
 theorem FCtx.cons_eq (x : ν) (y : ν) (a : α) (Γ : FCtx ν α)
   (h : x = y) : (Γ.cons x a) y = a := by

@@ -10,6 +10,8 @@ structure FLabel (ν : Type _) (α : Type _) where
   live : FCtx ν α
   param : α
 
+def FLabel.toFCtx (L : FLabel ν α) (x : ν) : FCtx ν α := L.live.cons x L.param
+
 theorem FLabel.ext {L K : FLabel ν α} (h : L.live = K.live) (h' : L.param = K.param)
   : L = K := by
   cases L; cases K
@@ -123,6 +125,17 @@ theorem FLCtx.mem_support {L : FLCtx κ ν α} (ℓ : κ)
 theorem FLCtx.ext {L K : FLCtx κ ν α} (h : ∀x, L x = K x)
   : L = K
   := DFunLike.coe_injective' (by funext x; apply h)
+
+def FLCtx.cons (x : κ) (L : FLabel ν α) (K : FLCtx κ ν α) : FLCtx κ ν α where
+  toFun := Function.update K.toFun x L
+  support := insert x K.support
+  mem_support_toFun _ := by
+    simp only [Function.update]
+    split <;> simp [*, mem_support_toFun]
+
+-- TODO: cons lore
+
+-- TODO: cons vs update
 
 def FLCtx.Wk (L K : FLCtx κ ν α) : Prop := ∀x, L x ≤ K x
 
