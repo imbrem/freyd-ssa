@@ -26,6 +26,19 @@ def UCFG.FWfI.wkExit {L : FLCtx κ ν (Ty α)} {g : UCFG φ (Ty α) ν κ} {K K'
   | cons ℓ x A dg dβ => cons ℓ x A (dg.wkExit (w.cons_refl ℓ _)) dβ
   | dead ℓ x A dg hℓ => dead ℓ x A (dg.wkExit w) hℓ
 
+inductive UCFG.FWfILM : FLCtx κ ν (Ty α) → UCFG φ (Ty α) ν κ → FLCtx κ ν (Ty α) → Type _
+  | nil (L) : FWfILM L nil L
+  | cons (ℓ x A) : FWfILM L g (K.cons ℓ Γℓ) → β.FWf 0 (Γℓ.toFCtx x) L → FWfILM L (g.cons ℓ x A β) K
+
+-- Note: if there are multiple definitions for g, this forces us to ignore them _all_
+-- More subtle hax could allow us to redefine things... but later...
+inductive UCFG.FWfIM : FLCtx κ ν (Ty α) → UCFG φ (Ty α) ν κ → FLCtx κ ν (Ty α) → Type _
+  | nil (L) : FWfIM L nil L
+  | cons (ℓ x A) : FWfIM L g (K.cons ℓ Γℓ) → ℓ ∉ K.support → β.FWf 0 (Γℓ.toFCtx x) L → FWfIM L (g.cons ℓ x A β) K
+  | dead (ℓ x A) : FWfIM L g K → ℓ ∉ L.support → FWfIM L (g.cons ℓ x A β) K
+
+-- TODO: transformation lore
+
 -- TODO: composition lore
 
 -- TODO: minimal variants?

@@ -32,6 +32,14 @@ theorem FLCtx.PSubstBot.bot_mpr {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst 
   (hσ : PSubstBot Γ σ Δ) : Δ = ⊥ → Γ = ⊥
   := λh => by cases hσ <;> simp at *
 
+theorem FLCtx.PSubstBot.bot_iff {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))}
+  (hσ : PSubstBot Γ σ Δ) : Γ = ⊥ ↔ Δ = ⊥
+  := ⟨hσ.bot_mp, hσ.bot_mpr⟩
+
+theorem FLCtx.PSubstBot.bot_ne_iff {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))}
+  (hσ : PSubstBot Γ σ Δ) : Γ ≠ ⊥ ↔ Δ ≠ ⊥
+  := by simp [hσ.bot_iff]
+
 theorem FLCtx.PSubstBot.is_some_mp {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))}
   (hσ : PSubstBot Γ σ Δ) : Γ.isSome → Δ.isSome
   := λh => by cases hσ <;> simp [Option.isSome] at *
@@ -69,6 +77,42 @@ theorem FLCtx.PSubst.bot_mp {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : F
 theorem FLCtx.PSubst.bot_mpr {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
   (hσ : L.PSubst σ K) (x : κ) : K x = ⊥ → L x = ⊥
   := (hσ x).bot_mpr
+
+theorem FLCtx.PSubst.bot_iff {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubst σ K) (x : κ) : L x = ⊥ ↔ K x = ⊥
+  := (hσ x).bot_iff
+
+theorem FLCtx.PSubst.bot_ne_iff {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubst σ K) (x : κ) : L x ≠ ⊥ ↔ K x ≠ ⊥
+  := (hσ x).bot_ne_iff
+
+theorem FLCtx.PSubst.mem_support_iff {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubst σ K) (x : κ) : x ∈ L.support ↔ x ∈ K.support
+  := by simp [FLCtx.mem_support, (hσ x).bot_iff]
+
+theorem FLCtx.PSubst.mem_support_mp {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubst σ K) (x : κ) : x ∈ L.support → x ∈ K.support
+  := by simp [FLCtx.mem_support, (hσ x).bot_iff]
+
+theorem FLCtx.PSubst.mem_support_mpr {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubst σ K) (x : κ) : x ∈ K.support → x ∈ L.support
+  := by simp [FLCtx.mem_support, (hσ x).bot_iff]
+
+theorem FLCtx.PSubst.not_mem_support_iff {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubst σ K) (x : κ) : x ∉ L.support ↔ x ∉ K.support
+  := by simp [FLCtx.mem_support, (hσ x).bot_iff]
+
+theorem FLCtx.PSubst.not_mem_support_mp {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubst σ K) (x : κ) : x ∉ L.support → x ∉ K.support
+  := by simp [FLCtx.mem_support, (hσ x).bot_iff]
+
+theorem FLCtx.PSubst.not_mem_support_mpr {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubst σ K) (x : κ) : x ∉ K.support → x ∉ L.support
+  := by simp [FLCtx.mem_support, (hσ x).bot_iff]
+
+theorem FLCtx.PSubst.support_eq {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubst σ K) : L.support = K.support
+  := Finset.ext hσ.mem_support_iff
 
 theorem FLCtx.PSubst.is_some_mp {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
   (hσ : L.PSubst σ K) (x : κ) : (L x).isSome → (K x).isSome
@@ -242,6 +286,10 @@ theorem FLCtx.PSubstConsBot.bot_mpr {Γ : WithBot (FLabel ν (Ty α))} {σ : USu
   (hσ : PSubstConsBot Γ σ Δ N) : Δ = ⊥ → Γ = ⊥
   := λh => by cases hσ <;> simp at *
 
+theorem FLCtx.PSubstConsBot.bot_iff {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))}
+  (hσ : PSubstConsBot Γ σ Δ N) : Γ = ⊥ ↔ Δ = ⊥
+  := ⟨hσ.bot_mp, hσ.bot_mpr⟩
+
 theorem FLCtx.PSubstConsBot.is_some_mp {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))}
   (hσ : PSubstConsBot Γ σ Δ N) : Γ.isSome → Δ.isSome
   := λh => by cases hσ <;> simp [Option.isSome] at *
@@ -280,6 +328,34 @@ theorem FLCtx.PSubstCons.bot_mp {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K
 theorem FLCtx.PSubstCons.bot_mpr {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
   (hσ : L.PSubstCons σ K N) (x : κ) : K x = ⊥ → L x = ⊥
   := (hσ x).bot_mpr
+
+theorem FLCtx.PSubstCons.bot_iff {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubstCons σ K N) (x : κ) : L x = ⊥ ↔ K x = ⊥
+  := (hσ x).bot_iff
+
+theorem FLCtx.PSubstCons.mem_support_iff {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubstCons σ K N) (x : κ) : x ∈ L.support ↔ x ∈ K.support
+  := by simp [FLCtx.mem_support, (hσ x).bot_iff]
+
+theorem FLCtx.PSubstCons.mem_support_mp {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubstCons σ K N) (x : κ) : x ∈ L.support → x ∈ K.support
+  := by simp [FLCtx.mem_support, (hσ x).bot_iff]
+
+theorem FLCtx.PSubstCons.mem_support_mpr {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubstCons σ K N) (x : κ) : x ∈ K.support → x ∈ L.support
+  := by simp [FLCtx.mem_support, (hσ x).bot_iff]
+
+theorem FLCtx.PSubstCons.not_mem_support_iff {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubstCons σ K N) (x : κ) : x ∉ L.support ↔ x ∉ K.support
+  := by simp [FLCtx.mem_support, (hσ x).bot_iff]
+
+theorem FLCtx.PSubstCons.not_mem_support_mp {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubstCons σ K N) (x : κ) : x ∉ L.support → x ∉ K.support
+  := by simp [FLCtx.mem_support, (hσ x).bot_iff]
+
+theorem FLCtx.PSubstCons.not_mem_support_mpr {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubstCons σ K N) (x : κ) : x ∉ K.support → x ∉ L.support
+  := by simp [FLCtx.mem_support, (hσ x).bot_iff]
 
 theorem FLCtx.PSubstCons.is_some_mp {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
   (hσ : L.PSubstCons σ K N) (x : κ) : (L x).isSome → (K x).isSome

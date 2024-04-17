@@ -140,6 +140,13 @@ theorem FLCtx.cons_app (x : κ) (L : FLabel ν α) (K : FLCtx κ ν α) (y : κ)
 
 -- TODO: cons vs update
 
+def FLCtx.erase (x : κ) (L : FLCtx κ ν α) : FLCtx κ ν α where
+  toFun y := if y = x then ⊥ else L y
+  support := L.support.erase x
+  mem_support_toFun y := by
+    simp only [Finset.mem_erase, mem_support_toFun]
+    split <;> aesop
+
 def FLCtx.Wk (L K : FLCtx κ ν α) : Prop := ∀x, L x ≤ K x
 
 theorem FLCtx.Wk.refl (L : FLCtx κ ν α) : FLCtx.Wk L L := λ_ => le_refl _

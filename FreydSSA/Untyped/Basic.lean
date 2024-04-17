@@ -795,7 +795,7 @@ def UCFG.toUGRegion {φ α ν κ}
 
 inductive UPTerminator (φ : Type _) (ν : Type _) (κ : Type _)
   : Type _ where
-  | br : κ → (ν → UTm φ ν) → UPTerminator φ ν κ
+  | br : κ → USubst φ ν → UPTerminator φ ν κ
   | ite : UTm φ ν → UPTerminator φ ν κ → UPTerminator φ ν κ → UPTerminator φ ν κ
 
 structure UPBB (φ : Type _) (ν : Type _) (κ : Type _) : Type _ where
