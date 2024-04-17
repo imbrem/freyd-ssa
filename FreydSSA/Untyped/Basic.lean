@@ -537,7 +537,7 @@ theorem UCFG.renameLabel_comp {φ α ν κ κ'}
   := by induction Φ <;> simp [UCFG.renameLabel, UBB.renameLabel_comp, *]
 
 def UCFG.rewrite {φ α ν κ}
-  (σ : ν → UTm φ ν) : UCFG φ α ν κ → UCFG φ α ν κ
+  (σ : USubst φ ν) : UCFG φ α ν κ → UCFG φ α ν κ
   | nil => nil
   | cons Φ κ x A b => cons (Φ.rewrite σ) κ x A (b.rewrite σ)
 
@@ -546,7 +546,7 @@ theorem UCFG.rewrite_var {φ α ν κ}
     induction Φ <;> simp [UCFG.rewrite, UBB.rewrite_var, *]
 
 theorem UCFG.rewrite_comp {φ α ν κ}
-  (σ σ' : ν → UTm φ ν) (Φ : UCFG φ α ν κ)
+  (σ σ' : USubst φ ν) (Φ : UCFG φ α ν κ)
   : Φ.rewrite (UTm.comp σ σ') = (Φ.rewrite σ).rewrite σ'
   := by induction Φ <;> simp [UCFG.rewrite, UBB.rewrite_comp, *]
 

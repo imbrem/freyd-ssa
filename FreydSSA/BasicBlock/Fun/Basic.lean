@@ -19,6 +19,14 @@ def UBB.FWf.wkEntry {p : Purity} {Γ Δ : FCtx ν (Ty α)} {β : UBB φ ν κ} {
     terminator := dβ.terminator.wkEntry db.wk
   }
 
+def UBB.FWf.wkExit {p : Purity} {Γ : FCtx ν (Ty α)} {β : UBB φ ν κ} {L K : FLCtx κ ν (Ty α)}
+  (dβ : UBB.FWf p Γ β L) (wk : L.Wk K) : UBB.FWf p Γ β K :=
+  {
+    live := dβ.live,
+    body := dβ.body,
+    terminator := dβ.terminator.wkExit wk
+  }
+
 structure UBB.FWfM (p : Purity) (Γ : FCtx ν (Ty α)) (β : UBB φ ν κ) (L : FLCtx κ ν (Ty α)) : Type _ :=
   (live : FCtx ν (Ty α))
   (body : β.body.FWfM p Γ live)

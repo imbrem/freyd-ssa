@@ -83,3 +83,5 @@ def UBody.FWf.factor {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} (dt : FWf p Γ 
 --TODO: min/max lore, e.g. FWf maxTrg and so on...
 
 --TODO: FWf'
+
+--TODO: body composition lore

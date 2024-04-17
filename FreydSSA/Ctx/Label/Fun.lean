@@ -133,6 +133,9 @@ def FLCtx.cons (x : κ) (L : FLabel ν α) (K : FLCtx κ ν α) : FLCtx κ ν α
     simp only [Function.update]
     split <;> simp [*, mem_support_toFun]
 
+theorem FLCtx.cons_app (x : κ) (L : FLabel ν α) (K : FLCtx κ ν α) (y : κ)
+  : (FLCtx.cons x L K) y = if y = x then ↑L else K y := by simp [cons, DFunLike.coe, Function.update]
+
 -- TODO: cons lore
 
 -- TODO: cons vs update
@@ -157,6 +160,16 @@ theorem FLCtx.Wk.ge {L K : FLCtx κ ν α} (h : FLCtx.Wk L K) : L ≤ K := h
 theorem FLCtx.Wk.le {L K : FLCtx κ ν α} (h : FLCtx.Wk L K) : K ≥ L := h
 theorem FLCtx.Wk.of_ge {L K : FLCtx κ ν α} (h : K ≥ L) : FLCtx.Wk L K := h
 theorem FLCtx.Wk.of_le {L K : FLCtx κ ν α} (h : L ≤ K) : FLCtx.Wk L K := h
+
+theorem FLCtx.Wk.cons {L K : FLCtx κ ν α} (x : κ) (w : FLabel.Wk Γ Δ) (w' : FLCtx.Wk L K)
+  : FLCtx.Wk (FLCtx.cons x Γ L) (FLCtx.cons x Δ K)
+  := λy => if h: y = x
+  then by cases h; simp only [cons_app, ↓reduceIte, WithBot.coe_le_coe]; exact w
+  else by simp [cons_app, h, w' y]
+
+theorem FLCtx.Wk.cons_refl {L K : FLCtx κ ν α} (x : κ) (Γ : FLabel ν α) (w' : FLCtx.Wk L K)
+  : FLCtx.Wk (FLCtx.cons x Γ L) (FLCtx.cons x Γ K)
+  := cons x (FLabel.Wk.refl _) w'
 
 theorem FLabel.Wk.toSingleton {L K : FLabel ν α} (x : κ) (w : FLabel.Wk L K)
   : FLCtx.Wk (FLCtx.singleton x L) (FLCtx.singleton x K)
