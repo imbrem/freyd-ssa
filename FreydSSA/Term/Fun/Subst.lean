@@ -77,12 +77,12 @@ def FCtx.Subst.lsup {Γ Δ Γ' Δ' : FCtx ν (Ty α)} {σ : USubst φ ν}
     exact hxΓ.lsup _hxΓ'
 
 def FCtx.Subst.cons {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
-  (x : ν) (A : Ty α) (hσ : Γ.Subst σ Δ) (hx : x ∉ Γ.support) : (Γ.cons x A).Subst (σ.cons x) (Δ.cons x A)
+  (x : ν) (A : Ty α) (hσ : Γ.Subst σ Δ) (hx : x ∉ Γ.support) : (Γ.update x A).Subst (σ.cons x) (Δ.update x A)
   := λy h => if p: x = y then
-    σ.cons_eq_left p ▸ UTm.FWf.var 1 (by cases p; rw [Γ.cons_eq _ _ _ rfl, <-get_eq,  Δ.cons_eq _ _ _ rfl])
+    σ.cons_eq_left p ▸ UTm.FWf.var 1 (by cases p; rw [Γ.update_eq _ _ _ rfl, <-get_eq,  Δ.update_eq _ _ _ rfl])
   else by
-    rw [FCtx.cons_get_ne _ _ _ (Ne.symm p) _, σ.cons_ne p]
-    exact (hσ _ (cons_mem_support_ne _ _ _ (Ne.symm p) h)).wk (Wk.cons_not_mem _ _ _ hx)
+    rw [FCtx.update_get_ne _ _ _ (Ne.symm p) _, σ.cons_ne p]
+    exact (hσ _ (update_mem_support_ne _ _ _ (Ne.symm p) h)).wk (Wk.update_not_mem _ _ _ hx)
 
 -- TODO: can even do an ordered SubstCons, where you erase everything _over_ a given x, and have everything over bottom
 -- But that's pretty over-complicated...
@@ -117,14 +117,14 @@ def FCtx.SubstCons.subset {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCtx 
   := λ_ h => (hσ _ h).wk (FCtx.Wk.sdiff_subset _ _ _ (Finset.erase_subset_erase _ hN))
 
 def FCtx.SubstCons.cons {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
-  (x : ν) (A : Ty α) (hσ : Γ.SubstCons σ Δ N) (hx : x ∈ N) : (Γ.cons x A).SubstCons (σ.cons x) (Δ.cons x A) N
+  (x : ν) (A : Ty α) (hσ : Γ.SubstCons σ Δ N) (hx : x ∈ N) : (Γ.update x A).SubstCons (σ.cons x) (Δ.update x A) N
   := λ{y} h => if p: x = y then
     σ.cons_eq_left p ▸ UTm.FWf.var 1 (by
     cases p
-    simp [<-get_eq, cons_eq, sdiff_except, sdiff_app])
+    simp [<-get_eq, update_eq, sdiff_except, sdiff_app])
   else by
-    rw [FCtx.cons_get_ne _ _ _ (Ne.symm p) _, σ.cons_ne p]
-    exact (hσ _ (cons_mem_support_ne _ _ _ (Ne.symm p) h)).wk (by
+    rw [FCtx.update_get_ne _ _ _ (Ne.symm p) _, σ.cons_ne p]
+    exact (hσ _ (update_mem_support_ne _ _ _ (Ne.symm p) h)).wk (by
       intro z
       simp only [sdiff_except, sdiff_app, Finset.mem_erase]
       split
@@ -135,12 +135,12 @@ def FCtx.SubstCons.cons {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finse
         | inl h' =>
           cases h'
           apply Or.inr
-          rw [FCtx.cons_ne]
+          rw [FCtx.update_ne]
           exact Ne.symm p
         | inr h' =>
           if hz : z ∈ Γ.support then
             apply Or.inr
-            rw [FCtx.cons_ne]
+            rw [FCtx.update_ne]
             intro hz
             cases hz
             exact h' hx
