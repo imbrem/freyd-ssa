@@ -106,6 +106,24 @@ theorem USubst.cons_list_cons_list'
       . rfl
     . rfl
 
+theorem USubst.eq_cons_list (σ : USubst φ ν) (xs : List ν)
+  (hσc : {x | x ∈ xs}.EqOn σ UTm.var)
+  : σ.cons_list xs = σ := by
+  induction xs with
+  | nil => rfl
+  | cons x xs I =>
+    rw [cons_cons_list, I]
+    funext y
+    rw [cons, Function.update]
+    split
+    . rename_i h
+      cases h
+      rw [<-hσc (by simp)]
+    . rfl
+    apply hσc.mono
+    simp
+    aesop
+
 theorem USubst.cons_cons_list_rev (x : ν) (xs : List ν) (σ : USubst φ ν)
   : USubst.cons_list (x :: xs) σ = USubst.cons_list xs (σ.cons x) := by
     rw [cons_list_cons_list', cons_cons_list', <-cons_list_cons_list']
@@ -299,6 +317,46 @@ theorem UBody.comp_rewrite {φ ν}
 def UBody.comp_defs {φ ν}
   (b₁ b₂ : UBody φ ν) : (b₁.comp b₂).defs = b₁.defs ++ b₂.defs
   := by induction b₁ <;> simp [defs, comp, *]
+
+theorem UBody.rewrite_eq_subst
+  (σ : USubst φ ν) (b : UBody φ ν) (hσ : {x | x ∈ b.defs}.EqOn σ UTm.var)
+  : b.rewrite σ = b.subst σ
+  := by induction b generalizing σ with
+  | nil => rfl
+  | let1 x e b I =>
+    rw [rewrite, subst, I]
+    congr
+    funext y
+    rw [USubst.cons, Function.update]
+    split
+    . rename_i h
+      cases h
+      rw [hσ]
+      simp [defs]
+    . rfl
+    apply hσ.mono
+    simp only [defs, List.mem_cons, Set.setOf_subset_setOf]
+    aesop
+  | let2 x y e b I =>
+    rw [rewrite, subst, I]
+    congr
+    funext y
+    rw [USubst.cons, Function.update]
+    split
+    . rename_i h
+      cases h
+      rw [hσ]
+      simp [defs]
+    rw [USubst.cons, Function.update]
+    split
+    . rename_i h
+      cases h
+      rw [hσ]
+      simp [defs]
+    . rfl
+    apply hσ.mono
+    simp only [defs, List.mem_cons, Set.setOf_subset_setOf]
+    aesop
 
 def UBody.SSA {φ ν} (Γ : List ν) (b : UBody φ ν) : Prop
   := Γ.Disjoint b.defs ∧ b.defs.Nodup
@@ -572,7 +630,7 @@ def UCFG.labels {φ α ν κ}
 def UCFG.defs {φ α ν κ}
   : UCFG φ α ν κ → List ν
   | nil => []
-  | cons Φ _ x _ _ => x :: Φ.defs
+  | cons Φ _ x _ β => x :: β.body.defs ++ Φ.defs
 
 def UCFG.comp {φ α ν κ}
   : UCFG φ α ν κ → UCFG φ α ν κ → UCFG φ α ν κ

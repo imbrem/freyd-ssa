@@ -5,42 +5,55 @@ variable {φ : Type u₁} {ν : Type u₂} {κ : Type u₃} {α : Type u₄} [Φ
   [Φc : CohInstSet φ (Ty α)]
   [DecidableEq ν] [DecidableEq κ] [DecidableEq α]
 
-
--- -- TODO: rune of ℓ erasure?
--- def FLCtx.PSubstCons.consSrc {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L : FLCtx κ ν (Ty α)}
---   (hσ : L'.PSubstCons σ (L.cons ℓ Γℓ) N) : Σ'Γℓ', L' = (L'.erase ℓ).cons ℓ Γℓ'
---   := sorry
-
+-- TODO: better: it's a _restriction_, i.e. L.restrict K.support = K
 def UCFG.FWfIM.toWk {L : FLCtx κ ν (Ty α)} {g : UCFG φ (Ty α) ν κ} {K : FLCtx κ ν (Ty α)}
   : g.FWfIM L K → K.Wk L
   | nil _ => FLCtx.Wk.refl _
-  | cons _ℓ _x _A dg hℓ dβ => (FLCtx.Wk.of_cons _ _ hℓ).comp dg.toWk
+  | cons _ℓ _Γℓ _x _A dg hℓ dβ => (FLCtx.Wk.of_cons _ _ hℓ).comp dg.toWk
   | dead _ℓ _x _A dg hℓ => dg.toWk
 
 -- -- TODO: factor out insertion lemmas...
--- def UCFG.FWfIM.substCons {L' L : FLCtx κ ν (Ty α)} {g : UCFG φ (Ty α) ν κ} {K : FLCtx κ ν (Ty α)}
+-- TODO: specifically restrict L' to K' to get substitution target...
+-- Note we don't even need PSubstCons then!
+-- def UCFG.FWfIM.rewrite {L' L : FLCtx κ ν (Ty α)} {g : UCFG φ (Ty α) ν κ} {K : FLCtx κ ν (Ty α)}
 --   (hσ : L'.PSubstCons σ L N) (dg : g.FWfIM L K) (hN : g.defs.toFinset ⊆ N)
 --   (hσc : {x | x ∈ g.defs}.EqOn σ UTm.var)
 --   : ΣK', (g.rewrite σ).FWfIM L' K' × K'.PSubstCons σ K N
 --   := match dg with
 --   | nil _ => ⟨_, nil _, hσ⟩
---   | cons ℓ x A dg hℓ dβ =>
---   let ⟨K', dg', hσ'⟩ := dg.substCons hσ
---     (by apply Finset.Subset.trans _ hN; simp [defs])
---     (hσc.mono (λ_ => by simp only [Set.mem_setOf_eq, defs]; exact List.mem_cons_of_mem _))
---   -- let dβ' := dβ.substCons sorry;
+--   | cons ℓ Γℓ x A dg hℓ dβ =>
+--   let ⟨K', dg', hσ'⟩ := dg.rewrite hσ
+--     (by
+--       apply Finset.Subset.trans _ hN
+--       simp only [defs, List.cons_append, List.toFinset_cons, List.toFinset_append]
+--       apply Finset.Subset.trans (Finset.subset_union_right _ _)
+--       apply Finset.subset_insert)
+--     (hσc.mono (λ_ => by simp only [defs]; aesop))
 --   let ⟨Γℓ', hK'⟩ := hσ'.consSrc;
+--   let hσβ := hσ.getToFCtx ℓ Γℓ' Γℓ x sorry sorry sorry;
+--   -- TODO: rewrite rather than subst...
+--   let ⟨Lβ', dβ', hσβ'⟩ := dβ.rewrite hσβ (by
+--     apply Finset.Subset.trans _ hN
+--     simp only [defs, List.cons_append, List.toFinset_cons, List.toFinset_append]
+--     apply Finset.Subset.trans (Finset.subset_union_left _ _)
+--     apply Finset.subset_insert
+--   ) (hσc.mono (by simp only [defs, List.cons_append, List.mem_cons, List.mem_append,
+--     Set.setOf_subset_setOf]; aesop));
 --   have w := dg'.toWk;
 --   have w' := hK' ▸ w;
 --   ⟨
 --     K'.erase ℓ,
---     cons ℓ x A (hK' ▸ dg') (by simp [FLCtx.erase]) sorry,
+--     cons ℓ _ x A (hK' ▸ dg') (by simp [FLCtx.erase]) (dβ'.toFWf.wkExit sorry),
 --     sorry
 --   ⟩
 --   | dead ℓ x A dg hℓ =>
---     let ⟨K', dg', hσ'⟩ := dg.substCons hσ
---       (by apply Finset.Subset.trans _ hN; simp [defs])
---       (hσc.mono (λ_ => by simp only [Set.mem_setOf_eq, defs]; exact List.mem_cons_of_mem _));
+--     let ⟨K', dg', hσ'⟩ := dg.rewrite hσ
+--       (by
+--         apply Finset.Subset.trans _ hN
+--         simp only [defs, List.cons_append, List.toFinset_cons, List.toFinset_append]
+--         apply Finset.Subset.trans (Finset.subset_union_right _ _)
+--         apply Finset.subset_insert)
+--       (hσc.mono (λ_ => by simp only [defs]; aesop));
 --     ⟨K', dead ℓ x A dg' (hσ.not_mem_support_mpr ℓ hℓ), hσ'⟩
 
 -- def UCFG.FWfI.subst {L' L : FLCtx κ ν (Ty α)} {g : UCFG φ (Ty α) ν κ} {K : FLCtx κ ν (Ty α)}

@@ -500,3 +500,14 @@ def UTerminator.FWf'.substCons {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
 def UTerminator.FWf.substCons {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
   (hσ : Γ.SubstCons σ Δ N) (dt : t.FWf Δ L) : (L' : FLCtx κ ν (Ty α)) × (t.rewrite σ).FWfM Γ L' × (L'.SubstCons σ L N)
   := dt.factor.substCons hσ
+
+-- def FLCtx.PSubstCons.getToFCtx {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L : FLCtx κ ν (Ty α)}
+--   (hσ : L'.PSubstCons σ L N)
+--   (ℓ : κ) (Γℓ' : FLabel ν (Ty α)) (Γℓ : FLabel ν (Ty α)) (x : ν)
+--   (hℓL' : L' ℓ = Γℓ') (hℓL : L ℓ = Γℓ) (hx : x ∈ N)
+--   : (Γℓ'.toFCtx x).SubstCons σ (Γℓ.toFCtx x) N
+--   := sorry
+
+-- def FLCtx.PSubstCons.consSrc {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L : FLCtx κ ν (Ty α)}
+--   (hσ : L'.PSubstCons σ (L.cons ℓ Γℓ) N) : Σ'Γℓ', L' = (L'.erase ℓ).cons ℓ Γℓ'
+--   := sorry

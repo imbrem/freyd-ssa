@@ -32,6 +32,20 @@ def UBody.FWf.substCons {Γ' Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} {σ : US
         simp only [defs, USubst.cons_cons_list_rev]
         exact dt'.2.2⟩
 
+def UBody.FWf.rewrite {Γ' Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} {σ : USubst φ ν}
+  (hσ : Γ'.SubstCons σ Γ N)
+  (hN : t.defs.toFinset ⊆ N)
+  (hσc : {x | x ∈ t.defs}.EqOn σ UTm.var)
+  (dt : t.FWf p Γ Δ) : (Δ' : FCtx ν (Ty α)) × (t.rewrite σ).FWfM p Γ' Δ' × Δ'.SubstCons σ Δ N
+  := let ⟨Δ', dt', hσ'⟩ := dt.substCons hσ hN;
+  by
+    rw [t.rewrite_eq_subst σ hσc]
+    constructor
+    constructor
+    exact dt'
+    rw [<-σ.eq_cons_list _ hσc]
+    exact hσ'
+
 def UBody.FWf.subst {Γ' Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} {σ : USubst φ ν}
   (hσ : Γ'.Subst σ Γ)
   (hΓ' : Disjoint Γ'.support t.defs.toFinset)

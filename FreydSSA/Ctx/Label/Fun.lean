@@ -140,6 +140,9 @@ def FLCtx.cons (x : κ) (L : FLabel ν α) (K : FLCtx κ ν α) : FLCtx κ ν α
 theorem FLCtx.cons_app (x : κ) (L : FLabel ν α) (K : FLCtx κ ν α) (y : κ)
   : (FLCtx.cons x L K) y = if y = x then ↑L else K y := by simp [cons, DFunLike.coe, Function.update]
 
+def FLCtx.get {L : FLCtx κ ν α} (x : κ) (h : x ∈ L.support) : FLabel ν α
+  := (L x).get (by simp only [Option.isSome]; split; rfl; simp [mem_support, Bot.bot, *] at h)
+
 -- TODO: cons lore
 
 -- TODO: cons vs update
@@ -187,6 +190,7 @@ theorem FLCtx.Wk.of_cons {L : FLCtx κ ν α} (x : κ) (Γ : FLabel ν α) (hL :
   := λy => if h: y = x
   then by cases h; simp [cons_app, eq_bot_of_not_mem_support _ hL]
   else by simp [cons_app, h]
+
 
 theorem FLabel.Wk.toSingleton {L K : FLabel ν α} (x : κ) (w : FLabel.Wk L K)
   : FLCtx.Wk (FLCtx.singleton x L) (FLCtx.singleton x K)

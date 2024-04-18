@@ -34,7 +34,7 @@ inductive UCFG.FWfILM : FLCtx κ ν (Ty α) → UCFG φ (Ty α) ν κ → FLCtx 
 -- More subtle hax could allow us to redefine things... but later...
 inductive UCFG.FWfIM : FLCtx κ ν (Ty α) → UCFG φ (Ty α) ν κ → FLCtx κ ν (Ty α) → Type _
   | nil (L) : FWfIM L nil L
-  | cons (ℓ x A) : FWfIM L g (K.cons ℓ Γℓ) → ℓ ∉ K.support → β.FWf 0 (Γℓ.toFCtx x) L → FWfIM L (g.cons ℓ x A β) K
+  | cons (ℓ Γℓ x A) : FWfIM L g (K.cons ℓ Γℓ) → ℓ ∉ K.support → β.FWf 0 (Γℓ.toFCtx x) L → FWfIM L (g.cons ℓ x A β) K
   | dead (ℓ x A) : FWfIM L g K → ℓ ∉ L.support → FWfIM L (g.cons ℓ x A β) K
 
 -- TODO: transformation lore
