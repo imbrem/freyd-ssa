@@ -49,6 +49,14 @@ def FCtx.Subst.comp {Γ Δ Ξ : FCtx ν (Ty α)} {σ : USubst φ ν} {τ : USubs
   (hσ : Γ.Subst σ Δ) (hτ : Δ.Subst τ Ξ) : Γ.Subst (τ.comp σ) Ξ
   := λ _ h => (hτ _ h).subst hσ
 
+def FCtx.Subst.vars_sub_support {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} (hσ : FCtx.Subst Γ σ Δ)
+  : σ.vars Δ.support ⊆ Γ.support
+  := σ.vars_sub Δ.support Γ.support (λx h => (hσ x h).vars_sub_support)
+
+-- def FCtx.Subst.restrict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+--   (hσ : FCtx.Subst Γ σ Δ) : FCtx.Subst (Γ.restrict (σ.vars Δ.support)) σ Δ
+--   := sorry
+
 -- def FCtx.Subst.lsupExit {Γ Δ Ξ : FCtx ν (Ty α)} {σ : USubst φ ν}
 --   (hσ : Γ.Subst σ Δ) (hσ' : Γ.Subst σ Ξ) : Γ.Subst σ (Δ.lsup Ξ)
 --   := sorry
@@ -167,3 +175,15 @@ def FCtx.SubstCons.lsup {Γ Δ Γ' Δ' : FCtx ν (Ty α)} {σ : USubst φ ν}
     let hres := hxΓ.lsup _hxΓ'
     rw [<-lsup_sdiff_except]
     exact hres
+
+-- def FCtx.SubstCons.restrict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+--   (hσ : FCtx.SubstCons Γ σ Δ N) : FCtx.SubstCons (Γ.restrict (σ.vars Δ.support)) σ Δ N
+--   := sorry
+
+def FCtx.SubstCons.vars_sub_support {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} (hσ : FCtx.SubstCons Γ σ Δ N)
+  : σ.vars Δ.support ⊆ Γ.support
+  := hσ.toSubst.vars_sub_support
+
+structure FCtx.MSubstCons  (Γ : FCtx ν (Ty α)) (σ : USubst φ ν) (Δ : FCtx ν (Ty α)) (N : Finset ν) : Type _ where
+  isSubst : FCtx.SubstCons Γ σ Δ N
+  isMinimal : Γ.support = σ.vars N

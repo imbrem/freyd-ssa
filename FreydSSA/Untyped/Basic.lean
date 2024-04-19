@@ -7,6 +7,7 @@ import Mathlib.Data.Set.Finite
 import Mathlib.Data.Fin.Basic
 import Mathlib.Init.Classical
 import Mathlib.Order.SuccPred.Basic
+import Mathlib.Data.Finset.Functor
 
 import FreydSSA.Ctx
 import FreydSSA.InstSet
@@ -199,6 +200,13 @@ def UTm.vars : UTm φ ν → Finset ν
   | op _ e => e.vars
   | pair l r => l.vars ∪ r.vars
   | _ => {}
+
+def USubst.vars (σ : USubst φ ν) (N : Finset ν) : Finset ν
+  := Finset.sup N (λx => (σ x).vars)
+
+def USubst.vars_sub (σ : USubst φ ν) (N : Finset ν) (M : Finset ν)
+  (h: ∀x ∈ N, (σ x).vars ⊆ M) : USubst.vars σ N ⊆ M
+  := @Finset.sup_le _ _ _ _ _ _ M h
 
 inductive UBody (φ : Type _) (ν  : Type _)
    : Type _ where
