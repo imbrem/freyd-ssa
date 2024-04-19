@@ -93,11 +93,34 @@ instance Disc.instPartialOrder {α} : PartialOrder (Disc α) where
 class DiscreteOrder (α : Type u) [LE α] where
   le_eq (a b : α) : a ≤ b → a = b
 
+theorem DiscreteOrder.bddAbove_subsingleton {α} [Preorder α] [DiscreteOrder α]
+  (s : Set α) : BddAbove s → s.Subsingleton := by
+    intro ⟨a, ha⟩
+    intro x hx y hy
+    simp only [upperBounds, Set.mem_setOf_eq] at ha
+    cases le_eq _ _ (ha hx); cases le_eq _ _ (ha hy); rfl
+
 instance Disc.instDiscreteOrder {α} : DiscreteOrder (Disc α) where
   le_eq _ _ h := h
 
 class DiscreteBotOrder (α : Type u) [LE α] [Bot α] where
   le_bot_or_eq (a b : α) : a ≤ b → a = ⊥ ∨ a = b
+
+instance {α} [LE α] [Bot α] [DiscreteOrder α] : DiscreteBotOrder α where
+  le_bot_or_eq a b h := Or.inr (DiscreteOrder.le_eq a b h)
+
+-- theorem DiscreteOrder.bddAbove_cmp {α} [Preorder α] [Bot α] [DiscreteBotOrder α] (s : Set α)
+--   : BddAbove s → ∀a ∈ s, ∀b ∈ s, a = ⊥ ∨ b = ⊥ ∨ a = b := sorry
+
+-- theorem DiscreteOrder.bddAbove_of_cmp {α} [Preorder α] [Bot α] [DiscreteBotOrder α] (s : Set α)
+--   : (∀a ∈ s, ∀b ∈ s, a = ⊥ ∨ b = ⊥ ∨ a = b) → BddAbove s := sorry
+
+-- theorem DiscreteOrder.bddAbove_iff {α} [Preorder α] [Bot α] [DiscreteBotOrder α] (s : Set α)
+--   : BddAbove s ↔ ∀a ∈ s, ∀b ∈ s, a = ⊥ ∨ b = ⊥ ∨ a = b := ⟨bddAbove_cmp s, bddAbove_of_cmp s⟩
+
+-- TODO: BddAbove of subsingleton, and so on
+-- TODO: BddAbove is decidable for finite sets if we have decidable equality
+-- Note that bottom does _not_ have to be a real bottom here, this is useful for linearity
 
 theorem Disc.bot_coe_le_coe {α} {a b : Disc α} : (a : WithBot (Disc α)) ≤ (b : WithBot (Disc α)) → a = b
   := by simp only [WithBot.coe_le_coe]; exact id
@@ -111,6 +134,12 @@ instance WithBot.Disc.instDiscreteBotOrder {α} : DiscreteBotOrder (WithBot (Dis
 class DiscreteTopOrder (α : Type u) [LE α] [Top α] where
   le_top_or_eq (a b : α) : a ≤ b → b = ⊤ ∨ a = b
 
+-- TODO: BddBelow results for discrete top orders
+-- Note that top does _not_ have to be a real top here, this is useful for linearity
+
+instance {α} [LE α] [Top α] [DiscreteOrder α] : DiscreteTopOrder α where
+  le_top_or_eq a b h := Or.inr (DiscreteOrder.le_eq a b h)
+
 theorem Disc.top_coe_le_coe {α} {a b : Disc α} : (a : WithTop (Disc α)) ≤ (b : WithTop (Disc α)) → a = b
   := by simp only [WithTop.coe_le_coe]; exact id
 
@@ -122,6 +151,12 @@ instance WithTop.Disc.instDiscreteTopOrder {α} : DiscreteTopOrder (WithTop (Dis
 
 class DiscreteBoundedOrder (α : Type u) [LE α] [Bot α] [Top α] where
   le_bot_or_top_or_eq (a b : α) : a ≤ b → a = ⊥ ∨ b = ⊤ ∨ a = b
+
+instance {α} [LE α] [Bot α] [Top α] [DiscreteTopOrder α] : DiscreteBoundedOrder α where
+  le_bot_or_top_or_eq a b h := Or.inr (DiscreteTopOrder.le_top_or_eq a b h)
+
+instance {α} [LE α] [Bot α] [Top α] [DiscreteBotOrder α] : DiscreteBoundedOrder α where
+  le_bot_or_top_or_eq a b h := (DiscreteBotOrder.le_bot_or_eq a b h).elim Or.inl (Or.inr ∘ Or.inr)
 
 theorem Disc.top_bot_le_iff {α} [DecidableEq α] : (a b : WithTop (WithBot (Disc α))) → a ≤ b ↔ a = ⊥ ∨ b = ⊤ ∨ a = b
   | ⊥, _ => ⟨λ_ => Or.inl rfl, λ_ => bot_le⟩
