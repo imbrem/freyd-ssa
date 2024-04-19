@@ -23,6 +23,8 @@ def UBody.FWf.wkExit {Γ Δ Δ' : FCtx ν (Ty α)} {t : UBody φ ν} (dt : FWf p
   | let1 x de dt => let1 x de (dt.wkExit w)
   | let2 x y de dt => let2 x y de (dt.wkExit w)
 
+def UBody.FWf.discard {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} (dt : FWf p Γ t Δ) : FWf p Γ t ⊤ := dt.wkExit (FCtx.Wk.top _)
+
 theorem UBody.FWf.allEq {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} (dt : FWf p Γ t Δ) (dt' : FWf p Γ t Δ)
   : dt = dt' := by induction dt with
   | nil => cases dt'; rfl
@@ -75,8 +77,34 @@ theorem UBody.FWf.infTrg_is_least {Γ Δ Δ' : FCtx ν (Ty α)} {t : UBody φ ν
 theorem UBody.FWf.infTrg_is_glb {Γ Δ Δ' : FCtx ν (Ty α)} {t : UBody φ ν}
   (dt : FWf p Γ t Δ) : IsGLB (t.trgs Γ p) dt.infTrg := ⟨λ_ ⟨dt'⟩ => dt.infTrg_wk' dt', λ_ hΔ => hΔ ⟨dt.toInf⟩⟩
 
+def UBody.FWf.cast_src {Γ Γ' Δ : FCtx ν (Ty α)} {t : UBody φ ν} (dt : FWf p Γ t Δ) (hΓ : Γ = Γ')
+  : FWf p Γ' t Δ := hΓ ▸ dt
+
+def UBody.FWf.cast_trg {Γ Δ Δ' : FCtx ν (Ty α)} {t : UBody φ ν} (dt : FWf p Γ t Δ) (hΔ : Δ = Δ')
+  : FWf p Γ t Δ' := hΔ ▸ dt
+
+-- def UBody.FWf.scoped {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} (dt : FWf p Γ t Δ) (hΓ : Disjoint Γ.support t.defs.toFinset)
+--   : FWf p Γ t Γ
+--   := sorry
+
+-- TODO: cons thread
+
+-- TODO: linf is repeated cons, should probably go prove that...
+
+-- def UBody.FWf.thread_right {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν}
+--   (Ξ : FCtx ν (Ty α)) (hΓ : Γ.Cmp Ξ) (hΞ : Disjoint Ξ.support t.defs.toFinset) : FWf p Γ t Δ → FWf p (Γ.linf Ξ) t (Δ.linf Ξ)
+--   | nil p w => nil p (w.linf_right Ξ hΓ)
+--   | let1 _ de dt => let1 _ (de.wk sorry) ((dt.thread_right Ξ sorry sorry).cast_src sorry)
+--   | let2 _ _ de dt => let2 _ _ (de.wk sorry) ((dt.thread_right Ξ sorry sorry).cast_src sorry)
+
+-- def UBody.FWf.thread_left {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν}
+--   (Ξ : FCtx ν (Ty α)) (hΓ : Γ.Cmp Ξ) (hΞ : Disjoint Ξ.support t.defs.toFinset) : FWf p Γ t Δ → FWf p (Ξ.linf Γ) t (Ξ.linf Δ)
+--   | nil p w => nil p (w.linf_left Ξ)
+--   | let1 _ de dt => let1 _ (de.wk sorry) ((dt.thread_left Ξ sorry sorry).cast_src sorry)
+--   | let2 _ _ de dt => let2 _ _ (de.wk sorry) ((dt.thread_left Ξ sorry sorry).cast_src sorry)
+
 -- def UBody.FWf.restrict {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} : FWf p Γ t Δ → FWf p (Γ.restrict (t.vars_for Δ.support)) t Δ
---   | @nil _ _ _ _ _ Γ _ _ _ => Γ
+--   | nil p w => sorry
 --   | let1 _ _ dt => dt.infTrg
 --   | let2 _ _ _ dt => dt.infTrg
 

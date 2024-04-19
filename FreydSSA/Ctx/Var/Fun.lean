@@ -8,7 +8,7 @@ import Mathlib.Data.Fin.Basic
 import Mathlib.Init.Classical
 import Mathlib.Order.SuccPred.Basic
 
-variable {ν ν' α β} [DecidableEq ν] [DecidableEq ν'] [DecidableEq α]
+variable {ν ν' α} [DecidableEq ν] [DecidableEq ν'] [DecidableEq α]
 
 structure FCtx (ν : Type u) (α : Type v) : Type (max u v) where
   toFun : ν → WithTop α
@@ -207,6 +207,12 @@ theorem FCtx.Cmp.symm {Γ Δ : FCtx ν α} (c : FCtx.Cmp Γ Δ) : FCtx.Cmp Δ Γ
   | Or.inl h => Or.inl h.symm
   | Or.inr (Or.inl h) => Or.inr (Or.inr h)
   | Or.inr (Or.inr h) => Or.inr (Or.inl h)
+
+theorem FCtx.Cmp.wk_left {Γ Δ Δ' : FCtx ν α} (c : FCtx.Cmp Γ Δ) (w : Δ.Wk Δ') : FCtx.Cmp Γ Δ'
+  := λx => by cases c x <;> cases w x <;> aesop
+
+theorem FCtx.Cmp.wk_right {Γ' Γ Δ : FCtx ν α} (c : FCtx.Cmp Γ Δ) (w : Γ.Wk Γ') : FCtx.Cmp Γ' Δ
+  := λx => by cases c x <;> cases w x <;> aesop
 
 theorem FCtx.Cmp.of_wk₂ {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ Δ')
   : FCtx.Cmp Δ Δ' := by
@@ -451,7 +457,7 @@ theorem FCtx.lsup_right_some_eq_left {Δ Δ' : FCtx ν α} (x : ν)
 theorem FCtx.lsup_right_support_eq_left {Δ Δ' : FCtx ν α} (x : ν)
   (h : x ∈ Δ'.support) : FCtx.lsup Δ Δ' x = Δ x := by
   apply lsup_right_some_eq_left _ ((mem_support_exists _).mp h)
-  rfl
+
 theorem FCtx.lsup_left_not_support {Δ Δ' : FCtx ν α} (x : ν)
   (h : x ∉ Δ.support) : FCtx.lsup Δ Δ' x = ⊤ := by
   apply lsup_eq_none_left
@@ -550,7 +556,7 @@ theorem FCtx.rsup_left_some_eq_right {Δ Δ' : FCtx ν α} (x : ν)
 theorem FCtx.rsup_left_support_eq_right {Δ Δ' : FCtx ν α} (x : ν)
   (h : x ∈ Δ.support) : FCtx.rsup Δ Δ' x = Δ' x := by
   apply rsup_left_some_eq_right _ ((mem_support_exists _).mp h)
-  rfl
+
 theorem FCtx.rsup_right_not_support {Δ Δ' : FCtx ν α} (x : ν)
   (h : x ∉ Δ.support) : FCtx.rsup Δ Δ' x = ⊤ := by
   apply rsup_eq_none_left
@@ -654,6 +660,18 @@ theorem FCtx.rsup_idem (Δ : FCtx ν α)
   : FCtx.rsup Δ Δ = Δ := by
   rw [<-(FCtx.Cmp.refl Δ).lsup_eq_rsup, lsup_idem]
 
+theorem FCtx.Wk.lsup {Γ Γ' Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ' Δ')
+  : FCtx.Wk (FCtx.lsup Γ Γ') (FCtx.lsup Δ Δ') := by
+  intro x
+  simp only [lsup_app]
+  split <;> split <;> cases w x <;> cases w' x <;> aesop
+
+theorem FCtx.Wk.rsup {Γ Γ' Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : FCtx.Wk Γ' Δ')
+  : FCtx.Wk (FCtx.rsup Γ Γ') (FCtx.rsup Δ Δ') := by
+  intro x
+  simp only [rsup_app]
+  split <;> split <;> cases w x <;> cases w' x <;> aesop
+
 --TODO: lsup_nil, nil_lsup, rsup_nil, nil_rsup
 
 --TODO: sup eq iff wk
@@ -742,6 +760,30 @@ theorem FCtx.Wk.rinf_wk_left {Γ Δ Δ' : FCtx ν α} (w : FCtx.Wk Γ Δ) (w' : 
   : FCtx.Wk (FCtx.rinf Δ Δ') Δ := linf_eq_rinf w w' ▸ linf_wk Δ Δ'
 theorem FCtx.Wk.rinf_wk_right {Γ Δ Δ' : FCtx ν α} (_ : FCtx.Wk Γ Δ) (_ : FCtx.Wk Γ Δ')
   : FCtx.Wk (FCtx.rinf Δ Δ') Δ' := rinf_wk Δ Δ'
+
+theorem FCtx.Wk.linf_left {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ) (Ξ)
+  : FCtx.Wk (FCtx.linf Ξ Γ) (FCtx.linf Ξ Δ) := by
+  intro x
+  simp only [linf_app]
+  split <;> split <;> cases w x <;> aesop
+
+theorem FCtx.Wk.rinf_right {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ) (Ξ)
+  : FCtx.Wk (FCtx.rinf Γ Ξ) (FCtx.rinf Δ Ξ) := by
+  intro x
+  simp only [rinf_app]
+  split <;> split <;> cases w x <;> aesop
+
+theorem FCtx.Wk.linf_right {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ) (Ξ) (hΞ : Γ.Cmp Ξ)
+  : FCtx.Wk (FCtx.linf Γ Ξ) (FCtx.linf Δ Ξ)
+  := by
+    rw [hΞ.linf_eq_rinf, (hΞ.wk_right w).linf_eq_rinf]
+    apply w.rinf_right
+
+theorem FCtx.Wk.rinf_left {Γ Δ : FCtx ν α} (w : FCtx.Wk Γ Δ) (Ξ) (hΞ : Γ.Cmp Ξ)
+  : FCtx.Wk (FCtx.rinf Ξ Γ) (FCtx.rinf Ξ Δ)
+  := by
+    rw [<-hΞ.symm.linf_eq_rinf, <-(hΞ.wk_right w).symm.linf_eq_rinf]
+    apply w.linf_left
 
 --TODO: wk lemmas, assoc, idem, nil, etc.
 
@@ -1043,3 +1085,10 @@ theorem FCtx.Wk.sdiff_except (Γ : FCtx ν α) (N : Finset ν) (x : ν)
 theorem FCtx.lsup_sdiff_except (Γ Δ : FCtx ν α) (N : Finset ν) (x : ν)
   : (Γ.sdiff_except N x).lsup (Δ.sdiff_except N x) = (Γ.lsup Δ).sdiff_except N x
   := lsup_sdiff Γ Δ (N.erase x)
+
+instance FCtx.instTop : Top (FCtx ν α) where
+  top := ⟨λ_ => ⊤, ∅, by simp⟩
+
+theorem FCtx.Wk.top (Γ : FCtx ν α) : Γ.Wk ⊤ := λ_ => Or.inl rfl
+
+ -- TODO: lawful

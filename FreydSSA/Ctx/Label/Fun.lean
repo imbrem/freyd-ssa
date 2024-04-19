@@ -471,6 +471,11 @@ theorem FCtx.LWk.cmp₂ {L K M : FLCtx κ ν α} {Γ : FCtx ν α}
 theorem FCtx.LEq.toLWk {Γ : FCtx ν α} {L : FLCtx κ ν α} (hΓ : Γ.LEq L) : Γ.LWk L
   := λx => (hΓ x).toLWkBot
 
+instance FLCtx.instBot : Bot (FLCtx κ ν α) where
+  bot := FLCtx.empty κ ν α
+
+ -- TODO: lawful
+
 -- TODO: RWk, RWk to cmp...
 
 --TODO: lattice lore

@@ -326,16 +326,22 @@ theorem UBody.vars_for_eq_of_sub (t : UBody φ ν) (Δ : Finset ν)
   | inl h => exact h
   | inr h => exact (hx.2 h).elim
 
--- theorem UBody.sub_of_vars_for_eq (t : UBody φ ν) (Δ : Finset ν)
---   : t.vars_for Δ = t.vars → Δ ⊆ t.vars ∪ t.defs.toFinset := by
---   rw [vars_for, Finset.union_eq_left]
---   intro h x hx
---   simp only [Finset.mem_union]
---   sorry
+theorem UBody.sub_of_vars_for_eq (t : UBody φ ν) (Δ : Finset ν)
+  : t.vars_for Δ = t.vars → Δ ⊆ t.vars ∪ t.defs.toFinset := by
+  rw [vars_for, Finset.union_eq_left]
+  intro h x hx
+  simp only [Finset.mem_union]
+  if hx' : x ∈ t.defs.toFinset then
+    exact Or.inr hx'
+  else
+    apply Or.inl
+    apply h
+    simp only [Finset.mem_sdiff]
+    exact ⟨hx, hx'⟩
 
--- theorem UBody.vars_for_eq_iff (t : UBody φ ν) (Δ : Finset ν)
---   : t.vars_for Δ = t.vars ↔ Δ ⊆ t.vars ∪ t.defs.toFinset :=
---   ⟨t.sub_of_vars_for_eq Δ, t.vars_for_eq_of_sub Δ⟩
+theorem UBody.vars_for_eq_iff (t : UBody φ ν) (Δ : Finset ν)
+  : t.vars_for Δ = t.vars ↔ Δ ⊆ t.vars ∪ t.defs.toFinset :=
+  ⟨t.sub_of_vars_for_eq Δ, t.vars_for_eq_of_sub Δ⟩
 
 def UBody.comp {φ ν}
   : UBody φ ν → UBody φ ν → UBody φ ν
