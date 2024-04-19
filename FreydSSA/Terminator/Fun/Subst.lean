@@ -501,6 +501,15 @@ def UTerminator.FWf.substCons {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
   (hσ : Γ.SubstCons σ Δ N) (dt : t.FWf Δ L) : (L' : FLCtx κ ν (Ty α)) × (t.rewrite σ).FWfM Γ L' × (L'.SubstCons σ L N)
   := dt.factor.substCons hσ
 
+def FLCtx.PSubstConsBot.isMin {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))} {N : Finset ν}
+  : PSubstConsBot Γ σ Δ N → Prop
+  | bot _ _ => True
+  | subst hσ _ => hσ.isMin
+
+def FLCtx.PSubstCons.isMin {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)} {N : Finset ν}
+  (hσ : L.PSubstCons σ K N) : Prop
+  := ∀x, (hσ x).isMin
+
 -- def FLCtx.PSubstCons.getToFCtx {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L : FLCtx κ ν (Ty α)}
 --   (hσ : L'.PSubstCons σ L N)
 --   (ℓ : κ) (Γℓ' : FLabel ν (Ty α)) (Γℓ : FLabel ν (Ty α)) (x : ν)

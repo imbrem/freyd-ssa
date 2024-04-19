@@ -71,3 +71,267 @@ theorem WithBot.Cmp.symm {a b : WithBot α} (h : WithBot.Cmp a b) : WithBot.Cmp 
   case left a => exact WithBot.Cmp.right a
   case right a => exact WithBot.Cmp.left a
   case both a => exact WithBot.Cmp.both a
+
+@[inline, reducible]
+abbrev DecidableTop (α : Type u) [Top α] := DecidablePred (λ a : α => a = ⊤)
+
+instance {α} : DecidableTop (WithTop α) := λa => match a with | ⊤ => isTrue rfl | some _ => isFalse (λh => by cases h)
+
+@[inline, reducible]
+abbrev DecidableBot (α : Type u) [Bot α] := DecidablePred (λ a : α => a = ⊥)
+
+instance {α} : DecidableBot (WithBot α) := λa => match a with | ⊥ => isTrue rfl | some _ => isFalse (λh => by cases h)
+
+def Disc (α : Type u) : Type u := α
+
+instance Disc.instPartialOrder {α} : PartialOrder (Disc α) where
+  le a b := a = b
+  le_refl _ := rfl
+  le_trans _ _ _ := Eq.trans
+  le_antisymm _ _ _ := Eq.symm
+
+class DiscreteOrder (α : Type u) [LE α] where
+  le_eq (a b : α) : a ≤ b → a = b
+
+instance Disc.instDiscreteOrder {α} : DiscreteOrder (Disc α) where
+  le_eq _ _ h := h
+
+class DiscreteBotOrder (α : Type u) [LE α] [Bot α] where
+  le_bot_or_eq (a b : α) : a ≤ b → a = ⊥ ∨ a = b
+
+theorem Disc.bot_coe_le_coe {α} {a b : Disc α} : (a : WithBot (Disc α)) ≤ (b : WithBot (Disc α)) → a = b
+  := by simp only [WithBot.coe_le_coe]; exact id
+
+instance WithBot.Disc.instDiscreteBotOrder {α} : DiscreteBotOrder (WithBot (Disc α)) where
+  le_bot_or_eq
+    | ⊥, b, _ => Or.inl rfl
+    | some a, ⊥, h => by simp at h
+    | some a, some b, h => Or.inr (by cases Disc.bot_coe_le_coe h; rfl)
+
+class DiscreteTopOrder (α : Type u) [LE α] [Top α] where
+  le_top_or_eq (a b : α) : a ≤ b → b = ⊤ ∨ a = b
+
+theorem Disc.top_coe_le_coe {α} {a b : Disc α} : (a : WithTop (Disc α)) ≤ (b : WithTop (Disc α)) → a = b
+  := by simp only [WithTop.coe_le_coe]; exact id
+
+instance WithTop.Disc.instDiscreteTopOrder {α} : DiscreteTopOrder (WithTop (Disc α)) where
+  le_top_or_eq
+    | a, ⊤, _ => Or.inl rfl
+    | ⊤, b, h => by simp only [top_le_iff] at h; simp [h]
+    | some a, some b, h => Or.inr (by cases Disc.top_coe_le_coe h; rfl)
+
+class DiscreteBoundedOrder (α : Type u) [LE α] [Bot α] [Top α] where
+  le_bot_or_top_or_eq (a b : α) : a ≤ b → a = ⊥ ∨ b = ⊤ ∨ a = b
+
+theorem Disc.top_bot_le_iff {α} [DecidableEq α] : (a b : WithTop (WithBot (Disc α))) → a ≤ b ↔ a = ⊥ ∨ b = ⊤ ∨ a = b
+  | ⊥, _ => ⟨λ_ => Or.inl rfl, λ_ => bot_le⟩
+  | _, ⊤ => ⟨λ_ => Or.inr $ Or.inl $ rfl, λ_ => le_top⟩
+  | ⊤, b => by aesop
+  | a, ⊥ => by aesop
+  | some (some a), some (some b) => ⟨
+      λh => (Or.inr $ Or.inr $ by cases WithBot.coe_le_coe.mp $ WithTop.coe_le_coe.mp $ h; rfl),
+      λ| Or.inr (Or.inr rfl) => le_refl _⟩
+
+instance WithTop.WithBot.Disc.instDiscreteBoundedOrder {α} [DecidableEq α] : DiscreteBoundedOrder (WithTop (WithBot (Disc α))) where
+  le_bot_or_top_or_eq := by simp [Disc.top_bot_le_iff]
+
+theorem Disc.bot_top_le_iff {α} [DecidableEq α] : (a b : WithBot (WithTop (Disc α))) → a ≤ b ↔ a = ⊥ ∨ b = ⊤ ∨ a = b
+  | ⊥, _ => ⟨λ_ => Or.inl rfl, λ_ => bot_le⟩
+  | _, ⊤ => ⟨λ_ => Or.inr $ Or.inl $ rfl, λ_ => le_top⟩
+  | ⊤, b => by aesop
+  | a, ⊥ => by aesop
+  | some (some a), some (some b) => ⟨
+      λh => (Or.inr $ Or.inr $ by cases WithTop.coe_le_coe.mp $ WithBot.coe_le_coe.mp $ h; rfl),
+      λ| Or.inr (Or.inr rfl) => le_refl _⟩
+
+instance WithBot.WithTop.Disc.instDiscreteBoundedOrder {α} [DecidableEq α] : DiscreteBoundedOrder (WithBot (WithTop (Disc α))) where
+  le_bot_or_top_or_eq := by simp [Disc.bot_top_le_iff]
+
+-- TODO: needed?
+-- instance Disc.instDecidableEq {α} [H : DecidableEq α] : DecidableEq (Disc α) := H
+
+-- TODO: needed?
+instance Disc.instDecidableLE {α} [H : DecidableEq α] : DecidableRel (@LE.le (Disc α) _) := H
+
+instance DiscreteOrder.isPartialOrder {α} [o : Preorder α] [DiscreteOrder α] : PartialOrder α where
+  toPreorder := o
+  le_antisymm _ _ h _ := le_eq _ _ h
+
+instance Disc.instSemilatticeBot {α} [DecidableEq α] : SemilatticeInf (WithBot (Disc α)) where
+  inf
+    | ⊥, _ => ⊥
+    | _, ⊥ => ⊥
+    | some a, some b => if a = b then some a else ⊥
+  inf_le_left := by aesop
+  inf_le_right := by aesop
+  le_inf
+    | ⊥, _, _ => by simp
+    | _, ⊥, _ => λh => by simp only [le_bot_iff] at h; cases h; simp
+    | _, _, ⊥ => λ_ h => by simp only [le_bot_iff] at h; cases h; simp
+    | some a, some b, some c => λh h' => by
+      cases WithBot.coe_le_coe.mp h
+      cases WithBot.coe_le_coe.mp h'
+      simp
+
+instance Disc.instSemilatticeSup {α} [DecidableEq α] : SemilatticeSup (WithTop (Disc α)) where
+  sup
+    | ⊤, _ => ⊤
+    | _, ⊤ => ⊤
+    | some a, some b => if a = b then some a else ⊤
+  le_sup_left := by aesop
+  le_sup_right := by aesop
+  sup_le
+    | _, _, ⊤ => by simp
+    | ⊤, _, _ => λh _ => by simp only [top_le_iff] at h; cases h; simp
+    | _, ⊤, _ => λ_ h => by simp only [top_le_iff] at h; cases h; simp
+    | some a, some b, some c => λh h' => by
+      cases WithTop.coe_le_coe.mp h
+      cases WithTop.coe_le_coe.mp h'
+      simp
+
+instance WithTop.WithBot.Disc.instLattice {α} [DecidableEq α] : Lattice (WithTop (WithBot (Disc α))) where
+  sup
+    | ⊤, _ => ⊤
+    | _, ⊤ => ⊤
+    | ⊥, a => a
+    | a, ⊥ => a
+    | some (some a), some (some b) => if a = b then some (some a) else ⊤
+  le_sup_left
+    | ⊤, a => by aesop
+    | some a, ⊤ => by aesop
+    | ⊥, some a => by simp
+    | some (some a), ⊥ => le_refl _
+    | some (some a), some (some b) => by aesop
+  le_sup_right
+    | ⊤, a => by aesop
+    | some a, ⊤ => by aesop
+    | ⊥, some (some a) => le_refl _
+    | some a, ⊥ => by simp
+    | some (some a), some (some b) => by aesop
+  sup_le
+    | _, _, ⊤ => by simp
+    | _, ⊤, _ => by aesop
+    | ⊤, _, _ => by aesop
+    | ⊥, some (some a), some (some b) => λ_ => id
+    | some (some a), ⊥, some b => λh _ => h
+    | ⊥, ⊥, some b => λh _ => h
+    | a, b, ⊥ => by simp only [le_bot_iff]; intro h h'; cases h; cases h'; rfl
+    | some (some a), some (some b), some (some c) => by
+      simp only [coe_le_coe]
+      intro h h'
+      cases WithBot.coe_le_coe.mp h
+      cases WithBot.coe_le_coe.mp h'
+      simp
+  inf_le_left := by aesop
+  inf_le_right := by aesop
+  le_inf := by aesop
+
+instance WithBot.WithTop.Disc.instLattice {α} [DecidableEq α] : Lattice (WithBot (WithTop (Disc α))) where
+  inf
+    | ⊥, _ => ⊥
+    | _, ⊥ => ⊥
+    | ⊤, a => a
+    | a, ⊤ => a
+    | some (some a), some (some b) => if a = b then some (some a) else ⊥
+  le_sup_left := by aesop
+  le_sup_right := by aesop
+  sup_le := by aesop
+  inf_le_left
+    | ⊥, a => by aesop
+    | some a, ⊥ => by aesop
+    | ⊤, ⊤ => le_refl _
+    | ⊤, some (some a) => by simp
+    | some (some a), ⊤ => le_refl _
+    | some (some a), some (some b) => by aesop
+  inf_le_right
+    | ⊥, a => by aesop
+    | some a, ⊥ => by aesop
+    | ⊤, ⊤ => le_refl _
+    | ⊤, some (some a) => le_refl _
+    | some (some a), ⊤ => by aesop
+    | some (some a), some (some b) => by aesop
+  le_inf
+    | ⊥, _, _ => by simp
+    | _, ⊥, _ => λh => by simp only [le_bot_iff] at h; cases h; simp
+    | _, _, ⊥ => λ_ h => by simp only [le_bot_iff] at h; cases h; simp
+    | some (some a), some (some b), ⊤ => λh _ => h
+    | some a, ⊤, some (some b) => λ_ h => h
+    | some a, ⊤, ⊤ => λ_ _ => le_top
+    | ⊤, a, b => by simp only [top_le_iff]; intro h h'; cases h; cases h'; rfl
+    | some (some a), some (some b), some (some c) => by
+      simp only [coe_le_coe]
+      intro h h'
+      cases WithTop.coe_le_coe.mp h
+      cases WithTop.coe_le_coe.mp h'
+      simp
+
+-- Note: these lattices are _not_ distributive!
+
+-- open Classical in
+-- noncomputable instance WithTop.WithBot.Disc.instCompleteLattice {α} [DecidableEq α] : CompleteLattice (WithTop (WithBot (Disc α))) where
+--   sSup A := if h : A.Nonempty then
+--       let a := choose h;
+--       if ∃b ∈ A, b ≠ ⊥ ∧ b ≠ a then ⊤ else a
+--     else
+--       ⊥
+--   le_sSup A a h := by
+--     simp only
+--     split
+--     . rename_i h'
+--       split
+--       . exact le_top
+--       . rename_i c
+--         rw [Disc.top_bot_le_iff, or_iff_not_and_not]
+--         rw [not_or]
+--         intro ⟨ha, _, ha'⟩
+--         exact c ⟨a, h, ha, ha'⟩
+--     . rename_i h'
+--       exact (h' ⟨_, h⟩).elim
+--   sSup_le A a h := by
+--     simp only
+--     split
+--     . split
+--       . rename_i hn h'
+--         generalize ce : choose hn = c
+--         have hc := h _ (le_sSup sorry)
+--         let ⟨b, hb, hbb, hba⟩ := h'
+--         have hb' := h _ hb
+--         rw [Disc.top_bot_le_iff] at hb'
+--         cases hb' with
+--         | inl h => exact (hbb h).elim
+--         | inr h => cases h with
+--         | inl h => cases h; exact le_refl _
+--         | inr hb' =>
+--           cases hb'
+--           have hc := h _ (choose hn)
+--           simp only [top_le_iff]
+--       . sorry
+--     . exact bot_le
+--   sInf A := if h : A.Nonempty then
+--       let a := choose h;
+--       if ∃b ∈ A, a ≠ b then ⊥ else a
+--     else
+--       ⊤
+--   sInf_le := sorry
+--   le_sInf := sorry
+--   le_top := by simp
+--   bot_le := by simp
+
+-- open Classical in
+-- noncomputable instance WithBot.WithTop.Disc.instCompleteLattice {α} [DecidableEq α] : CompleteLattice (WithBot (WithTop (Disc α))) where
+--   sSup A := if h : A.Nonempty then
+--       let a := choose h;
+--       if ∃b ∈ A, a ≠ b then ⊤ else a
+--     else
+--       ⊥
+--   le_sSup := sorry
+--   sSup_le := sorry
+--   sInf A := if h : A.Nonempty then
+--       let a := choose h;
+--       if ∃b ∈ A, a ≠ b then ⊥ else a
+--     else
+--       ⊤
+--   sInf_le := sorry
+--   le_sInf := sorry
+--   le_top := by simp
+--   bot_le := by simp

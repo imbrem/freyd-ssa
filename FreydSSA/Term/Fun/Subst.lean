@@ -194,3 +194,10 @@ def FCtx.SubstCons.unrestrict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N :
 def FCtx.SubstCons.vars_sub_support {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} (hσ : FCtx.SubstCons Γ σ Δ N)
   : σ.vars Δ.support ⊆ Γ.support
   := hσ.toSubst.vars_sub_support
+
+def FCtx.SubstCons.isMin {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (_hσ : FCtx.SubstCons Γ σ Δ N) : Prop := Γ.support ⊆ σ.vars Δ.support
+
+theorem FCtx.SubstCons.isMin.eq_restrict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) (hmin : hσ.isMin) : Γ.restrict (σ.vars Δ.support) = Γ
+  := by rw [restrict_sub_support_iff]; exact hmin
