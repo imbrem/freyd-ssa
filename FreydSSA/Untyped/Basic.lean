@@ -299,11 +299,43 @@ def UBody.rewrite' {φ ν}
       => let2 x' y' (e.rewrite (λz => (σ z).elim UTm.var id)) (b.rewrite' σ)
     | _, _ => (b.rewrite' σ)
 
-def UBody.defs {φ ν}
+def UBody.defs
   : UBody φ ν → List ν
   | nil => []
   | let1 x _ b => x :: b.defs
   | let2 x y _ b => x :: y :: b.defs
+
+def UBody.vars
+  : UBody φ ν → Finset ν
+  | nil => ∅
+  | let1 x e b => b.vars ∪ (e.vars.erase x)
+  | let2 x y e b => b.vars ∪ ((e.vars.erase x).erase y)
+
+def UBody.vars_for (t : UBody φ ν) (Δ : Finset ν) : Finset ν
+  := t.vars ∪ (Δ \ t.defs.toFinset)
+
+theorem UBody.vars_for_sub_vars (t : UBody φ ν) (Δ : Finset ν) : t.vars ⊆ t.vars_for Δ
+  := Finset.subset_union_left _ _
+
+theorem UBody.vars_for_eq_of_sub (t : UBody φ ν) (Δ : Finset ν)
+  : Δ ⊆ t.vars ∪ t.defs.toFinset → t.vars_for Δ = t.vars := by
+  rw [vars_for, Finset.union_eq_left]
+  intro h x hx
+  simp only [Finset.mem_sdiff] at hx
+  cases Finset.mem_union.mp (h hx.1) with
+  | inl h => exact h
+  | inr h => exact (hx.2 h).elim
+
+-- theorem UBody.sub_of_vars_for_eq (t : UBody φ ν) (Δ : Finset ν)
+--   : t.vars_for Δ = t.vars → Δ ⊆ t.vars ∪ t.defs.toFinset := by
+--   rw [vars_for, Finset.union_eq_left]
+--   intro h x hx
+--   simp only [Finset.mem_union]
+--   sorry
+
+-- theorem UBody.vars_for_eq_iff (t : UBody φ ν) (Δ : Finset ν)
+--   : t.vars_for Δ = t.vars ↔ Δ ⊆ t.vars ∪ t.defs.toFinset :=
+--   ⟨t.sub_of_vars_for_eq Δ, t.vars_for_eq_of_sub Δ⟩
 
 def UBody.comp {φ ν}
   : UBody φ ν → UBody φ ν → UBody φ ν

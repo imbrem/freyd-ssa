@@ -66,14 +66,26 @@ theorem UBody.FWf.trgCmp {Γ Δ Δ' : FCtx ν (Ty α)} {t : UBody φ ν}
 theorem UBody.FWf.infTrg_wk' {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} (dt : FWf p Γ t Δ) (dt' : FWf p Γ t Δ')
   : dt.infTrg.Wk Δ' := dt.infTrg_eq dt' ▸ dt'.infTrg_wk
 
-def UBody.targets (Γ : FCtx ν (Ty α)) (p : Purity) (t : UBody φ ν)
+def UBody.trgs (Γ : FCtx ν (Ty α)) (p : Purity) (t : UBody φ ν)
   : Set (FCtx ν (Ty α)) := λΔ => Nonempty (FWf p Γ t Δ)
 
 theorem UBody.FWf.infTrg_is_least {Γ Δ Δ' : FCtx ν (Ty α)} {t : UBody φ ν}
-  (dt : FWf p Γ t Δ) : IsLeast (t.targets Γ p) dt.infTrg := ⟨⟨dt.toInf⟩, λ_ ⟨dt'⟩ => dt.infTrg_wk' dt'⟩
+  (dt : FWf p Γ t Δ) : IsLeast (t.trgs Γ p) dt.infTrg := ⟨⟨dt.toInf⟩, λ_ ⟨dt'⟩ => dt.infTrg_wk' dt'⟩
 
 theorem UBody.FWf.infTrg_is_glb {Γ Δ Δ' : FCtx ν (Ty α)} {t : UBody φ ν}
-  (dt : FWf p Γ t Δ) : IsGLB (t.targets Γ p) dt.infTrg := ⟨λ_ ⟨dt'⟩ => dt.infTrg_wk' dt', λ_ hΔ => hΔ ⟨dt.toInf⟩⟩
+  (dt : FWf p Γ t Δ) : IsGLB (t.trgs Γ p) dt.infTrg := ⟨λ_ ⟨dt'⟩ => dt.infTrg_wk' dt', λ_ hΔ => hΔ ⟨dt.toInf⟩⟩
+
+-- def UBody.FWf.restrict {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} : FWf p Γ t Δ → FWf p (Γ.restrict (t.vars_for Δ.support)) t Δ
+--   | @nil _ _ _ _ _ Γ _ _ _ => Γ
+--   | let1 _ _ dt => dt.infTrg
+--   | let2 _ _ _ dt => dt.infTrg
+
+-- all sources must contain all variables in t.vars_for Δ.support, and in particular must contain all variables in t.vars
+
+def UBody.srcs (p : Purity) (t : UBody φ ν) (Δ : FCtx ν (Ty α))
+  : Set (FCtx ν (Ty α)) := λΓ => Nonempty (FWf p Γ t Δ)
+
+-- given Γ, Γ.restrict (t.vars_for Δ.support) is the smallest source _compatible with Γ_
 
 --TODO: FWf.comp
 
