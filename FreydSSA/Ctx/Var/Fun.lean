@@ -837,6 +837,13 @@ theorem FCtx.restrict_app (Γ : FCtx ν α) (vars : Finset ν) (x : ν)
   : (FCtx.restrict Γ vars) x = if x ∈ vars then Γ x else ⊤
   := rfl
 
+theorem FCtx.restrict_comm (Γ : FCtx ν α) (A B : Finset ν)
+  : (Γ.restrict A).restrict B = (Γ.restrict B).restrict A := by
+  apply FCtx.ext
+  intro x
+  simp only [restrict_app]
+  split <;> simp [*]
+
 theorem FCtx.restrict_support (Γ : FCtx ν α) : Γ.restrict Γ.support = Γ
   := ext (λx => by
     simp only [restrict_app, mem_support, ne_eq, ite_not, ite_eq_right_iff];
@@ -971,6 +978,13 @@ theorem FCtx.sdiff_eq_restrict (Γ : FCtx ν α) (N : Finset ν)
     rfl
     simp only [ne_eq, not_not] at *; assumption
 
+theorem FCtx.sdiff_restrict_comm (Γ : FCtx ν α) (A B : Finset ν)
+  : (Γ.restrict A).sdiff B = (Γ.sdiff B).restrict A := by
+  apply FCtx.ext
+  intro x
+  simp only [restrict_app, sdiff_app]
+  split <;> simp [*]
+
 theorem FCtx.sdiff_eq (Γ : FCtx ν α) (N : Finset ν) (hΓ : Disjoint Γ.support N)
   : (FCtx.sdiff Γ N) = Γ := by
   apply FCtx.ext
@@ -1012,6 +1026,10 @@ theorem FCtx.lsup_sdiff (Γ Δ : FCtx ν α) (N : Finset ν) : (Γ.sdiff N).lsup
 
 def FCtx.sdiff_except (Γ : FCtx ν α) (N : Finset ν) (x : ν) : FCtx ν α
   := Γ.sdiff (N.erase x)
+
+theorem FCtx.sdiff_except_restrict_comm (Γ : FCtx ν α) (A B : Finset ν) (x : ν)
+  : (Γ.restrict A).sdiff_except B x = (Γ.sdiff_except B x).restrict A
+  := Γ.sdiff_restrict_comm _ _
 
 theorem FCtx.sdiff_except_eq_sdiff (Γ : FCtx ν α) (N : Finset ν) (x : ν) (hx : x ∉ N)
   : Γ.sdiff_except N x = Γ.sdiff N := by simp [sdiff_except, *]

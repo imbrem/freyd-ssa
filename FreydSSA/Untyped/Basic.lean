@@ -208,6 +208,10 @@ def USubst.vars_sub (σ : USubst φ ν) (N : Finset ν) (M : Finset ν)
   (h: ∀x ∈ N, (σ x).vars ⊆ M) : USubst.vars σ N ⊆ M
   := @Finset.sup_le _ _ _ _ _ _ M h
 
+def USubst.sub_vars (σ : USubst φ ν) (N : Finset ν)
+  : ∀x ∈ N, (σ x).vars ⊆ σ.vars N
+  := λx h => @Finset.le_sup _ _ _ _ _ (λx => (σ x).vars) x h
+
 inductive UBody (φ : Type _) (ν  : Type _)
    : Type _ where
   | nil : UBody φ ν

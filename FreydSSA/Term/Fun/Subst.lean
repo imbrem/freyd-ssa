@@ -53,9 +53,13 @@ def FCtx.Subst.vars_sub_support {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} (h
   : σ.vars Δ.support ⊆ Γ.support
   := σ.vars_sub Δ.support Γ.support (λx h => (hσ x h).vars_sub_support)
 
--- def FCtx.Subst.restrict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
---   (hσ : FCtx.Subst Γ σ Δ) : FCtx.Subst (Γ.restrict (σ.vars Δ.support)) σ Δ
---   := sorry
+def FCtx.Subst.restrict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
+  (hσ : FCtx.Subst Γ σ Δ) : FCtx.Subst (Γ.restrict (σ.vars Δ.support)) σ Δ
+  := λx h => (hσ x h).restrict.wk (FCtx.Wk.restrict_sub _ (σ.sub_vars Δ.support x h))
+
+def FCtx.Subst.unrestrict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.Subst (Γ.restrict R) σ Δ) : FCtx.Subst Γ σ Δ
+  := hσ.wkEntry (FCtx.Wk.wk_restrict Γ _)
 
 -- def FCtx.Subst.lsupExit {Γ Δ Ξ : FCtx ν (Ty α)} {σ : USubst φ ν}
 --   (hσ : Γ.Subst σ Δ) (hσ' : Γ.Subst σ Ξ) : Γ.Subst σ (Δ.lsup Ξ)
@@ -176,14 +180,17 @@ def FCtx.SubstCons.lsup {Γ Δ Γ' Δ' : FCtx ν (Ty α)} {σ : USubst φ ν}
     rw [<-lsup_sdiff_except]
     exact hres
 
--- def FCtx.SubstCons.restrict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
---   (hσ : FCtx.SubstCons Γ σ Δ N) : FCtx.SubstCons (Γ.restrict (σ.vars Δ.support)) σ Δ N
---   := sorry
+def FCtx.SubstCons.restrict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) : FCtx.SubstCons (Γ.restrict (σ.vars Δ.support)) σ Δ N
+  := λx h => (hσ x h).restrict.wk (by
+    rw [sdiff_except_restrict_comm]
+    exact FCtx.Wk.restrict_sub _ (σ.sub_vars Δ.support x h)
+  )
+
+def FCtx.SubstCons.unrestrict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.SubstCons (Γ.restrict R) σ Δ N) : FCtx.SubstCons Γ σ Δ N
+  := hσ.wkEntry (FCtx.Wk.wk_restrict Γ _)
 
 def FCtx.SubstCons.vars_sub_support {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} (hσ : FCtx.SubstCons Γ σ Δ N)
   : σ.vars Δ.support ⊆ Γ.support
   := hσ.toSubst.vars_sub_support
-
-structure FCtx.MSubstCons  (Γ : FCtx ν (Ty α)) (σ : USubst φ ν) (Δ : FCtx ν (Ty α)) (N : Finset ν) : Type _ where
-  isSubst : FCtx.SubstCons Γ σ Δ N
-  isMinimal : Γ.support = σ.vars N
