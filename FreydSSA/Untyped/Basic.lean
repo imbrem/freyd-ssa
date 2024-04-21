@@ -13,7 +13,7 @@ import FreydSSA.Ctx
 import FreydSSA.InstSet
 import FreydSSA.Utils
 
-variable {φ ν ν' κ κ' α β} [DecidableEq ν]
+variable {φ ν ν' κ κ' α β} [DecidableEq ν] [DecidableEq κ]
 
 --TODO: map_inst
 
@@ -485,6 +485,10 @@ inductive UTerminator (φ : Type _) (ν : Type _) (κ : Type _)
    : Type _ where
   | br : κ → UTm φ ν → UTerminator φ ν κ
   | ite : UTm φ ν → UTerminator φ ν κ → UTerminator φ ν κ → UTerminator φ ν κ
+
+def UTerminator.targets : UTerminator φ ν κ → Finset κ
+  | br ℓ _ => {ℓ}
+  | ite _ s t => s.targets ∪ t.targets
 
 def UTerminator.rename {φ ν ν' κ}
   (σ : ν → ν') : UTerminator φ ν κ → UTerminator φ ν' κ

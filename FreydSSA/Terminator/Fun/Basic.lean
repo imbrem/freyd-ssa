@@ -40,6 +40,21 @@ theorem UTerminator.FWf.toMinTrg {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν �
     (ds.minTrg_LEq.toLWk.cmp₂ dt.minTrg_LEq.toLWk ds.minTrg_wk dt.minTrg_wk).lsup_wk_right
   ))
 
+-- def UTerminator.FWf.minTrg_targets {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
+--   : (dt : t.FWf Γ L) → (L.restrict t.targets).PWk dt.minTrg
+--   | br w de => by
+--     apply FLCtx.ext
+--     intro x
+--     simp only [minTrg, FLCtx.singleton_app, targets, FLCtx.restrict_app, Finset.mem_singleton]
+--     split
+--     . rename_i h
+--       have h' := w x
+--       cases h
+--       simp only [FLCtx.singleton_app, ↓reduceIte, ge_iff_le] at h'
+--       sorry
+--     . rfl
+--   | ite de ds dt => sorry
+
 theorem UTerminator.FWf.minTrg_eq {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
   : (dt : t.FWf Γ L) → (dt' : t.FWf Γ L') → dt.minTrg = dt'.minTrg
   | br _ de, br _ de' => by cases de.tyEq de'; rfl
