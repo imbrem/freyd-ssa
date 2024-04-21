@@ -357,6 +357,10 @@ theorem FLCtx.PSubstCons.not_mem_support_mpr {L : FLCtx κ ν (Ty α)} {σ : USu
   (hσ : L.PSubstCons σ K N) (x : κ) : x ∉ K.support → x ∉ L.support
   := by simp [FLCtx.mem_support, (hσ x).bot_iff]
 
+theorem FLCtx.PSubstCons.support_eq {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+  (hσ : L.PSubstCons σ K N) : L.support = K.support
+  := Finset.ext hσ.mem_support_iff
+
 theorem FLCtx.PSubstCons.is_some_mp {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
   (hσ : L.PSubstCons σ K N) (x : κ) : (L x).isSome → (K x).isSome
   := (hσ x).is_some_mp
@@ -510,13 +514,22 @@ def FLCtx.PSubstCons.isMin {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FL
   (hσ : L.PSubstCons σ K N) : Prop
   := ∀x, (hσ x).isMin
 
--- def FLCtx.PSubstCons.getToFCtx {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L : FLCtx κ ν (Ty α)}
---   (hσ : L'.PSubstCons σ L N)
---   (ℓ : κ) (Γℓ' : FLabel ν (Ty α)) (Γℓ : FLabel ν (Ty α)) (x : ν)
---   (hℓL' : L' ℓ = Γℓ') (hℓL : L ℓ = Γℓ) (hx : x ∈ N)
---   : (Γℓ'.toFCtx x).SubstCons σ (Γℓ.toFCtx x) N
---   := sorry
+def FLCtx.PSubstCons.getToFCtx {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L : FLCtx κ ν (Ty α)}
+  (hσ : L'.PSubstCons σ L N)
+  (ℓ : κ) (Γℓ' : FLabel ν (Ty α)) (Γℓ : FLabel ν (Ty α)) (x : ν)
+  (hℓL' : L' ℓ = Γℓ') (hℓL : L ℓ = Γℓ) (hx : x ∈ N)
+  : (Γℓ'.toFCtx x).SubstCons σ (Γℓ.toFCtx x) N
+  := sorry
 
--- def FLCtx.PSubstCons.consSrc {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L : FLCtx κ ν (Ty α)}
---   (hσ : L'.PSubstCons σ (L.cons ℓ Γℓ) N) : Σ'Γℓ', L' = (L'.erase ℓ).cons ℓ Γℓ'
---   := sorry
+def FLCtx.PSubstCons.consSrc {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L : FLCtx κ ν (Ty α)}
+  (hσ : L'.PSubstCons σ (L.cons ℓ Γℓ) N) : ℓ ∈ L'.support
+  := sorry
+
+def FLCtx.PSubstCons.erase {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)} {N : Finset ν}
+  (hσ : L.PSubstCons σ K N) (ℓ : κ) : (L.erase ℓ).PSubstCons σ (K.erase ℓ) N
+  := sorry
+
+def FLCtx.PSubstCons.erase' {L L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K K' : FLCtx κ ν (Ty α)} {N : Finset ν}
+  (hσ : L.PSubstCons σ K N) (ℓ : κ) (hK' : K' = K.erase ℓ) (hL' : L' = L.erase ℓ)
+  : L'.PSubstCons σ K' N
+  := hK' ▸ hL' ▸ hσ.erase ℓ

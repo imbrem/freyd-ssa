@@ -122,6 +122,9 @@ theorem FLCtx.singleton_app (x : κ) (L : FLabel ν α) (y : κ)
 theorem FLCtx.mem_support {L : FLCtx κ ν α} (ℓ : κ)
   : ℓ ∈ L.support ↔ L ℓ ≠ ⊥ := L.mem_support_toFun ℓ
 
+theorem FLCtx.not_mem_support {L : FLCtx κ ν α} (ℓ : κ)
+  : ℓ ∉ L.support ↔ L ℓ = ⊥ := by simp [mem_support]
+
 theorem FLCtx.ext {L K : FLCtx κ ν α} (h : ∀x, L x = K x)
   : L = K
   := DFunLike.coe_injective' (by funext x; apply h)
@@ -142,6 +145,10 @@ theorem FLCtx.cons_app (x : κ) (L : FLabel ν α) (K : FLCtx κ ν α) (y : κ)
 
 def FLCtx.get {L : FLCtx κ ν α} (x : κ) (h : x ∈ L.support) : FLabel ν α
   := (L x).get (by simp only [Option.isSome]; split; rfl; simp [mem_support, Bot.bot, *] at h)
+
+theorem FLCtx.get_eq {L : FLCtx κ ν α} (x : κ) (h : x ∈ L.support)
+  : L.get x h = L x
+  := by simp [get, WithBot.some]
 
 -- TODO: cons lore
 
@@ -191,7 +198,6 @@ theorem FLCtx.Wk.of_cons {L : FLCtx κ ν α} (x : κ) (Γ : FLabel ν α) (hL :
   then by cases h; simp [cons_app, eq_bot_of_not_mem_support _ hL]
   else by simp [cons_app, h]
 
-
 theorem FLabel.Wk.toSingleton {L K : FLabel ν α} (x : κ) (w : FLabel.Wk L K)
   : FLCtx.Wk (FLCtx.singleton x L) (FLCtx.singleton x K)
   := λy => by
@@ -231,6 +237,67 @@ theorem FLCtx.EWk.to_wk {L K : FLCtx κ ν α} (h : FLCtx.EWk L K) : FLCtx.Wk L 
   := λx => by cases h x <;> simp [*]
 theorem FLCtx.EWk.antisymm {L K : FLCtx κ ν α} (h : FLCtx.EWk L K) (h' : FLCtx.EWk K L)
   : L = K := h.to_wk.antisymm h'.to_wk
+
+def FLCtx.restrict (L : FLCtx κ ν α) (labels : Finset κ) : FLCtx κ ν α where
+  toFun x := if x ∈ labels then L x else ⊥
+  support := L.support ∩ labels
+  mem_support_toFun := by simp [mem_support, And.comm]
+
+theorem FLCtx.restrict_app (L : FLCtx κ ν α) (labels : Finset κ) (x : κ)
+  : (L.restrict labels) x = if x ∈ labels then L x else ⊥ := rfl
+
+theorem FLCtx.restrict_sub_support {L : FLCtx κ ν α} {ls : Finset κ} (hls : L.support ⊆ ls)
+  : L.restrict ls = L := by
+  --TODO: clean this up...
+  apply ext
+  intro x
+  simp only [restrict_app, ite_eq_left_iff]
+  intro hx
+  have hx := λc => hx (Finset.mem_of_subset hls c)
+  simp only [mem_support, ne_eq, imp_false, not_not] at hx
+  rw [hx]
+
+def FLCtx.Restricts (L : FLCtx κ ν α) (K : FLCtx κ ν α) : Prop := K.restrict L.support = L
+
+theorem FLCtx.Restricts.to_ewk {L K : FLCtx κ ν α} (h : L.Restricts K) : L.EWk K
+  := λℓ => by
+    if h' : L ℓ = K ℓ ∨ L ℓ = ⊥ then
+      exact h'
+    else
+      simp only [Restricts] at h
+      rw [not_or, <-h, restrict_app] at h'
+      split at h' <;> simp at h'
+
+def FLCtx.EWk.restricts {L K : FLCtx κ ν α} (h : L.EWk K) : L.Restricts K
+  := by
+  apply FLCtx.ext
+  intro ℓ
+  rw [restrict_app]
+  cases h ℓ with
+  | inl h =>
+    split
+    . exact h.symm
+    . apply Eq.symm
+      apply eq_bot_of_not_mem_support
+      assumption
+  | inr h =>
+    rw [<-not_mem_support] at h
+    simp only [h, ↓reduceIte]
+    apply Eq.symm
+    rw [<-not_mem_support]
+    exact h
+
+def FLCtx.EWk.iff_restricts (L K : FLCtx κ ν α) : L.EWk K ↔ L.Restricts K
+  := ⟨restricts, Restricts.to_ewk⟩
+
+def FLCtx.Restricts.to_wk {L K : FLCtx κ ν α} (h : L.Restricts K) : L.Wk K
+  := h.to_ewk.to_wk
+
+theorem FLCtx.EWk.of_cons {L : FLCtx κ ν α} (x : κ) (Γ : FLabel ν α) (hL : x ∉ L.support)
+  : FLCtx.EWk L (FLCtx.cons x Γ L)
+  := λy => if h: y = x
+  then by cases h; simp [cons_app, eq_bot_of_not_mem_support _ hL]
+  else by simp [cons_app, h]
 
 def FLCtx.PWk (L K : FLCtx κ ν α) : Prop := ∀x, L x ≤ K x ∧ (K x = ⊥ -> L x = ⊥)
 
