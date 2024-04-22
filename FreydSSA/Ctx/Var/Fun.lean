@@ -1086,8 +1086,21 @@ theorem FCtx.lsup_sdiff_except (Γ Δ : FCtx ν α) (N : Finset ν) (x : ν)
   : (Γ.sdiff_except N x).lsup (Δ.sdiff_except N x) = (Γ.lsup Δ).sdiff_except N x
   := lsup_sdiff Γ Δ (N.erase x)
 
+def FCtx.empty (ν α) : FCtx ν α where
+  toFun _ := ⊤
+  support := ∅
+  mem_support_toFun := by simp
+
+instance FCtx.instEmptyCollection : EmptyCollection (FCtx ν α) where
+  emptyCollection := FCtx.empty ν α
+
 instance FCtx.instTop : Top (FCtx ν α) where
-  top := ⟨λ_ => ⊤, ∅, by simp⟩
+  top := FCtx.empty ν α
+
+theorem FCtx.top_app (x : ν) : (⊤ : FCtx ν α) x = ⊤ := rfl
+
+@[simp]
+theorem FCtx.not_in_top (x : ν) : x ∉ (⊤ : FCtx ν α).support := Finset.not_mem_empty x
 
 theorem FCtx.Wk.top (Γ : FCtx ν α) : Γ.Wk ⊤ := λ_ => Or.inl rfl
 

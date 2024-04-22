@@ -90,9 +90,20 @@ def FLCtx.empty (κ : Type _) (ν : Type _) (α : Type _) : FLCtx κ ν α where
   support := ∅
   mem_support_toFun x := by simp
 
+instance FLCtx.instBot : Bot (FLCtx κ ν α) where
+  bot := FLCtx.empty κ ν α
+
+instance FLCtx.instEmptyCollection : EmptyCollection (FLCtx κ ν α) where
+  emptyCollection := FLCtx.empty κ ν α
+
 def FLCtx.singleton (x : κ) (L : FLabel ν α) : FLCtx κ ν α where
   toFun y := if y = x then L else ⊥
   support := {x}
+  mem_support_toFun y := by simp
+
+def FLCtx.splat (xs : Finset κ) (L : FLabel ν α) : FLCtx κ ν α where
+  toFun y := if y ∈ xs then L else ⊥
+  support := xs
   mem_support_toFun y := by simp
 
 theorem FLCtx.toFun_inj_mp {L K : FLCtx κ ν α} (h : L.toFun = K.toFun)
@@ -115,8 +126,16 @@ instance FLCtx.instFunLike : FunLike (FLCtx κ ν α) κ (WithBot (FLabel ν α)
   coe := FLCtx.toFun
   coe_injective' := by intro Γ Δ; apply FLCtx.toFun_inj_mp
 
+theorem FLCtx.empty_app (x : κ) : (FLCtx.empty κ ν α) x = ⊥ := rfl
+
+theorem FLCtx.bot_app (x : κ) : (⊥ : FLCtx κ ν α) x = ⊥ := rfl
+
 theorem FLCtx.singleton_app (x : κ) (L : FLabel ν α) (y : κ)
   : FLCtx.singleton x L y = (if y = x then ↑L else ⊥)
+  := rfl
+
+theorem FLCtx.splat_app (xs : Finset κ) (L : FLabel ν α) (y : κ)
+  : FLCtx.splat xs L y = (if y ∈ xs then ↑L else ⊥)
   := rfl
 
 theorem FLCtx.mem_support {L : FLCtx κ ν α} (ℓ : κ)
@@ -149,6 +168,23 @@ def FLCtx.get {L : FLCtx κ ν α} (x : κ) (h : x ∈ L.support) : FLabel ν α
 theorem FLCtx.get_eq {L : FLCtx κ ν α} (x : κ) (h : x ∈ L.support)
   : L.get x h = L x
   := by simp [get, WithBot.some]
+
+theorem FLCtx.splat_empty (L : FLabel ν α) : FLCtx.splat ∅ L = FLCtx.empty κ _ _ := by
+  apply FLCtx.ext
+  intro x
+  simp [splat_app, empty_app]
+
+theorem FLCtx.splat_empty_emp {L : FLabel ν α} : FLCtx.splat ∅ L = (∅ : FLCtx κ _ _) :=
+  splat_empty L
+
+theorem FLCtx.splat_empty_bot {L : FLabel ν α} : FLCtx.splat ∅ L = (⊥ : FLCtx κ _ _) :=
+  splat_empty L
+
+theorem FLCtx.splat_singleton (x : κ) (L : FLabel ν α)
+  : FLCtx.splat {x} L = FLCtx.singleton x L := by
+  apply FLCtx.ext
+  intro y
+  simp [splat_app, singleton_app]
 
 -- TODO: cons lore
 
@@ -207,6 +243,15 @@ theorem FLabel.Wk.toSingleton {L K : FLabel ν α} (x : κ) (w : FLabel.Wk L K)
     exact w
     simp
 
+theorem FLabel.Wk.toSplat {L K : FLabel ν α} (xs : Finset κ) (w : FLabel.Wk L K)
+  : FLCtx.Wk (FLCtx.splat xs L) (FLCtx.splat xs K)
+  := λy => by
+    simp only [FLCtx.splat_app]
+    split
+    simp only [WithBot.coe_le_coe]
+    exact w
+    simp
+
 def FLabel.Wk.of_le_coe {L K : FLabel ν α} (h : (L : WithBot (FLabel ν α)) ≤ (K : WithBot (FLabel ν α))) : L ≤ K
   := by simp only [WithBot.coe_le_coe] at h; exact h
 
@@ -219,6 +264,23 @@ theorem FCtx.Wk.toLabel {Γ Δ : FCtx ν α} (w : Γ.Wk Δ) (param : α)
 
 def FCtx.toSingleton (x : κ) (Γ : FCtx ν α) (param : α) : FLCtx κ ν α
   := FLCtx.singleton x (Γ.toLabel param)
+
+def FCtx.toSplat (xs : Finset κ) (Γ : FCtx ν α) (param : α) : FLCtx κ ν α
+  := FLCtx.splat xs (Γ.toLabel param)
+
+def FCtx.tensor (xs : FCtx κ α) (Γ : FCtx ν α) : FLCtx κ ν α where
+  toFun ℓ := if h : ℓ ∈ xs.support then Γ.toLabel (xs.get ℓ h) else ⊥
+  support := xs.support
+  mem_support_toFun := by simp
+
+-- Note: this is annoying because xs here is contravariant. Should be ⊥ not ⊤, but _elas_...
+theorem FCtx.tensor_app (xs : FCtx κ α) (Γ : FCtx ν α) (ℓ : κ)
+  : (FCtx.tensor xs Γ) ℓ = if h : ℓ ∈ xs.support then ↑(Γ.toLabel (xs.get ℓ h)) else ⊥ := rfl
+
+theorem FCtx.tensor_top (Γ : FCtx ν α) : FCtx.tensor ⊤ Γ = (⊥ : FLCtx κ _ _) := by
+  apply FLCtx.ext
+  intro x
+  simp [tensor_app, FLCtx.bot_app]
 
 theorem FCtx.Wk.toSingleton {Γ Δ : FCtx ν α} (x : κ) (w : Γ.Wk Δ) (param : α)
   : (Γ.toSingleton x param).Wk (Δ.toSingleton x param)
@@ -537,9 +599,6 @@ theorem FCtx.LWk.cmp₂ {L K M : FLCtx κ ν α} {Γ : FCtx ν α}
 
 theorem FCtx.LEq.toLWk {Γ : FCtx ν α} {L : FLCtx κ ν α} (hΓ : Γ.LEq L) : Γ.LWk L
   := λx => (hΓ x).toLWkBot
-
-instance FLCtx.instBot : Bot (FLCtx κ ν α) where
-  bot := FLCtx.empty κ ν α
 
  -- TODO: lawful
 

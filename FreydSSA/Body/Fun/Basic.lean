@@ -42,6 +42,13 @@ def UBody.FWf.infTrg {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} : FWf p Γ t Δ
   | let1 _ _ dt => dt.infTrg
   | let2 _ _ _ dt => dt.infTrg
 
+def UBody.FWf.infTrg_support {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν}
+  : (dt : FWf p Γ t Δ) → dt.infTrg.support = Γ.support ∪ t.defs.toFinset
+  | nil _ _ => by simp [infTrg, defs]
+  | let1 _ _ dt => by simp [infTrg, dt.infTrg_support, FCtx.cons, defs]
+  | let2 _ _ _ dt => by
+    simp [infTrg, FCtx.cons, dt.infTrg_support, defs, Finset.Insert.comm]
+
 def UBody.FWf.toInf {Γ Δ : FCtx ν (Ty α)} {t : UBody φ ν} : (dt : FWf p Γ t Δ) → FWf p Γ t dt.infTrg
   | nil _ _ => nil _ (FCtx.Wk.refl _)
   | let1 _ de dt => let1 _ de dt.toInf
