@@ -277,10 +277,56 @@ def FCtx.tensor (xs : FCtx κ α) (Γ : FCtx ν α) : FLCtx κ ν α where
 theorem FCtx.tensor_app (xs : FCtx κ α) (Γ : FCtx ν α) (ℓ : κ)
   : (FCtx.tensor xs Γ) ℓ = if h : ℓ ∈ xs.support then ↑(Γ.toLabel (xs.get ℓ h)) else ⊥ := rfl
 
+theorem FCtx.tensor_app' (xs : FCtx κ α) (Γ : FCtx ν α) (ℓ : κ)
+  : (FCtx.tensor xs Γ) ℓ = match xs ℓ with | some A => Γ.toLabel A | ⊤ => ⊥ := by
+  simp only [tensor_app]
+  split
+  case inl h => rw [FCtx.get_eq h]
+  case inr h => rw [eq_top_of_not_mem_support _ h]
+
+theorem FCtx.tensor_eq_bot (xs : FCtx κ α) (Γ : FCtx ν α) (ℓ : κ)
+  : (FCtx.tensor xs Γ) ℓ = ⊥ ↔ xs ℓ = ⊤ := by simp [tensor_app, not_mem_support]
+
+theorem FCtx.tensor_eq_bot_mp (xs : FCtx κ α) (Γ : FCtx ν α) (ℓ : κ)
+  : (FCtx.tensor xs Γ) ℓ = ⊥ → xs ℓ = ⊤ := by simp [tensor_app, not_mem_support]
+
+theorem FCtx.tensor_eq_bot_mpr (xs : FCtx κ α) (Γ : FCtx ν α) (ℓ : κ)
+  : xs ℓ = ⊤ -> (FCtx.tensor xs Γ) ℓ = ⊥ := by simp [tensor_app, not_mem_support]
+
+theorem FCtx.tensor_eq_label_param (xs : FCtx κ α) (Γ : FCtx ν α) (ℓ : κ) (L : FLabel ν α)
+  : (FCtx.tensor xs Γ) ℓ = some L → xs ℓ = L.param := by
+  simp only [tensor_app']
+  split
+  case _ h => intro h'; cases h'; rw [h]; rfl
+  case _ => intro h'; contradiction
+
 theorem FCtx.tensor_top (Γ : FCtx ν α) : FCtx.tensor ⊤ Γ = (⊥ : FLCtx κ _ _) := by
   apply FLCtx.ext
   intro x
   simp [tensor_app, FLCtx.bot_app]
+
+def FLCtx.params (L : FLCtx κ ν α) : FCtx κ α where
+  toFun ℓ := if h : ℓ ∈ L.support then (L.get ℓ h).param else ⊤
+  support := L.support
+  mem_support_toFun := by simp
+
+theorem FLCtx.params_app (L : FLCtx κ ν α) (ℓ : κ)
+  : L.params ℓ = if h : ℓ ∈ L.support then ↑(L.get ℓ h).param else ⊤ := rfl
+
+theorem FLCtx.params_app' (L : FLCtx κ ν α) (ℓ : κ)
+  : L.params ℓ = match L ℓ with | some Γ => Γ.param | ⊥ => ⊤ := by
+  simp only [params_app]
+  split
+  case inl h => rw [<-L.get_eq ℓ h] -- TODO: inconsistent ordering here...
+  case inr h => rw [eq_bot_of_not_mem_support _ h]
+
+theorem FCtx.tensor_params (xs : FCtx κ α) (Γ : FCtx ν α) : (FCtx.tensor xs Γ).params = xs := by
+  apply FCtx.ext
+  intro x
+  simp only [FLCtx.params_app']
+  split
+  case _ h => rw [tensor_eq_label_param _ _ _ _ h]
+  case _ h => rw [tensor_eq_bot_mp _ _ _ h]
 
 theorem FCtx.Wk.toSingleton {Γ Δ : FCtx ν α} (x : κ) (w : Γ.Wk Δ) (param : α)
   : (Γ.toSingleton x param).Wk (Δ.toSingleton x param)
@@ -542,6 +588,10 @@ inductive FCtx.LEqBot (Γ : FCtx ν α) : (Δ : WithBot (FLabel ν α)) → Prop
   | refl (A) : LEqBot Γ (some ⟨Γ, A⟩)
 
 def FCtx.LEq (Γ : FCtx ν α) (L : FLCtx κ ν α) : Prop := ∀x, Γ.LEqBot (L x)
+
+-- TODO: LEq Γ iff = tensor Γ params
+
+-- TODO: LWk Γ iff ≤ₚ tensor Γ params
 
 theorem FCtx.singletonLEq (x : κ) (Γ : FCtx ν α) (param : α) : Γ.LEq (Γ.toSingleton x param)
   := λy => by
