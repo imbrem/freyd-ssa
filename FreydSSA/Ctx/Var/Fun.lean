@@ -1105,3 +1105,42 @@ theorem FCtx.not_in_top (x : ν) : x ∉ (⊤ : FCtx ν α).support := Finset.no
 theorem FCtx.Wk.top (Γ : FCtx ν α) : Γ.Wk ⊤ := λ_ => Or.inl rfl
 
  -- TODO: lawful
+
+theorem FCtx.Wk.restrict_eq {Γ Δ : FCtx ν α} (w : Γ.Wk Δ)
+  : Γ.restrict Δ.support = Δ := by
+  apply FCtx.ext
+  intro x
+  simp only [restrict_app]
+  split
+  case _ _ h => rw [w.eq_on _ h]
+  case _ _ h => rw [eq_top_of_not_mem_support _ h]
+
+theorem FCtx.wk_of_restrict_eq (Γ Δ : FCtx ν α) (h : Γ.restrict Δ.support = Δ)
+  : Γ.Wk Δ := by
+  apply FCtx.Wk.of_eq_on
+  intro x hx
+  rw [<-h]
+  simp [restrict_app, hx]
+
+theorem FCtx.wk_iff_restrict_eq (Γ Δ : FCtx ν α)
+  : Γ.Wk Δ ↔ Γ.restrict Δ.support = Δ := ⟨Wk.restrict_eq, wk_of_restrict_eq Γ Δ⟩
+
+theorem FCtx.Cmp.eq_on' {Γ Δ : FCtx ν α} (c : Γ.Cmp Δ)
+  : ∀x, x ∈ Γ.support -> x ∈ Δ.support -> Δ x = Γ x := by
+  intro x hΓ hΔ
+  simp only [mem_support] at hΓ hΔ
+  cases c x with
+  | inl h => rw [h]
+  | inr h => aesop
+
+theorem FCtx.Cmp.eq_on {Γ Δ : FCtx ν α} (c : Γ.Cmp Δ)
+  : ∀x ∈ Γ.support ∩ Δ.support, Δ x = Γ x := by
+  simp only [Finset.mem_inter]
+  intro x ⟨hΓ, hΔ⟩
+  exact c.eq_on' x hΓ hΔ
+
+theorem FCtx.Cmp.wk_of_subset {Γ Δ : FCtx ν α} (c : Γ.Cmp Δ) (h : Δ.support ⊆ Γ.support)
+  : Γ.Wk Δ := by
+  apply FCtx.Wk.of_eq_on
+  intro x hx
+  rw [c.eq_on' x (h hx) hx]

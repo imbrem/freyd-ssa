@@ -201,3 +201,20 @@ def FCtx.SubstCons.isMin {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Fins
 theorem FCtx.SubstCons.isMin.eq_restrict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
   (hσ : FCtx.SubstCons Γ σ Δ N) (hmin : hσ.isMin) : Γ.restrict (σ.vars Δ.support) = Γ
   := by rw [restrict_sub_support_iff]; exact hmin
+
+theorem FCtx.SubstCons.isMin_of_eq_restict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) (hΓ : Γ.restrict (σ.vars Δ.support) = Γ) : hσ.isMin
+  := by rw [restrict_sub_support_iff] at hΓ; exact hΓ
+
+theorem FCtx.SubstCons.isMin.eq_restrict_iff {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) : hσ.isMin ↔ Γ.restrict (σ.vars Δ.support) = Γ
+  := ⟨isMin.eq_restrict hσ, hσ.isMin_of_eq_restict⟩
+
+theorem FCtx.SubstCons.push_wk {Γ Γ' Δ Δ' : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) (hσ' : FCtx.SubstCons Γ' σ Δ' N)
+  (hΓ : Γ'.Wk Γ) (hmin : hσ.isMin) (hmin' : hσ'.isMin) : Δ'.Wk Δ := by
+  have hΔ'Δ := hσ'.cmp hσ hΓ.cmp;
+  apply FCtx.Wk.of_eq_on
+  intro x hx
+  simp only [isMin] at *
+  sorry
