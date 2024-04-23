@@ -87,6 +87,10 @@ theorem FCtx.eq_top_of_not_mem_support {Γ : FCtx ν α} (x : ν)
 theorem FCtx.not_mem_support {Γ : FCtx ν α} (x : ν)
   : x ∉ Γ.support ↔ Γ x = ⊤ := ⟨eq_top_of_not_mem_support x, not_mem_support_of_eq_top x⟩
 
+theorem FCtx.mem_support_iff_of_eq {Γ Δ : FCtx ν α} (x : ν) (h : Γ x = Δ x)
+  : x ∈ Γ.support ↔ x ∈ Δ.support
+  := by simp [mem_support, h]
+
 def FCtx.map_ty (Γ : FCtx ν α) (f : α → β) : FCtx ν β where
   toFun x := (Γ.toFun x).map (f)
   support := Γ.support
@@ -1188,3 +1192,44 @@ theorem FCtx.restrict_eq_of_eq_at (Γ Γ' : FCtx ν α) (x) (h : Γ x = Γ' x)
 theorem FCtx.restrict_eq_singleton_iff (Γ Γ' : FCtx ν α) (x) :
   Γ.restrict {x} = Γ'.restrict {x} ↔ Γ x = Γ' x
   := ⟨eq_at_of_restrict_eq _ _ _, restrict_eq_of_eq_at _ _ _⟩
+
+def FCtx.eq_on (Γ Δ : FCtx ν α) : Finset ν := Γ.support.filter (λx => Γ x = Δ x)
+
+theorem FCtx.eq_on_comm (Γ Δ : FCtx ν α) : Γ.eq_on Δ = Δ.eq_on Γ := by
+  apply Finset.ext
+  intro x
+  simp only [eq_on, Finset.mem_filter]
+  constructor <;> intro ⟨hx, h⟩ <;> simp [mem_support_iff_of_eq _ h.symm, h, hx]
+
+theorem FCtx.mem_left_of_mem_eq_on (Γ Δ : FCtx ν α) (x : ν) (hx : x ∈ Γ.eq_on Δ)
+  : x ∈ Γ.support := by
+  simp only [eq_on, Finset.mem_filter] at hx
+  exact hx.1
+
+theorem FCtx.mem_right_of_mem_eq_on (Γ Δ : FCtx ν α) (x : ν) (hx : x ∈ Γ.eq_on Δ)
+  : x ∈ Δ.support := by
+  rw [eq_on_comm] at hx
+  exact mem_left_of_mem_eq_on _ _ _ hx
+
+theorem FCtx.eq_at_of_mem_eq_on (Γ Δ : FCtx ν α) (x : ν) (hx : x ∈ Γ.eq_on Δ)
+  : Γ x = Δ x := by
+  simp only [eq_on, Finset.mem_filter] at hx
+  exact hx.2
+
+theorem FCtx.Cmp.eq_on_intersect {Γ Δ : FCtx ν α} (c : Γ.Cmp Δ)
+  : Γ.eq_on Δ = Γ.support ∩ Δ.support := by
+  apply Finset.ext
+  intro x
+  simp only [FCtx.eq_on, Finset.mem_filter]
+  constructor
+  . intro ⟨hx, h⟩
+    simp [mem_support_iff_of_eq _ h.symm, hx]
+  . intro hx
+    constructor
+    rw [Finset.mem_inter] at hx
+    exact hx.1
+    apply c.symm.eq_on
+    rw [Finset.inter_comm] at hx
+    exact hx
+
+-- TODO: lore about restricting to equality...

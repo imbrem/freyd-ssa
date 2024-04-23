@@ -204,13 +204,31 @@ def UTm.vars : UTm φ ν → Finset ν
 def USubst.vars (σ : USubst φ ν) (N : Finset ν) : Finset ν
   := Finset.sup N (λx => (σ x).vars)
 
-def USubst.vars_sub (σ : USubst φ ν) (N : Finset ν) (M : Finset ν)
+theorem USubst.vars_sub (σ : USubst φ ν) (N : Finset ν) (M : Finset ν)
   (h: ∀x ∈ N, (σ x).vars ⊆ M) : USubst.vars σ N ⊆ M
   := @Finset.sup_le _ _ _ _ _ _ M h
 
-def USubst.sub_vars (σ : USubst φ ν) (N : Finset ν)
+theorem USubst.sub_vars (σ : USubst φ ν) (N : Finset ν)
   : ∀x ∈ N, (σ x).vars ⊆ σ.vars N
   := λx h => @Finset.le_sup _ _ _ _ _ (λx => (σ x).vars) x h
+
+theorem USubst.prop_on_vars (σ : USubst φ ν) (N : Finset ν) (P : ν → Prop)
+  (h : ∀x ∈ N, ∀y ∈ (σ x).vars, P y) : ∀x ∈ σ.vars N, P x
+  := by
+  simp only [vars, Finset.mem_sup, forall_exists_index, and_imp]
+  intro y x hx hy
+  exact h x hx y hy
+
+theorem USubst.of_prop_on_vars (σ : USubst φ ν) (N : Finset ν) (P : ν → Prop)
+  (h : ∀x ∈ σ.vars N, P x) : ∀x ∈ N, ∀y ∈ (σ x).vars, P y
+  := by
+  simp only [vars, Finset.mem_sup, forall_exists_index, and_imp] at h
+  intro x hx y hy
+  exact h y x hx hy
+
+theorem USubst.prop_on_vars_iff (σ : USubst φ ν) (N : Finset ν) (P : ν → Prop)
+  : (∀x ∈ N, ∀y ∈ (σ x).vars, P y) ↔ (∀x ∈ σ.vars N, P x)
+  := ⟨prop_on_vars _ _ _, of_prop_on_vars _ _ _⟩
 
 inductive UBody (φ : Type _) (ν  : Type _)
    : Type _ where

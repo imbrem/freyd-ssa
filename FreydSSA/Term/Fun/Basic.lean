@@ -5,8 +5,7 @@ import FreydSSA.InstSet
 import FreydSSA.Untyped.Basic
 
 variable {φ ν α} [Φ : InstSet φ (Ty α)]
-  [Φc : CohInstSet φ (Ty α)]
-  [Φi : InjInstSet φ (Ty α)]
+  [Φc : CohInstSet φ (Ty α)] [Φi : InjInstSet φ (Ty α)]
   [DecidableEq ν] [DecidableEq α]
 
 --TODO: since this is quotiented, should this be a Prop? Can then do decidability and everything, and indexed contexts for the rest...

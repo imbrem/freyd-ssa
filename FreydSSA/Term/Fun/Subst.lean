@@ -1,7 +1,7 @@
 import FreydSSA.Term.Fun.Basic
 
 variable {φ ν α} [Φ : InstSet φ (Ty α)]
-  [Φc : CohInstSet φ (Ty α)]
+  [Φc : CohInstSet φ (Ty α)] [Φi : InjInstSet φ (Ty α)]
   [DecidableEq ν] [DecidableEq α]
 
 -- TODO: figure out how to bind this correctly...
@@ -209,3 +209,53 @@ theorem FCtx.SubstCons.isMin_of_eq_restict {Γ Δ : FCtx ν (Ty α)} {σ : USubs
 theorem FCtx.SubstCons.IsMin.eq_restrict_iff {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
   (hσ : FCtx.SubstCons Γ σ Δ N) : hσ.IsMin ↔ Γ.restrict (σ.vars Δ.support) = Γ
   := ⟨IsMin.eq_restrict hσ, hσ.isMin_of_eq_restict⟩
+
+theorem FCtx.Subst.src_eq_on_var {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
+  (hσ : FCtx.Subst Γ σ Δ) (hσ' : FCtx.Subst Γ' σ Δ')
+  : ∀x ∈ Δ.support, Δ x = Δ' x -> ∀y ∈ (σ x).vars, Γ y = Γ' y
+  := by
+    intro x hx hΔ
+    have hx' : x ∈ Δ'.support := (FCtx.mem_support_iff_of_eq _ hΔ).mp hx
+    exact (hσ x hx).src_eq_on (FCtx.get_eq_of _ _ hΔ.symm ▸ hσ' x hx')
+
+theorem FCtx.Subst.src_eq_on_var' {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
+  (hσ : FCtx.Subst Γ σ Δ) (hσ' : FCtx.Subst Γ' σ Δ')
+  : ∀x ∈ Δ.eq_on Δ', ∀y ∈ (σ x).vars, Γ y = Γ' y
+  := λ x hx => hσ.src_eq_on_var hσ' x
+    (FCtx.mem_left_of_mem_eq_on _ _ _ hx)
+    (FCtx.eq_at_of_mem_eq_on _ _ _ hx)
+
+theorem FCtx.Subst.src_eq_on_var_eq {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
+  (hσ : FCtx.Subst Γ σ Δ) (hσ' : FCtx.Subst Γ' σ Δ)
+  : ∀x ∈ Δ.support, ∀y ∈ (σ x).vars, Γ y = Γ' y
+  := λ x hx => hσ.src_eq_on_var hσ' x hx rfl
+
+theorem FCtx.Subst.src_eq_on {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
+  (hσ : FCtx.Subst Γ σ Δ) (hσ' : FCtx.Subst Γ' σ Δ')
+  : ∀x ∈ σ.vars (Δ.eq_on Δ'), Γ x = Γ' x
+  := σ.prop_on_vars _ _ (hσ.src_eq_on_var' hσ')
+
+theorem FCtx.Subst.src_eq_on_eq {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
+  (hσ : FCtx.Subst Γ σ Δ) (hσ' : FCtx.Subst Γ' σ Δ)
+  : ∀x ∈ σ.vars Δ.support, Γ x = Γ' x
+  := σ.prop_on_vars _ _ (hσ.src_eq_on_var_eq hσ')
+
+theorem FCtx.SubstCons.src_eq_on_var {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) (hσ' : FCtx.SubstCons Γ' σ Δ' N')
+  : ∀x ∈ Δ.support, Δ x = Δ' x -> ∀y ∈ (σ x).vars, Γ y = Γ' y
+  := hσ.toSubst.src_eq_on_var hσ'.toSubst
+
+theorem FCtx.SubstCons.src_eq_on_var_eq {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) (hσ' : FCtx.SubstCons Γ' σ Δ N)
+  : ∀x ∈ Δ.support, ∀y ∈ (σ x).vars, Γ y = Γ' y
+  := hσ.toSubst.src_eq_on_var_eq hσ'.toSubst
+
+theorem FCtx.SubstCons.src_eq_on {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) (hσ' : FCtx.SubstCons Γ' σ Δ' N')
+  : ∀x ∈ σ.vars (Δ.eq_on Δ'), Γ x = Γ' x
+  := hσ.toSubst.src_eq_on hσ'.toSubst
+
+theorem FCtx.SubstCons.src_eq_on_eq {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) (hσ' : FCtx.SubstCons Γ' σ Δ N)
+  : ∀x ∈ σ.vars Δ.support, Γ x = Γ' x
+  := hσ.toSubst.src_eq_on_eq hσ'.toSubst
