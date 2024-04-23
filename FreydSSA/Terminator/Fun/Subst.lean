@@ -523,7 +523,7 @@ def FLCtx.PSubstCons.getToFCtx {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L
 
 def FLCtx.PSubstCons.consSrc {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L : FLCtx κ ν (Ty α)}
   (hσ : L'.PSubstCons σ (L.cons ℓ Γℓ) N) : ℓ ∈ L'.support
-  := σ.prop_on_vars _ _ sorry
+  := sorry
 
 def FLCtx.PSubstCons.erase {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)} {N : Finset ν}
   (hσ : L.PSubstCons σ K N) (ℓ : κ) : (L.erase ℓ).PSubstCons σ (K.erase ℓ) N
