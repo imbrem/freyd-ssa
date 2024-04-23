@@ -195,20 +195,20 @@ def FCtx.SubstCons.vars_sub_support {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν
   : σ.vars Δ.support ⊆ Γ.support
   := hσ.toSubst.vars_sub_support
 
-def FCtx.SubstCons.IsMin {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+def FCtx.SubstCons.SupSrc {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
   (_hσ : FCtx.SubstCons Γ σ Δ N) : Prop := Γ.support ⊆ σ.vars Δ.support
 
-theorem FCtx.SubstCons.IsMin.eq_restrict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
-  (hσ : FCtx.SubstCons Γ σ Δ N) (hmin : hσ.IsMin) : Γ.restrict (σ.vars Δ.support) = Γ
+theorem FCtx.SubstCons.SupSrc.eq_restrict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) (hmin : hσ.SupSrc) : Γ.restrict (σ.vars Δ.support) = Γ
   := by rw [restrict_sub_support_iff]; exact hmin
 
-theorem FCtx.SubstCons.isMin_of_eq_restict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
-  (hσ : FCtx.SubstCons Γ σ Δ N) (hΓ : Γ.restrict (σ.vars Δ.support) = Γ) : hσ.IsMin
+theorem FCtx.SubstCons.supSrc_of_eq_restict {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) (hΓ : Γ.restrict (σ.vars Δ.support) = Γ) : hσ.SupSrc
   := by rw [restrict_sub_support_iff] at hΓ; exact hΓ
 
-theorem FCtx.SubstCons.IsMin.eq_restrict_iff {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
-  (hσ : FCtx.SubstCons Γ σ Δ N) : hσ.IsMin ↔ Γ.restrict (σ.vars Δ.support) = Γ
-  := ⟨IsMin.eq_restrict hσ, hσ.isMin_of_eq_restict⟩
+theorem FCtx.SubstCons.SupSrc.eq_restrict_iff {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) : hσ.SupSrc ↔ Γ.restrict (σ.vars Δ.support) = Γ
+  := ⟨SupSrc.eq_restrict hσ, hσ.supSrc_of_eq_restict⟩
 
 theorem FCtx.Subst.src_eq_on_var {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν}
   (hσ : FCtx.Subst Γ σ Δ) (hσ' : FCtx.Subst Γ' σ Δ')
@@ -256,6 +256,10 @@ theorem FCtx.SubstCons.src_eq_on {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {
   := hσ.toSubst.src_eq_on hσ'.toSubst
 
 theorem FCtx.SubstCons.src_eq_on_eq {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
-  (hσ : FCtx.SubstCons Γ σ Δ N) (hσ' : FCtx.SubstCons Γ' σ Δ N)
+  (hσ : FCtx.SubstCons Γ σ Δ N) (hσ' : FCtx.SubstCons Γ' σ Δ N')
   : ∀x ∈ σ.vars Δ.support, Γ x = Γ' x
   := hσ.toSubst.src_eq_on_eq hσ'.toSubst
+
+theorem FCtx.SubstCons.wk_sup_src {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (hσ : FCtx.SubstCons Γ σ Δ N) (hσ' : FCtx.SubstCons Γ' σ Δ N') (h : hσ'.SupSrc) : Γ.Wk Γ' :=
+  FCtx.Wk.of_eq_on λ_ hx => hσ'.src_eq_on_eq hσ _ (h hx)

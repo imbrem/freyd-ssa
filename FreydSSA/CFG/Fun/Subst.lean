@@ -2,7 +2,7 @@ import FreydSSA.CFG.Fun.Basic
 import FreydSSA.BasicBlock.Fun.Subst
 
 variable {φ : Type u₁} {ν : Type u₂} {κ : Type u₃} {α : Type u₄} [Φ : InstSet φ (Ty α)]
-  [Φc : CohInstSet φ (Ty α)]
+  [Φc : CohInstSet φ (Ty α)] [Φi : InjInstSet φ (Ty α)]
   [DecidableEq ν] [DecidableEq κ] [DecidableEq α]
 
 def UCFG.FWfIM.to_ewk {L : FLCtx κ ν (Ty α)} {g : UCFG φ (Ty α) ν κ} {K : FLCtx κ ν (Ty α)}
@@ -14,7 +14,7 @@ def UCFG.FWfIM.to_ewk {L : FLCtx κ ν (Ty α)} {g : UCFG φ (Ty α) ν κ} {K :
 def UCFG.FWfIM.rewrite_exact {L' L : FLCtx κ ν (Ty α)} {g : UCFG φ (Ty α) ν κ} {K : FLCtx κ ν (Ty α)}
   {σ : USubst φ ν}
   (hσ : L'.PSubstCons σ L N) (dg : g.FWfIM L K) (hN : g.defs.toFinset ⊆ N)
-  (hσM : hσ.IsMin)
+  (hσM : hσ.SupSrc)
   (hσc : {x | x ∈ g.defs}.EqOn σ UTm.var)
   : (g.rewrite σ).FWfIM L' (L'.restrict K.support)
   := match dg with
@@ -46,7 +46,7 @@ def UCFG.FWfIM.rewrite_exact {L' L : FLCtx κ ν (Ty α)} {g : UCFG φ (Ty α) �
     have h
       : (L'.restrict (K.cons ℓ Γℓ).support) = (L'.restrict K.support).cons ℓ (FLCtx.get _ hℓ')
       := sorry
-    cons ℓ _ x A (h ▸ dg') sorry (dβ'.toFWf.wkExit sorry)
+    cons ℓ _ x A (h ▸ dg') sorry (dβ'.toFWf.wkExit (hσβ'.wk_sup_src hσ hσM))
   | dead ℓ x A dg hℓ =>
     let dg' := dg.rewrite_exact hσ
       (by

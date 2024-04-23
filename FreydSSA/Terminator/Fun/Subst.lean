@@ -4,7 +4,7 @@ import FreydSSA.Term.Fun.Subst
 -- TODO: label-by-label substitution...
 
 variable {φ : Type u₁} {ν : Type u₂} {κ : Type u₃} {α : Type u₄} [Φ : InstSet φ (Ty α)]
-  [Φc : CohInstSet φ (Ty α)]
+  [Φc : CohInstSet φ (Ty α)] [Φi : InjInstSet φ (Ty α)]
   [DecidableEq ν] [DecidableEq κ] [DecidableEq α]
 
 inductive FLCtx.SubstBot
@@ -505,14 +505,14 @@ def UTerminator.FWf.substCons {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
   (hσ : Γ.SubstCons σ Δ N) (dt : t.FWf Δ L) : (L' : FLCtx κ ν (Ty α)) × (t.rewrite σ).FWfM Γ L' × (L'.SubstCons σ L N)
   := dt.factor.substCons hσ
 
-def FLCtx.PSubstConsBot.IsMin {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))} {N : Finset ν}
+def FLCtx.PSubstConsBot.SupSrc {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))} {N : Finset ν}
   : PSubstConsBot Γ σ Δ N → Prop
   | bot _ _ => True
-  | subst hσ _ => hσ.IsMin
+  | subst hσ _ => hσ.SupSrc
 
-def FLCtx.PSubstCons.IsMin {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)} {N : Finset ν}
+def FLCtx.PSubstCons.SupSrc {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)} {N : Finset ν}
   (hσ : L.PSubstCons σ K N) : Prop
-  := ∀x, (hσ x).IsMin
+  := ∀x, (hσ x).SupSrc
 
 def FLCtx.PSubstCons.getToFCtx {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L : FLCtx κ ν (Ty α)}
   (hσ : L'.PSubstCons σ L N)
@@ -532,7 +532,49 @@ def FLCtx.PSubstCons.erase {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FL
     else
       simp only [h, erase_app]; exact hσ x
 
-def FLCtx.PSubstCons.erase' {L L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K K' : FLCtx κ ν (Ty α)} {N : Finset ν}
-  (hσ : L.PSubstCons σ K N) (ℓ : κ) (hK' : K' = K.erase ℓ) (hL' : L' = L.erase ℓ)
+def FLCtx.PSubstCons.erase' {L L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K K' : FLCtx κ ν (Ty α)}
+  {N : Finset ν} (hσ : L.PSubstCons σ K N) (ℓ : κ) (hK' : K' = K.erase ℓ) (hL' : L' = L.erase ℓ)
   : L'.PSubstCons σ K' N
   := hK' ▸ hL' ▸ hσ.erase ℓ
+
+theorem FLCtx.PSubstConsBot.wk_sup_src
+  {Γ Γ' : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))}
+  {N N' : Finset ν} (hσ : PSubstConsBot Γ σ Δ N) (hσ' : PSubstConsBot Γ' σ Δ N')
+  (hmin : hσ'.SupSrc) : Γ ≤ Γ'
+  := by cases hσ with
+  | bot => simp
+  | subst hσ hp => cases hσ' with | subst hσ' hp' =>
+    rw [WithBot.coe_le_coe]
+    constructor
+    exact hσ.wk_sup_src hσ' hmin
+    rw [hp, hp']
+
+theorem FLCtx.PSubstCons.wk_sup_src
+  {L L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)} {N N' : Finset ν}
+  (hσ : L.PSubstCons σ K N) (hσ' : L'.PSubstCons σ K N')
+  (hmin : hσ'.SupSrc) : L.Wk L' := λℓ => (hσ ℓ).wk_sup_src (hσ' ℓ) (hmin ℓ)
+
+theorem FLCtx.PSubstCons.pwk_sup_src
+  {L L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)} {N N' : Finset ν}
+  (hσ : L.PSubstCons σ K N) (hσ' : L'.PSubstCons σ K N')
+  (hmin : hσ'.SupSrc) : L.PWk L'
+  := ⟨hσ.wk_sup_src hσ' hmin, hσ.support_eq.trans hσ'.support_eq.symm⟩
+
+theorem FLCtx.SubstConsBot.wk_sup_src
+  {Γ Γ' : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))}
+  {N N' : Finset ν} (hσ : SubstConsBot Γ σ Δ N) (hσ' : PSubstConsBot Γ' σ Δ N')
+  (hmin : hσ'.SupSrc) : Γ ≤ Γ'
+  := by cases hσ with
+  | bot => simp
+  | subst hσ hp => cases hσ' with | subst hσ' hp' =>
+    rw [WithBot.coe_le_coe]
+    constructor
+    exact hσ.wk_sup_src hσ' hmin
+    rw [hp, hp']
+
+theorem FLCtx.SubstCons.wk_sup_src
+  {L L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)} {N N' : Finset ν}
+  (hσ : L.SubstCons σ K N) (hσ' : L'.PSubstCons σ K N')
+  (hmin : hσ'.SupSrc) : L.Wk L' := λℓ => (hσ ℓ).wk_sup_src (hσ' ℓ) (hmin ℓ)
+
+-- TODO: more general theorems bro...

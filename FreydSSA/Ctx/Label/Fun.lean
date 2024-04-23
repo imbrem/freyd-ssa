@@ -410,18 +410,24 @@ theorem FLCtx.EWk.of_cons {L : FLCtx κ ν α} (x : κ) (Γ : FLabel ν α) (hL 
   then by cases h; simp [cons_app, eq_bot_of_not_mem_support _ hL]
   else by simp [cons_app, h]
 
-def FLCtx.PWk (L K : FLCtx κ ν α) : Prop := ∀x, L x ≤ K x ∧ (K x = ⊥ -> L x = ⊥)
+def FLCtx.PWk (L K : FLCtx κ ν α) : Prop := L.Wk K ∧ L.support = K.support
 
 theorem FLCtx.PWk.refl (L : FLCtx κ ν α) : FLCtx.PWk L L
-  := λ_ => ⟨le_refl _, by intro; trivial⟩
-theorem FLCtx.PWk.trans {L K M : FLCtx κ ν α} (h : FLCtx.PWk L K) (h' : FLCtx.PWk K M)
-  : FLCtx.PWk L M := λx => match h x, h' x with
-  | ⟨h, h'⟩, ⟨h'', h'''⟩ => ⟨h.trans h'', h' ∘ h'''⟩
+  := ⟨FLCtx.Wk.refl _, rfl⟩
+theorem FLCtx.PWk.comp {L K M : FLCtx κ ν α} (h : FLCtx.PWk L K) (h' : FLCtx.PWk K M)
+  : FLCtx.PWk L M := ⟨h.1.comp h'.1, h.2.trans h'.2⟩
 
 theorem FLCtx.PWk.to_wk {L K : FLCtx κ ν α} (h : FLCtx.PWk L K) : FLCtx.Wk L K
-  := λx => (h x).left
+  := h.1
 theorem FLCtx.PWk.antisymm {L K : FLCtx κ ν α} (h : FLCtx.PWk L K) (h' : FLCtx.PWk K L)
   : L = K := h.to_wk.antisymm h'.to_wk
+
+theorem FLCtx.PWk.support_eq {L K : FLCtx κ ν α} (h : FLCtx.PWk L K)
+  : L.support = K.support := h.2
+
+-- TODO: commute EWk and PWk
+
+-- TODO: factor Wk into PWk followed by EWk _or_ EWk followed by PWk
 
 inductive FLCtx.CmpBot : (Γ Δ : WithBot (FLabel ν α)) → Prop
   | left (Γ : WithBot (FLabel ν α)) : CmpBot Γ ⊥
