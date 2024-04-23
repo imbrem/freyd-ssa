@@ -14,7 +14,7 @@ def UCFG.FWfIM.to_ewk {L : FLCtx κ ν (Ty α)} {g : UCFG φ (Ty α) ν κ} {K :
 def UCFG.FWfIM.rewrite_exact {L' L : FLCtx κ ν (Ty α)} {g : UCFG φ (Ty α) ν κ} {K : FLCtx κ ν (Ty α)}
   {σ : USubst φ ν}
   (hσ : L'.PSubstCons σ L N) (dg : g.FWfIM L K) (hN : g.defs.toFinset ⊆ N)
-  (hσM : hσ.isMin)
+  (hσM : hσ.IsMin)
   (hσc : {x | x ∈ g.defs}.EqOn σ UTm.var)
   : (g.rewrite σ).FWfIM L' (L'.restrict K.support)
   := match dg with

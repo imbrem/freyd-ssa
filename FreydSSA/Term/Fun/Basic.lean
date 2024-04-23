@@ -6,6 +6,7 @@ import FreydSSA.Untyped.Basic
 
 variable {φ ν α} [Φ : InstSet φ (Ty α)]
   [Φc : CohInstSet φ (Ty α)]
+  [Φi : InjInstSet φ (Ty α)]
   [DecidableEq ν] [DecidableEq α]
 
 --TODO: since this is quotiented, should this be a Prop? Can then do decidability and everything, and indexed contexts for the rest...
@@ -110,5 +111,24 @@ def UTm.FWf.vars_sub_support {e : UTm φ ν} : e.FWf p Γ A → e.vars ⊆ Γ.su
   | pair p dl dr => Finset.union_subset dl.vars_sub_support dr.vars_sub_support
   | unit p => by simp [vars]
   | bool p b => by simp [vars]
+
+def UTm.FWf.src_eq_on {e : UTm φ ν} (de : e.FWf p Γ A) (de' : e.FWf p' Γ' A)
+  : ∀x ∈ e.vars, Γ x = Γ' x := by induction de generalizing Γ' p' with
+  | var _ w => cases de' with | var _ w' => simp [vars, w, w']
+  | op hf _ I => cases de' with | op hf' de' =>
+    intro x hx
+    cases Φi.coh_src hf hf'
+    exact I de' x hx
+  | pair _ _ _ Il Ir => cases de' with | pair _ dl' dr' =>
+    simp only [vars, Finset.mem_union]
+    intro x hx
+    cases hx with
+    | inl hx => exact Il dl' x hx
+    | inr hx => exact Ir dr' x hx
+  | _ => simp [vars, FCtx.restrict_empty]
+
+def UTm.FWf.src_restrict_eq {e : UTm φ ν} (de : e.FWf p Γ A) (de' : e.FWf p' Γ' A)
+  : Γ.restrict e.vars = Γ'.restrict e.vars
+  := Γ.restrict_eq_of_eq_on Γ' e.vars (src_eq_on de de')
 
 --TODO: cmp ==> inf = linf without alleq, rinf with

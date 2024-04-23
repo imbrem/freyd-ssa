@@ -505,14 +505,14 @@ def UTerminator.FWf.substCons {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ}
   (hσ : Γ.SubstCons σ Δ N) (dt : t.FWf Δ L) : (L' : FLCtx κ ν (Ty α)) × (t.rewrite σ).FWfM Γ L' × (L'.SubstCons σ L N)
   := dt.factor.substCons hσ
 
-def FLCtx.PSubstConsBot.isMin {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))} {N : Finset ν}
+def FLCtx.PSubstConsBot.IsMin {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))} {N : Finset ν}
   : PSubstConsBot Γ σ Δ N → Prop
   | bot _ _ => True
-  | subst hσ _ => hσ.isMin
+  | subst hσ _ => hσ.IsMin
 
-def FLCtx.PSubstCons.isMin {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)} {N : Finset ν}
+def FLCtx.PSubstCons.IsMin {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)} {N : Finset ν}
   (hσ : L.PSubstCons σ K N) : Prop
-  := ∀x, (hσ x).isMin
+  := ∀x, (hσ x).IsMin
 
 def FLCtx.PSubstCons.getToFCtx {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L : FLCtx κ ν (Ty α)}
   (hσ : L'.PSubstCons σ L N)
@@ -527,7 +527,10 @@ def FLCtx.PSubstCons.consSrc {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L :
 
 def FLCtx.PSubstCons.erase {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)} {N : Finset ν}
   (hσ : L.PSubstCons σ K N) (ℓ : κ) : (L.erase ℓ).PSubstCons σ (K.erase ℓ) N
-  := sorry
+  := λx => by if h : x = ℓ then
+      simp only [h, erase_app]; constructor
+    else
+      simp only [h, erase_app]; exact hσ x
 
 def FLCtx.PSubstCons.erase' {L L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K K' : FLCtx κ ν (Ty α)} {N : Finset ν}
   (hσ : L.PSubstCons σ K N) (ℓ : κ) (hK' : K' = K.erase ℓ) (hL' : L' = L.erase ℓ)

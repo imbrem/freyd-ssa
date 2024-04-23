@@ -39,6 +39,10 @@ theorem FCtx.ext {Γ Δ : FCtx ν α} (h : ∀x, Γ x = Δ x)
   : Γ = Δ
   := DFunLike.coe_injective' (by funext x; apply h)
 
+theorem FCtx.ext_app {Γ Δ : FCtx ν α} (h : Γ = Δ)
+  : ∀x, Γ x = Δ x
+  := by intro x; cases h; rfl
+
 theorem FCtx.mem_support {Γ : FCtx ν α} (x : ν)
   : x ∈ Γ.support ↔ Γ x ≠ ⊤ := Γ.mem_support_toFun x
 
@@ -1144,3 +1148,43 @@ theorem FCtx.Cmp.wk_of_subset {Γ Δ : FCtx ν α} (c : Γ.Cmp Δ) (h : Δ.suppo
   apply FCtx.Wk.of_eq_on
   intro x hx
   rw [c.eq_on' x (h hx) hx]
+
+theorem FCtx.restrict_empty (Γ : FCtx ν α) : Γ.restrict ∅ = ⊤ := by
+  apply FCtx.ext
+  intro x
+  simp [restrict_app, top_app]
+
+theorem FCtx.eq_on_of_restrict_eq (Γ Γ' : FCtx ν α) (N : Finset ν) (h : Γ.restrict N = Γ'.restrict N)
+  : ∀x ∈ N, Γ x = Γ' x := by
+  intro x hx
+  have h := FCtx.ext_app h x
+  simp only [restrict_app, Finset.mem_singleton, ↓reduceIte, hx] at h
+  exact h
+
+theorem FCtx.restrict_eq_of_eq_on (Γ Γ' : FCtx ν α) (N : Finset ν) (h : ∀x ∈ N, Γ x = Γ' x)
+  : Γ.restrict N = Γ'.restrict N := by
+  apply FCtx.ext
+  intro x
+  simp only [restrict_app]
+  split
+  case inl h' => exact h _ h'
+  case _ => rfl
+
+theorem FCtx.restrict_eq_iff (Γ Γ' : FCtx ν α) (N : Finset ν)
+  : Γ.restrict N = Γ'.restrict N ↔ ∀x ∈ N, Γ x = Γ' x :=
+    ⟨eq_on_of_restrict_eq _ _ _, restrict_eq_of_eq_on _ _ _⟩
+
+theorem FCtx.eq_at_of_restrict_eq (Γ Γ' : FCtx ν α) (x) (h : Γ.restrict {x} = Γ'.restrict {x})
+  : Γ x = Γ' x := by
+  have h := FCtx.ext_app h x
+  simp only [restrict_app, Finset.mem_singleton, ↓reduceIte] at h
+  exact h
+
+theorem FCtx.restrict_eq_of_eq_at (Γ Γ' : FCtx ν α) (x) (h : Γ x = Γ' x)
+  : Γ.restrict {x} = Γ'.restrict {x} := by
+  rw [restrict_eq_iff]
+  simp [h]
+
+theorem FCtx.restrict_eq_singleton_iff (Γ Γ' : FCtx ν α) (x) :
+  Γ.restrict {x} = Γ'.restrict {x} ↔ Γ x = Γ' x
+  := ⟨eq_at_of_restrict_eq _ _ _, restrict_eq_of_eq_at _ _ _⟩

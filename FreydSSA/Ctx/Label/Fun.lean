@@ -197,6 +197,9 @@ def FLCtx.erase (x : κ) (L : FLCtx κ ν α) : FLCtx κ ν α where
     simp only [Finset.mem_erase, mem_support_toFun]
     split <;> aesop
 
+theorem FLCtx.erase_app (x : κ) (L : FLCtx κ ν α) (y : κ)
+  : (FLCtx.erase x L) y = if y = x then ⊥ else L y := rfl
+
 def FLCtx.Wk (L K : FLCtx κ ν α) : Prop := ∀x, L x ≤ K x
 
 theorem FLCtx.Wk.refl (L : FLCtx κ ν α) : FLCtx.Wk L L := λ_ => le_refl _
