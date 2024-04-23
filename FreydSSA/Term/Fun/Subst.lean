@@ -129,7 +129,8 @@ def FCtx.SubstCons.subset {Γ : FCtx ν (Ty α)} {σ : USubst φ ν} {Δ : FCtx 
   := λ_ h => (hσ _ h).wk (FCtx.Wk.sdiff_subset _ _ _ (Finset.erase_subset_erase _ hN))
 
 def FCtx.SubstCons.cons {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
-  (x : ν) (A : Ty α) (hσ : Γ.SubstCons σ Δ N) (hx : x ∈ N) : (Γ.cons x A).SubstCons (σ.cons x) (Δ.cons x A) N
+  (x : ν) (A : Ty α) (hσ : Γ.SubstCons σ Δ N) (hx : x ∈ N)
+  : (Γ.cons x A).SubstCons (σ.cons x) (Δ.cons x A) N
   := λ{y} h => if p: x = y then
     σ.cons_eq_left p ▸ UTm.FWf.var 1 (by
     cases p
@@ -161,6 +162,11 @@ def FCtx.SubstCons.cons {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finse
             simp only [<-not_mem_support]
             exact hz
     )
+
+def FCtx.SubstCons.cons' {Γ Δ : FCtx ν (Ty α)} {σ : USubst φ ν} {N : Finset ν}
+  (x : ν) (A A' : Ty α) (hσ : Γ.SubstCons σ Δ N) (hx : x ∈ N) (hA : A = A')
+  : (Γ.cons x A).SubstCons (σ.cons x) (Δ.cons x A') N
+  := hA ▸ hσ.cons x A hx
 
 theorem FCtx.SubstCons.cmp {Γ Δ Γ' Δ' : FCtx ν (Ty α)} {σ : USubst φ ν}
   (hσ : Γ.SubstCons σ Δ N) (hσ' : Γ'.SubstCons σ Δ' N') (hΓ : Γ.Cmp Γ') : Δ.Cmp Δ'

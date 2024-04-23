@@ -107,6 +107,13 @@ theorem USubst.cons_list_cons_list'
       . rfl
     . rfl
 
+theorem USubst.eq_cons (x : ν) (σ : USubst φ ν) (h : σ x = UTm.var x) : σ.cons x = σ := by
+  funext y
+  simp only [cons, Function.update, eq_rec_constant, dite_eq_ite, ite_eq_right_iff]
+  intro hy
+  cases hy
+  exact h.symm
+
 theorem USubst.eq_cons_list (σ : USubst φ ν) (xs : List ν)
   (hσc : {x | x ∈ xs}.EqOn σ UTm.var)
   : σ.cons_list xs = σ := by

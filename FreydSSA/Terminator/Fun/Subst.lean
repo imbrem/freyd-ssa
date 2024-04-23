@@ -278,6 +278,16 @@ inductive FLCtx.PSubstConsBot
   | bot (σ N) : PSubstConsBot ⊥ σ ⊥ N
   | subst {Γ Δ : FLabel ν (Ty α)} (hσ : FCtx.SubstCons Γ.live σ Δ.live N) (hparam : Γ.param = Δ.param) : PSubstConsBot (↑Γ) σ (↑Δ) N
 
+def FLCtx.PSubstConsBot.get {Γ Δ : FLabel ν (Ty α)} {σ : USubst φ ν}
+  (hσ : @PSubstConsBot φ ν _ Φ _ ↑Γ σ ↑Δ N) : FCtx.SubstCons Γ.live σ Δ.live N
+  := match hσ with
+  | PSubstConsBot.subst hσ _ => hσ
+
+def FLCtx.PSubstConsBot.param_eq {Γ Δ : FLabel ν (Ty α)} {σ : USubst φ ν}
+  (hσ : @PSubstConsBot φ ν _ Φ _ ↑Γ σ ↑Δ N) : Γ.param = Δ.param
+  := match hσ with
+  | PSubstConsBot.subst _ hp => hp
+
 theorem FLCtx.PSubstConsBot.bot_mp {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))}
   (hσ : PSubstConsBot Γ σ Δ N) : Γ = ⊥ → Δ = ⊥
   := λh => by cases hσ <;> simp at *
@@ -297,10 +307,6 @@ theorem FLCtx.PSubstConsBot.is_some_mp {Γ : WithBot (FLabel ν (Ty α))} {σ : 
 theorem FLCtx.PSubstConsBot.is_some_mpr {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ : WithBot (FLabel ν (Ty α))}
   (hσ : PSubstConsBot Γ σ Δ N) : Δ.isSome → Γ.isSome
   := λh => by cases hσ <;> simp [Option.isSome] at *
-
-theorem FLCtx.PSubstConsBot.param_eq {Γ : FLabel ν (Ty α)} {σ : USubst φ ν} {Δ : FLabel ν (Ty α)}
-  (hσ : @PSubstConsBot _ ν α Φ _ (↑Γ) σ (↑Δ) N) : Γ.param = Δ.param
-  := by cases hσ; assumption
 
 def FLCtx.PSubstConsBot.wkExit {Γ : WithBot (FLabel ν (Ty α))} {σ : USubst φ ν} {Δ Δ' : WithBot (FLabel ν (Ty α))}
   (hσ : PSubstConsBot Γ σ Δ N) (w : Δ ≤ Δ') : SubstConsBot Γ σ Δ' N
@@ -517,13 +523,13 @@ def FLCtx.PSubstCons.SupSrc {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : F
 def FLCtx.PSubstCons.getToFCtx {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L : FLCtx κ ν (Ty α)}
   (hσ : L'.PSubstCons σ L N)
   (ℓ : κ) (Γℓ' : FLabel ν (Ty α)) (Γℓ : FLabel ν (Ty α)) (x : ν)
-  (hℓL' : L' ℓ = Γℓ') (hℓL : L ℓ = Γℓ) (hx : x ∈ N)
-  : (Γℓ'.toFCtx x).SubstCons σ (Γℓ.toFCtx x) N
-  := sorry
+  (hℓL' : L' ℓ = Γℓ') (hℓL : L ℓ = Γℓ) (hx : x ∈ N) (hxc : σ x = UTm.var x)
+  : (Γℓ'.toFCtx x).SubstCons σ (Γℓ.toFCtx x) N :=
+  let hσ := hℓL ▸ hℓL' ▸ hσ ℓ;
+  σ.eq_cons _ hxc ▸ hσ.get.cons' x _ _ hx hσ.param_eq
 
-def FLCtx.PSubstCons.consSrc {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L : FLCtx κ ν (Ty α)}
-  (hσ : L'.PSubstCons σ (L.cons ℓ Γℓ) N) : ℓ ∈ L'.support
-  := sorry
+theorem FLCtx.PSubstCons.consSrc {L' : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {L : FLCtx κ ν (Ty α)}
+  (hσ : L'.PSubstCons σ (L.cons ℓ Γℓ) N) : ℓ ∈ L'.support := by simp [hσ.support_eq, cons]
 
 def FLCtx.PSubstCons.erase {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)} {N : Finset ν}
   (hσ : L.PSubstCons σ K N) (ℓ : κ) : (L.erase ℓ).PSubstCons σ (K.erase ℓ) N
