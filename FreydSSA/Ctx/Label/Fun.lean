@@ -148,6 +148,8 @@ theorem FLCtx.ext {L K : FLCtx κ ν α} (h : ∀x, L x = K x)
   : L = K
   := DFunLike.coe_injective' (by funext x; apply h)
 
+theorem FLCtx.ext_app {L K : FLCtx κ ν α} (h : L = K) : ∀x, L x = K x := λ_ => h ▸ rfl
+
 theorem FLCtx.eq_bot_of_not_mem_support {L : FLCtx κ ν α} (x : κ) (hx : x ∉ L.support) : L x = ⊥ := by
   simp only [mem_support, ne_eq, not_not] at hx;
   exact hx
@@ -161,6 +163,9 @@ def FLCtx.cons (x : κ) (L : FLabel ν α) (K : FLCtx κ ν α) : FLCtx κ ν α
 
 theorem FLCtx.cons_app (x : κ) (L : FLabel ν α) (K : FLCtx κ ν α) (y : κ)
   : (FLCtx.cons x L K) y = if y = x then ↑L else K y := by simp [cons, DFunLike.coe, Function.update]
+
+theorem FLCtx.cons_support (x : κ) (L : FLabel ν α) (K : FLCtx κ ν α)
+  : (FLCtx.cons x L K).support = insert x K.support := rfl
 
 def FLCtx.get {L : FLCtx κ ν α} (x : κ) (h : x ∈ L.support) : FLabel ν α
   := (L x).get (by simp only [Option.isSome]; split; rfl; simp [mem_support, Bot.bot, *] at h)
@@ -207,6 +212,11 @@ theorem FLCtx.Wk.comp {L K M : FLCtx κ ν α} (h : FLCtx.Wk L K) (h' : FLCtx.Wk
   : FLCtx.Wk L M := λx => le_trans (h x) (h' x)
 theorem FLCtx.Wk.antisymm {L K : FLCtx κ ν α} (h : FLCtx.Wk L K) (h' : FLCtx.Wk K L)
   : L = K := FLCtx.ext (λx => le_antisymm (h x) (h' x))
+
+theorem FLCtx.Wk.support_subset {L K : FLCtx κ ν α} (h : FLCtx.Wk L K) : L.support ⊆ K.support
+  := λx => by
+    rw [mem_support, mem_support, ne_eq, imp_not_comm, not_not]
+    exact λhx => le_bot_iff.mp (hx ▸ h x)
 
 instance FLCtx.instPartialOrder : PartialOrder (FLCtx κ ν α) where
   le L K := ∀x, L x ≤ K x
@@ -349,6 +359,9 @@ theorem FLCtx.EWk.to_wk {L K : FLCtx κ ν α} (h : FLCtx.EWk L K) : FLCtx.Wk L 
 theorem FLCtx.EWk.antisymm {L K : FLCtx κ ν α} (h : FLCtx.EWk L K) (h' : FLCtx.EWk K L)
   : L = K := h.to_wk.antisymm h'.to_wk
 
+theorem FLCtx.EWk.support_subset {L K : FLCtx κ ν α} (h : FLCtx.EWk L K) : L.support ⊆ K.support
+  := h.to_wk.support_subset
+
 def FLCtx.restrict (L : FLCtx κ ν α) (labels : Finset κ) : FLCtx κ ν α where
   toFun x := if x ∈ labels then L x else ⊥
   support := L.support ∩ labels
@@ -403,6 +416,29 @@ def FLCtx.EWk.iff_restricts (L K : FLCtx κ ν α) : L.EWk K ↔ L.Restricts K
 
 def FLCtx.Restricts.to_wk {L K : FLCtx κ ν α} (h : L.Restricts K) : L.Wk K
   := h.to_ewk.to_wk
+
+theorem FLCtx.restrict_insert_eq_cons (L K : FLCtx κ ν α) (ℓ N Γ)
+  (h : L.restrict (insert ℓ N) = K.cons ℓ Γ) : L ℓ = Γ := by
+  have h := ext_app h ℓ;
+  simp only [restrict_app, Finset.mem_insert, true_or, ↓reduceIte, cons_app] at h
+  exact h
+
+theorem FLCtx.restrict_insert_eq (L : FLCtx κ ν α) (ℓ) (hℓ : ℓ ∈ L.support)
+  : L.restrict (insert ℓ N) = (L.restrict N).cons ℓ (L.get _ hℓ) := by
+  apply FLCtx.ext
+  intro x
+  simp only [restrict_app, Finset.mem_insert, cons_app]
+  apply Eq.symm
+  split <;> simp [get_eq, *]
+
+theorem FLCtx.not_mem_restrict_of_not_mem {L : FLCtx κ ν α} {ℓ : κ} {N : Finset κ}
+  (h : ℓ ∉ N) : ℓ ∉ (L.restrict N).support := by simp [restrict, h]
+
+theorem FLCtx.Restricts.cons_eq {L K : FLCtx κ ν α} (ℓ Γ) (h : (L.cons ℓ Γ).Restricts K)
+  : K ℓ = Γ := restrict_insert_eq_cons _ _ _ _ _ h
+
+theorem FLCtx.EWk.cons_eq {L K : FLCtx κ ν α} (ℓ Γ) (h : FLCtx.EWk (L.cons ℓ Γ) K)
+  : K ℓ = Γ := h.restricts.cons_eq
 
 theorem FLCtx.EWk.of_cons {L : FLCtx κ ν α} (x : κ) (Γ : FLabel ν α) (hL : x ∉ L.support)
   : FLCtx.EWk L (FLCtx.cons x Γ L)
