@@ -19,7 +19,7 @@ structure Var (ν : Type u) (α : Type v) : Type (max u v) where
 
 def Ctx (ν : Type u) (α : Type v) : Type (max u v) := List (Var ν α)
 
-instance {ν α} : Membership (Var ν α) (Ctx ν α) := List.instMembershipList
+instance {ν α} : Membership (Var ν α) (Ctx ν α) := by unfold Ctx; infer_instance
 
 def Ctx.Typed (Γ : Ctx ν α) : Prop
   := ∀ v ∈ Γ, ∀ v' ∈ Γ, v.name = v'.name → v.ty = v'.ty
@@ -429,6 +429,7 @@ def Ctx.Nodup.get {ν α} {Γ : Ctx ν α} (hΓ : Γ.Nodup) (i : Fin Γ.length)
         ⟨i, by rw [names, List.length_map]; exact hi⟩]
       rw [<-@List.get_indexOf _ (Classical.typeDecidableEq _) _ hΓ
         ⟨j, by rw [names, List.length_map]; exact hj⟩]
+      simp at hj'
       simp [hj']
   )
 
@@ -479,7 +480,8 @@ theorem Ctx.nameIndex_first {ν α} [DecidableEq ν] (x : ν) (Γ : Ctx ν α)
       match j with
       | ⟨0, _⟩ => cases hj; contradiction
       | ⟨j + 1, hj'⟩ =>
-        simp only [add_le_add_iff_right]
+        simp only []
+        rw [Nat.add_le_add_iff_right]
         exact I ⟨j, (Nat.lt_of_succ_lt_succ hj')⟩ hj
 
 def Ctx.get_first {ν α} [DecidableEq ν] {x : ν} {Γ : Ctx ν α} (h: x ∈ Γ.names)

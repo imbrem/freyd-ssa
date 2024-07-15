@@ -384,11 +384,11 @@ theorem LCtx.PWk.allEq {ν κ α} {L K : LCtx ν κ α} (D D': L.PWk K): D = D'
       apply Label.Wk.allEq
       exact I _
 
-theorem LCtx.PWk.comp {L K M : LCtx ν κ α} : L.PWk K → K.PWk M → L.PWk M
+def LCtx.PWk.comp {L K M : LCtx ν κ α} : L.PWk K → K.PWk M → L.PWk M
   | nil, w => w
   | cons h w, PWk.cons h' w' => PWk.cons (h.comp h') (w.comp w')
 
-theorem LCtx.PWk.refl : (L : LCtx ν κ α) → L.PWk L
+def LCtx.PWk.refl : (L : LCtx ν κ α) → L.PWk L
   | [] => nil
   | ℓ::L => cons (Label.Wk.refl ℓ) (refl L)
 

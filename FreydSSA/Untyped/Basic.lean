@@ -340,7 +340,7 @@ def UBody.vars_for (t : UBody φ ν) (Δ : Finset ν) : Finset ν
   := t.vars ∪ (Δ \ t.defs.toFinset)
 
 theorem UBody.vars_for_sub_vars (t : UBody φ ν) (Δ : Finset ν) : t.vars ⊆ t.vars_for Δ
-  := Finset.subset_union_left _ _
+  := Finset.subset_union_left
 
 theorem UBody.vars_for_eq_of_sub (t : UBody φ ν) (Δ : Finset ν)
   : Δ ⊆ t.vars ∪ t.defs.toFinset → t.vars_for Δ = t.vars := by

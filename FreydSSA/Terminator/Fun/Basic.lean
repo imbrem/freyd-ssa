@@ -34,7 +34,7 @@ theorem UTerminator.FWf.minTrg_LEq {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν
   | br _ _ => Γ.singletonLEq _ _
   | ite _ ds dt => ds.minTrg_LEq.lsup dt.minTrg_LEq
 
-theorem UTerminator.FWf.toMinTrg {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : (dt : t.FWf Γ L) → t.FWf Γ dt.minTrg
+def UTerminator.FWf.toMinTrg {Γ : FCtx ν (Ty α)} {t : UTerminator φ ν κ} : (dt : t.FWf Γ L) → t.FWf Γ dt.minTrg
   | br _ de => br (FLCtx.Wk.refl _) de
   | ite de ds dt => ite de (ds.toMinTrg.wkExit (FLCtx.lsup_wk _ _)) (dt.toMinTrg.wkExit (
     (ds.minTrg_LEq.toLWk.cmp₂ dt.minTrg_LEq.toLWk ds.minTrg_wk dt.minTrg_wk).lsup_wk_right

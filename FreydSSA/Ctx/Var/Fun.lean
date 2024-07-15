@@ -60,8 +60,8 @@ theorem FCtx.mem_support_exists {Γ : FCtx ν α} (x : ν)
   rw [mem_support]
   apply Iff.intro
   . cases Γ x with
-    | none => intro h; contradiction
-    | some a => intro _; exact ⟨a, rfl⟩
+    | top => intro h; contradiction
+    | coe a => intro _; exact ⟨a, rfl⟩
   . intro ⟨a, ha⟩
     rw [ha]
     simp
@@ -99,7 +99,7 @@ def FCtx.map_ty (Γ : FCtx ν α) (f : α → β) : FCtx ν β where
     rw [Γ.mem_support_toFun x]
     simp only []
     generalize Γ.toFun x = a
-    cases a <;> simp [WithTop.map, Top.top]
+    cases a <;> simp
 
 def FCtx.cons (x : ν) (a : α) (Γ : FCtx ν α) : FCtx ν α where
   toFun := Function.update Γ.toFun x a
@@ -956,19 +956,19 @@ theorem FCtx.Wk.restrict_sub {v v' : Finset ν} (Γ : FCtx ν α) (hv : v' ⊆ v
 
 theorem FCtx.Wk.restrict_union_left (Γ : FCtx ν α) (l r : Finset ν)
   : (Γ.restrict (l ∪ r)).Wk (Γ.restrict l)
-  := restrict_sub Γ (Finset.subset_union_left l r)
+  := restrict_sub Γ Finset.subset_union_left
 
 theorem FCtx.Wk.restrict_union_right (Γ : FCtx ν α) (l r : Finset ν)
   : (Γ.restrict (l ∪ r)).Wk (Γ.restrict r)
-  := restrict_sub Γ (Finset.subset_union_right l r)
+  := restrict_sub Γ Finset.subset_union_right
 
 theorem FCtx.Wk.restrict_inter_left (Γ : FCtx ν α) (l r : Finset ν)
   : (Γ.restrict l).Wk (Γ.restrict (l ∩ r))
-  := restrict_sub Γ (Finset.inter_subset_left l r)
+  := restrict_sub Γ Finset.inter_subset_left
 
 theorem FCtx.Wk.restrict_inter_right (Γ : FCtx ν α) (l r : Finset ν)
   : (Γ.restrict r).Wk (Γ.restrict (l ∩ r))
-  := restrict_sub Γ (Finset.inter_subset_right l r)
+  := restrict_sub Γ Finset.inter_subset_right
 
 theorem FCtx.Wk.restrict {Γ Δ : FCtx ν α} (w : Γ.Wk Δ) (v : Finset ν)
   : (Γ.restrict v).Wk (Δ.restrict v)
@@ -1171,7 +1171,7 @@ theorem FCtx.restrict_eq_of_eq_on (Γ Γ' : FCtx ν α) (N : Finset ν) (h : ∀
   intro x
   simp only [restrict_app]
   split
-  case inl h' => exact h _ h'
+  case isTrue h' => exact h _ h'
   case _ => rfl
 
 theorem FCtx.restrict_eq_iff (Γ Γ' : FCtx ν α) (N : Finset ν)

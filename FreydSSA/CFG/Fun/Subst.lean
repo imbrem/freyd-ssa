@@ -29,7 +29,7 @@ def UCFG.FWfIM.rewrite_exact {L' L : FLCtx κ ν (Ty α)} {g : UCFG φ (Ty α) �
       (by
         apply Finset.Subset.trans _ hN
         simp only [defs, List.cons_append, List.toFinset_cons, List.toFinset_append]
-        apply Finset.Subset.trans (Finset.subset_union_right _ _)
+        apply Finset.Subset.trans Finset.subset_union_right
         apply Finset.subset_insert)
       hσM (hσc.mono (λ_ => by simp only [defs]; aesop));
     have hℓL : ℓ ∈ L.support := ewk.support_subset (by simp [FLCtx.cons]);
@@ -43,7 +43,7 @@ def UCFG.FWfIM.rewrite_exact {L' L : FLCtx κ ν (Ty α)} {g : UCFG φ (Ty α) �
     let ⟨Lβ', dβ', hσβ'⟩ := dβ.rewrite hσβ (by
       apply Finset.Subset.trans _ hN
       simp only [defs, List.cons_append, List.toFinset_cons, List.toFinset_append]
-      apply Finset.Subset.trans (Finset.subset_union_left _ _)
+      apply Finset.Subset.trans Finset.subset_union_left
       apply Finset.subset_insert
     ) (hσc.mono (by simp only [defs, List.cons_append, List.mem_cons, List.mem_append,
       Set.setOf_subset_setOf]; aesop));
@@ -58,7 +58,7 @@ def UCFG.FWfIM.rewrite_exact {L' L : FLCtx κ ν (Ty α)} {g : UCFG φ (Ty α) �
       (by
         apply Finset.Subset.trans _ hN
         simp only [defs, List.cons_append, List.toFinset_cons, List.toFinset_append]
-        apply Finset.Subset.trans (Finset.subset_union_right _ _)
+        apply Finset.Subset.trans Finset.subset_union_right
         apply Finset.subset_insert)
       hσM (hσc.mono (λ_ => by simp only [defs]; aesop));
     dead ℓ x A dg' (hσ.not_mem_support_mpr ℓ hℓ)

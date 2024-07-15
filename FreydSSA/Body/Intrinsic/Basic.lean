@@ -1,6 +1,5 @@
 import Mathlib.Data.List.Basic
 import Mathlib.Data.List.Lattice
-import Std.Data.List.Basic
 import Mathlib.Data.Set.Basic
 import Mathlib.Data.Set.Function
 import Mathlib.Init.Classical

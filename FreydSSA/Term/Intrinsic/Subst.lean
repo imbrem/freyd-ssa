@@ -1,6 +1,5 @@
 import Mathlib.Data.List.Basic
 import Mathlib.Data.List.DropRight
-import Std.Data.List.Basic
 import Mathlib.Data.Set.Basic
 import Mathlib.Data.Set.Function
 import Mathlib.Init.Classical
@@ -79,7 +78,7 @@ def InstSet.Subst.comp [Φ : InstSet φ (Ty α)]
 theorem InstSet.Subst.comp_nil [Φ : InstSet φ (Ty α)]
   {Γ Δ : Ctx ν (Ty α)} (σ: Φ.Subst Γ Δ)
   : σ.comp (nil _) = nil _
-  := rfl
+  := by simp [comp]
 
 theorem InstSet.Tm.subst_nil' [Φ : InstSet φ (Ty α)] {p : Purity} {A : Ty α}
   {Γ : Ctx ν (Ty α)}
@@ -97,7 +96,7 @@ theorem InstSet.Tm.subst_nil [Φ : InstSet φ (Ty α)] {p : Purity} {A : Ty α}
 theorem InstSet.Subst.nil_comp [Φ : InstSet φ (Ty α)]
   {Γ : Ctx ν (Ty α)}
   : (σ: Φ.Subst [] Γ) → (nil _).comp σ = σ
-  | nil _ => rfl
+  | nil _ => by simp [comp]
   | cons e σ => by simp [comp, σ.nil_comp, Tm.subst_nil]
 
 def InstSet.Subst.id [Φ : InstSet φ (Ty α)]

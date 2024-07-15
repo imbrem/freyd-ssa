@@ -294,8 +294,8 @@ theorem FCtx.tensor_app' (xs : FCtx κ α) (Γ : FCtx ν α) (ℓ : κ)
   : (FCtx.tensor xs Γ) ℓ = match xs ℓ with | some A => Γ.toLabel A | ⊤ => ⊥ := by
   simp only [tensor_app]
   split
-  case inl h => rw [FCtx.get_eq h]
-  case inr h => rw [eq_top_of_not_mem_support _ h]
+  case isTrue h => rw [FCtx.get_eq h]
+  case isFalse h => rw [eq_top_of_not_mem_support _ h]
 
 theorem FCtx.tensor_eq_bot (xs : FCtx κ α) (Γ : FCtx ν α) (ℓ : κ)
   : (FCtx.tensor xs Γ) ℓ = ⊥ ↔ xs ℓ = ⊤ := by simp [tensor_app, not_mem_support]
@@ -330,8 +330,8 @@ theorem FLCtx.params_app' (L : FLCtx κ ν α) (ℓ : κ)
   : L.params ℓ = match L ℓ with | some Γ => Γ.param | ⊥ => ⊤ := by
   simp only [params_app]
   split
-  case inl h => rw [<-L.get_eq ℓ h] -- TODO: inconsistent ordering here...
-  case inr h => rw [eq_bot_of_not_mem_support _ h]
+  case isTrue h => rw [<-L.get_eq ℓ h] -- TODO: inconsistent ordering here...
+  case isFalse h => rw [eq_bot_of_not_mem_support _ h]
 
 theorem FCtx.tensor_params (xs : FCtx κ α) (Γ : FCtx ν α) : (FCtx.tensor xs Γ).params = xs := by
   apply FCtx.ext
@@ -674,13 +674,13 @@ theorem FCtx.LWkBot.cmp₂ {Γ : FCtx ν α} {Δ Ξ M : WithBot (FLabel ν α)}
   | wk A w, wk A' w' => by
     constructor
     cases M with
-    | none =>
+    | bot =>
       --BUG: kernel says invalid projection if done that way, investigate
       have ⟨_, h, _⟩ := (_hΔ' _ rfl)
       cases h
-    | some M =>
+    | coe M =>
       cases M
-      simp only [WithBot.some_le_some] at *
+      simp only [WithBot.some, WithBot.some_le_some] at *
       cases _hΔ'.param
       cases _hΞ'.param
       exact ⟨w.cmp₂ w', rfl⟩

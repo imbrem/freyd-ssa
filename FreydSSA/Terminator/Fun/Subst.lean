@@ -122,7 +122,7 @@ theorem FLCtx.PSubst.is_some_mpr {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {
   (hσ : L.PSubst σ K) (x : κ) : (K x).isSome → (L x).isSome
   := (hσ x).is_some_mpr
 
-theorem FLCtx.PSubst.some_trg {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+def FLCtx.PSubst.some_trg {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
   (hσ : L.PSubst σ K) (x : κ) (Γ : FLabel ν (Ty α)) : L x = some Γ → Σ'Δ, K x = some Δ
   := λh => ⟨(K x).get (hσ.is_some_mp x (by simp [h])), by simp⟩
 
@@ -218,8 +218,8 @@ theorem FCtx.LWkBot.psubst_cmp₂ {Γ : FCtx ν (Ty α)} {Δ Ξ M M' : WithBot (
   | wk A w, wk A' w' => by
     constructor
     cases M with
-    | none => cases _hΔ'
-    | some M =>
+    | bot => cases _hΔ'
+    | coe M =>
       cases _hΔ'
       cases _hΞ'
       constructor
@@ -375,7 +375,7 @@ theorem FLCtx.PSubstCons.is_some_mpr {L : FLCtx κ ν (Ty α)} {σ : USubst φ �
   (hσ : L.PSubstCons σ K N) (x : κ) : (K x).isSome → (L x).isSome
   := (hσ x).is_some_mpr
 
-theorem FLCtx.PSubstCons.some_trg {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
+def FLCtx.PSubstCons.some_trg {L : FLCtx κ ν (Ty α)} {σ : USubst φ ν} {K : FLCtx κ ν (Ty α)}
   (hσ : L.PSubstCons σ K N) (x : κ) (Γ : FLabel ν (Ty α)) : L x = some Γ → Σ'Δ, K x = some Δ
   := λh => ⟨(K x).get (hσ.is_some_mp x (by simp [h])), by simp⟩
 
@@ -471,8 +471,8 @@ theorem FCtx.LWkBot.psubstCons_cmp₂ {Γ : FCtx ν (Ty α)} {Δ Ξ M M' : WithB
   | wk A w, wk A' w' => by
     constructor
     cases M with
-    | none => cases _hΔ'
-    | some M =>
+    | bot => cases _hΔ'
+    | coe M =>
       cases _hΔ'
       cases _hΞ'
       constructor

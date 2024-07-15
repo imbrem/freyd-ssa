@@ -72,12 +72,10 @@ theorem WithBot.Cmp.symm {a b : WithBot α} (h : WithBot.Cmp a b) : WithBot.Cmp 
   case right a => exact WithBot.Cmp.left a
   case both a => exact WithBot.Cmp.both a
 
-@[inline, reducible]
 abbrev DecidableTop (α : Type u) [Top α] := DecidablePred (λ a : α => a = ⊤)
 
 instance {α} : DecidableTop (WithTop α) := λa => match a with | ⊤ => isTrue rfl | some _ => isFalse (λh => by cases h)
 
-@[inline, reducible]
 abbrev DecidableBot (α : Type u) [Bot α] := DecidablePred (λ a : α => a = ⊥)
 
 instance {α} : DecidableBot (WithBot α) := λa => match a with | ⊥ => isTrue rfl | some _ => isFalse (λh => by cases h)
@@ -177,17 +175,11 @@ theorem DiscreteTopOrder.bot_coe_le_coe {α} [LE α] [Top α] [DiscreteTopOrder 
   : (a : WithBot α) ≤ (b : WithBot α) ↔ a ≤ b
   := by simp
 
-instance WithBot.instTop {α} [t : Top α] : Top (WithBot α) where
-  top := t.top
+-- instance WithBot.instOrderTop {α} [LE α] [OrderTop α] : OrderTop (WithBot α) where
+--   le_top | ⊥ => by simp | some a => by simp [instTop, coe_le_coe]
 
-instance WithBot.instOrderTop {α} [LE α] [OrderTop α] : OrderTop (WithBot α) where
-  le_top | ⊥ => by simp | some a => by simp [instTop, coe_le_coe]
-
-instance WithTop.instBot {α} [b : Bot α] : Bot (WithTop α) where
-  bot := b.bot
-
-instance WithTop.instOrderBot {α} [LE α] [OrderBot α] : OrderBot (WithTop α) where
-  bot_le | ⊤ => by simp | some a => by simp [instBot, coe_le_coe]
+-- instance WithTop.instOrderBot {α} [LE α] [OrderBot α] : OrderBot (WithTop α) where
+--   bot_le | ⊤ => by simp | some a => by simp [instBot, coe_le_coe]
 
 theorem DiscreteBotOrder.withTop_le {α} [LE α] [αb : Bot α] [DiscreteBotOrder α]
   : {a b : WithTop α} → a ≤ b → a = ⊥ ∨ b = ⊤ ∨ a = b
